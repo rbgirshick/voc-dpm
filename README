@@ -1,0 +1,168 @@
+
+Information
+===========
+
+Project webpage: http://www.cs.uchicago.edu/~pff/latent/.
+
+This is an implementation of our object detection system based on
+mixtures of deformable part models. The current implementation extends
+the system in [2] as described in [3]. The models in this implementation 
+are structured using the grammar formalism presented in [4].
+
+The distribution contains object detection and model learning code, as
+well as models trained on the PASCAL and INRIA Person datasets. This
+release also includes code for rescoring detections based on
+contextual information.
+
+The system is implemented in Matlab, with a few helper functions
+written in C/C++ for efficiency reasons. The software was tested on
+several versions of Linux and Mac OS X using Matlab versions R2009b
+and R2010a. There may be compatibility issues with other versions of
+Matlab.
+
+For questions concerning the code please contact Ross Girshick at
+<rbg AT cs DOT uchicago DOT edu>.
+
+This project has been supported by the National Science Foundation under Grant
+No. 0534820, 0746569 and 0811340.
+
+
+References
+==========
+
+[1] P. Felzenszwalb, D. McAllester, D. Ramaman.  
+A Discriminatively Trained, Multiscale, Deformable Part Model.  
+Proceedings of the IEEE CVPR 2008.
+
+[2] P. Felzenszwalb, R. Girshick, D. McAllester, D. Ramanan.  Object
+Detection with Discriminatively Trained Part Based Models.
+To appear in the IEEE Transactions on Pattern Analysis and Machine 
+Intelligence.
+
+[3] P. Felzenszwalb, R. Girshick, D. McAllester.
+release4-notes.pdf -- included in this code release.
+
+[4] P. Felzenszwalb, D. McAllester
+Object Detection Grammars
+University of Chicago, Computer Science TR-2010-02, February 2010
+
+
+How to Cite
+===========
+When citing our system, please cite reference [2] and the website for
+the specific release. The website bibtex reference is below.
+
+@misc{voc-release4,
+  author = "Felzenszwalb, P. F. and Girshick, R. B. and McAllester, D.",
+  title = "Discriminatively Trained Deformable Part Models, Release 4",
+  howpublished = "http://people.cs.uchicago.edu/~pff/latent-release4/"}
+
+
+Basic Usage
+===========
+
+1. Unpack the code.
+2. Start matlab.
+3. Run the 'compile' script to compile the helper functions.
+   (you may need to edit compile.m to use a different convolution 
+    routine depending on your system)
+4. Load a model and an image.
+5. Use 'process' to detect objects.
+
+example:
+> load VOC2007/car_final.mat;   % car model trained on the PASCAL 2007 dataset
+> im = imread('000034.jpg');    % test image
+> bbox = process(im, model, 0); % detect objects
+> showboxes(im, bbox);          % display results
+
+The main functions defined in the object detection code are:
+
+boxes = imgdetect(im, model, thresh)              % detect objects in image im
+bbox = bboxpred_get(model.bboxpred, dets, boxes)  % bounding box location regression
+I = nms(bbox, overlap)                            % non-maximal suppression
+bbox = clipboxes(im, bbox)                        % clip boxes to image boundary
+showboxes(im, boxes)                              % visualize detections
+visualizemodel(model)                             % visualize models
+
+Their usage is demonstrated in the 'demo' script.  
+
+The directories 'VOC200?' contain matlab datafiles with models trained
+on several PASCAL datasets (the train+val subsets).  Loading one of
+these files from within matlab will define a variable 'model' with the
+model trained for a particular object category.  The value
+'model.thresh' defines a threshold that can be used in the 'detect'
+function to obtain a high recall rate.
+
+Using the learning code
+=======================
+
+1. Download and install the 2006/2007/2008 PASCAL VOC devkit and dataset.
+   (you should set VOCopts.testset='test' in VOCinit.m)
+2. Modify 'globals.m' according to your configuration.
+3. Run 'make' to compile learn.cc, the LSVM gradient descent code.
+   (Run from a shell, not Matlab.)
+4. Start matlab.
+5. Run the 'compile' script to compile the helper functions.
+   (you may need to edit compile.m to use a different convolution 
+    routine depending on your system)
+6. Use the 'pascal' script to train and evaluate a model. 
+
+example:
+> pascal('person', 3);   % train and evaluate a 6 component person model
+
+The learning code saves a number of intermediate files in a cache
+directory defined in 'globals.m'.  You should delete these files before
+training models on different datasets, or when training new models after
+modifing the code.
+
+The code also generates some very large temporary files during training
+(the default configuration produces files up to about 3GB).  They are
+placed in a temporary directory defined in 'globals.m'.  This directory
+should be in a local filesystem.
+
+
+Context Rescoring
+=================
+
+This release includes code for rescoring detections based on contextual
+information.  Context rescoring is performed by class-specific SVMs.
+To train these SVMs, the following steps are required.
+1) Models for all 20 PASCAL object classes must be trained.
+2) Detections must be computed on the PASCAL trainval and test datasets.
+   (The script trainval.m can be used for computing detections on the
+    trainval dataset.)
+3) The svm-mex MATLAB interface for SVM^light must be installed.  It
+   can be downloaded from http://sourceforge.net/projects/mex-svm/.
+   (This in turn requires downloading SVM^light version *6.01*.)
+   Place the 'svm_mex601' directory from the installation in this 
+   code directory.
+After these steps have been completed, the context rescoring SVMs
+can be trained by calling the function 'rescore_train()' in matlab.
+The detections on the test datasets, for all classes, can be rescored
+by calling the function 'rescore_test()' in matlab.
+
+example:
+> rescore_train()
+> rescore_test()
+
+
+Multicore Support
+=================
+
+In addition to multithreaded convolutions (see notes in compile.m),
+multicore support is also available through the Matlab Parallel 
+Computing Toolbox.  Various loops (e.g., negative example data mining,
+positive latent labeling, and testing) are implemented using the 'parfor'
+parallel for-loop construct.  To take advantage of the parfor loops,
+use the 'matlabpool' command.
+
+example:
+> matlabpool open 8   % start 8 parallel matlab instances
+
+The parfor loops work without any changes when running a single
+Matlab instance.  Note that due to the use of parfor loops you may
+see non-sequential ordering of loop indexes in the terminal output when
+training and testing.  This is expected behavior.  The parallel computing
+toolbox has been tested on Linux using Matlab 2009b and 2010a.  The OS
+X version of Matlab tends to crash when using the parallel computing
+toolbox.

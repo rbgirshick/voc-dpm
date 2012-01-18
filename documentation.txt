@@ -1,0 +1,131 @@
+Weight vector documentation
+===========================
+
+The model parameters are encoded in a weight vector that is updated
+by a stochastic gradient descent procedure.  The mapping from indexes
+in the weight vector to pieces of the object model (e.g., filters,
+deformation models, rule offests, ...) is done through 'blocklabels'.
+
+The weight vector is composed of contiguous blocks of parameters.
+Each block holds a related set of weights.  A blocklabel is an index
+into the list of blocks that comprise the weight vector.  For example
+the weight vector w = (w_1, w_2, ..., w_30) has 30 blocks, and a part
+filter for a model might be stored in w_12 (blocklabel = 12).
+
+The block layout of the weight vectors allows feature vectors to be
+stored in a sparse format where only the non-zero blocks are written.
+Likewise, learn.cc takes advantage of the sparse representation when
+computing dot products.
+
+
+Model format documentation
+==========================
+
+This document describes how the model format has changed relative
+to the format used in the previous release.  The new model format
+supports describing object models in terms of acyclic grammars.
+
+At the top level, the model structure has the following new fields:
+
+              filters: [1x42 struct]
+                rules: {1x81 cell}
+              symbols: [1x81 struct]
+                start: 2
+
+(Fields are shown with example values for the purpose of explaining
+their usage.)
+
+I'll go through each of these fields starting with the symbols struct array.
+
+model.symbols(i) =
+
+      type: 'T'
+    filter: 3
+
+The grammar is built out of symbols.  Each symbol is labeled by a number
+(which will be synonymous with the word "symbol") and has a type: 'T' =>
+terminal; 'N' => non-terminal.  Each terminal corresponds to exactly one
+filter.  In this case, the filter field is used to hold the filter's index.
+For non-terminal symbols, the filter field is empty.  Since we're talking
+about filters, let's look at the filter struct array next.
+
+model.filters{i} =
+
+             w: [7x11x31 double]
+    blocklabel: 1
+     symmetric: 'M'
+          size: [7 11]
+          flip: 0
+        symbol: 1
+
+As expected, each entry holds the filter weights and the blocklabel.
+The symmetric field can be either: 'M' => has a vertically mirrored
+partner or 'N' => no symmetry constraint.  If a filter has symmetric ==
+'M', then there will be two filters that share the same blocklabel.
+The flip field is used to indicate if the weights read from a model
+block should be flipped to form the filter (and likewise, if features
+written to the cache should be flipped).  The symbol field is simply a
+reference back to the terminal symbol that uses the filter.
+
+Now let's look at model.rules.  This cell array holds the grammar's
+productions.  Each symbol has a (possibly empty) cell in model.rules.  The
+cell model.rules{i} holds an array struct that lists the rules for which i
+acts as the left-hand side symbol.  So, model.rules{4}(1) and
+model.rules{4}(2) are the first two productions for symbol 4 in some
+imaginary grammar.  The field model.start holds the distinguished start
+symbol for the grammar.  Let's use that symbol as an example.
+
+model.rules{model.start}(1) =
+
+      type: 'S'
+       lhs: 2
+       rhs: [1 11 15 19 23 27 31]
+    offset: { w: -3.394  blocklabel: 2 }
+    anchor: {[0 0 0]  [12 0 1]  [4 5 1]  [13 8 1]  [0 0 1]  [16 0 1]  [0 5 1]}
+
+Here is the first rule with model.start on the LHS.  In the case of a 6
+component mixture model, model.rules{model.start} is a struct array of 6
+elements.  The field lhs is simply a convenience field indicating what the
+production's LHS is.  The field rhs holds the symbols that appear on the
+production's right-hand side.  The field type is 'S' if this is a structural
+rule or 'D' if this is a deformation rule.  Now I'll split the description
+into two cases.
+
+case 1: structural rule
+
+The field offset holds the offset value and its blocklabel (these will be
+shared for mirrored components).  The anchor field holds the parameters of
+the "structure function" that defines how each of the symbols in the rhs is
+placed relative to a placement of the lhs symbol.  The format is [dx dy ds],
+where 2^ds is the scale change.  So ds = 1 implies that the rhs symbol
+lives at twice resolution of the lhs symbol.  The values of dx, dy are HOG
+cell displacements at the rhs's native scale.  Note that dx and dy are
+displacements, so they are 1 less than the anchor values that were defined
+in the old model.  The first symbol on the rhs has anchor = [0 0 0],
+because this symbol is a terminal for the root filter.
+
+case 2: deformation rule
+
+Let's look at the second symbol on the rhs in the rule above.
+
+model.rules{11} =
+
+    type: 'D'
+     lhs: 11
+     rhs: 10
+     def: {
+             w: [0.0209 -0.0015 0.0155 0.0010]
+    blocklabel: 8
+          flip: 0
+     symmetric: 'M'
+     }
+     offset: { w: 0  blocklabel: 7 }
+
+Deformation rules don't have an anchor field, but do have a def field.  The
+def field describes the deformation model for this rule, and so it includes
+the coefficients and the blocklabel.  The def.symmetric field can be 'M' if
+there is a vertically mirrored deformation rule or 'N' if there is no
+symmetry constraint.  In the case of 'M', flip indicates how to write
+features and read models (just like features.flip).  There's an implicit
+assumption in the code that deformation rules only have one symbol on the
+right-hand side (though it need not be a terminal).

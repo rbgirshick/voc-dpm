@@ -1,0 +1,6 @@
+voc-release4.01 (11/23/11)
+---
+Fixed a runtime performance bug when using fconvblas.cc as the convolution
+routine with MATLAB >= 2010b on Intel CPUs.
+
+The default convolution routine now uses SSE optimized code (fconvsse.cc).
