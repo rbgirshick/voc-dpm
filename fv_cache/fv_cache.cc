@@ -20,6 +20,7 @@ struct context {
   fv_cache F;
   ex_cache E;
   model M;
+  int byte_size;
 };
 static context gctx;
 
@@ -63,7 +64,7 @@ void build_ex_cache() {
       if (i->is_unique == true)
         *(new_end++) = *i;
       else
-        i->free();
+        gctx.byte_size -= i->free();
     }
     F.erase(new_end, F.end());
     mexPrintf("done!\n");
@@ -109,10 +110,12 @@ void free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   Dprintf("Free handler\n");
 
   for (fv_iter i = gctx.F.begin(), i_end = gctx.F.end(); i != i_end; ++i)
-    i->free();
+    gctx.byte_size -= i->free();
   gctx.F.clear();
   gctx.E.clear();
   gctx.M.free();
+  mxAssert(gctx.byte_size == 0, "Byte size is not 0 after freeing all feature vectors");
+  gctx.byte_size = 0;
 }
 
 void init_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
@@ -136,10 +139,13 @@ void init_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // Dprintf("Add handler\n");
   // matlab inputs
-  // prhs[1]    key (binary label, dataid, x, y, scale)
-  // prhs[2]    num_blocks
-  // prhs[3]    feat_dim
-  // prhs[4]    sparse feat array
+  //  prhs[1]   key (binary label, dataid, x, y, scale)
+  //  prhs[2]   num_blocks
+  //  prhs[3]   feat_dim
+  //  prhs[4]   sparse feat array
+  // matlab outputs
+  //  plhs[0]   current fv cache size in bytes
+
   if (nrhs != 5)
     mexErrMsgTxt("Wrong number of inputs for 'add' command");
 
@@ -151,6 +157,10 @@ void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   fv e;
   e.init(key, num_blocks, feat_dim, feat);
   gctx.F.push_back(e);
+
+  gctx.byte_size += sizeof(float)*feat_dim;
+  if (nlhs > 0)
+    plhs[0] = mxCreateDoubleScalar(gctx.byte_size);
 }
 
 void print_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
@@ -183,7 +193,7 @@ void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) 
       *(new_end++) = *i;
       inds++;
     } else {
-      i->free();
+      gctx.byte_size -= i->free();
     }
   }
 
@@ -315,8 +325,10 @@ void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[
   M.component_blocks = new int*[M.num_components];
   for (int i = 0; i < M.num_components; i++) {
     const mxArray *mx_comp = mxGetCell(mx_comps, i);
-    if (mx_comp == NULL)
+    if (mx_comp == NULL) {
+      M.component_sizes[i] = 0;
       continue;
+    }
     const int *comp = (const int *)mxGetPr(mx_comp);
     M.component_sizes[i] = mxGetDimensions(mx_comp)[0];
     M.component_blocks[i] = new int[M.component_sizes[i]];
@@ -331,6 +343,16 @@ void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[
   M.J = mxGetScalar(prhs[7]);
 }
 
+void byte_size_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  // Dprintf("Byte size handler\n");
+  // matlab inputs
+  // matlab outputs
+  //  plhs[0]   current fv cache size in bytes
+  if (nlhs > 0)
+    plhs[0] = mxCreateDoubleScalar(gctx.byte_size);
+}
+
+
 namespace cmds {
   // Command names
   static const char *cmds[] = {
@@ -344,6 +366,7 @@ namespace cmds {
     "info",
     "set_model",
     "get_model",
+    "byte_size",
     NULL
   };
 
@@ -359,6 +382,7 @@ namespace cmds {
     &info_handler,
     &set_model_handler,
     &get_model_handler,
+    &byte_size_handler,
   };
 }
 

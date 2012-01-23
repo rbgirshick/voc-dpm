@@ -37,9 +37,10 @@ struct fv {
     is_unique = true;
   }
 
-  void free() {
+  int free() {
     delete [] feat;
     feat = NULL;
+    return feat_dim;
   }
 
   void print() {

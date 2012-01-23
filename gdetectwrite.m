@@ -1,5 +1,5 @@
 function [boxes, count] = gdetectwrite(pyra, model, boxes, info, label, ...
-                                       fid, id, maxsize, maxnum)
+                                       id, maxsize, maxnum)
 
 % Write detections from gdetect to the feature vector cache.
 %
@@ -8,7 +8,6 @@ function [boxes, count] = gdetectwrite(pyra, model, boxes, info, label, ...
 % boxes    detection boxes
 % info     detection info from gdetect.m
 % label    +1 / -1 binary class label
-% fid      cache's file descriptor from fopen()
 % id       id for use in long label (e.g., image number the detection is from)
 % maxsize  max cache size in bytes
 % maxnum   max number of feature vectors to write
@@ -28,7 +27,7 @@ end
 
 count = 0;
 if ~isempty(boxes)
-  count = writefeatures(pyra, model, info, label, fid, id, maxsize);
+  count = writefeatures(pyra, model, info, label, id, maxsize);
   % truncate boxes
   boxes(count+1:end,:) = [];
 end
@@ -36,12 +35,11 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % writes feature vectors for the detections in info
-function count = writefeatures(pyra, model, info, label, fid, id, maxsize)
+function count = writefeatures(pyra, model, info, label, id, maxsize)
 % pyra     feature pyramid
 % model    object model
 % info     detection info from gdetect.m
 % label    +1 / -1 binary class label
-% fid      cache's file descriptor from fopen()
 % id       id for use in long label (e.g., image number the detection is from)
 % maxsize  max cache size in bytes
 
@@ -64,9 +62,8 @@ for i = 1:size(info,3)
   y = info(DET_Y, model.start, i);
   l = info(DET_L, model.start, i);
   ex = [];
-  ex.fid = fid;
   ex.maxsize = maxsize;
-  ex.header = [label id l x y 0 0];
+  ex.key = [label; id; l; x; y];
   ex.blocks(model.numblocks).w = [];
 
   for j = 1:model.numsymbols
@@ -144,7 +141,7 @@ end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% write ex to ex.fid
+% write ex to fv cache
 function status = exwrite(ex)
 % ex  example to write
 
@@ -156,10 +153,8 @@ for i = 1:length(ex.blocks)
     numblocks = numblocks + 1;
   end
 end
-ex.header(6) = numblocks;
-ex.header(7) = length(buf);
-fwrite(ex.fid, ex.header, 'int32');
-fwrite(ex.fid, buf, 'single');
+
+byte_size = fv_cache('add', int32(ex.key), numblocks, length(buf), single(buf)); 
 
 % still under the limit?
-status = (ftell(ex.fid) < ex.maxsize);
+status = (byte_size < ex.maxsize);

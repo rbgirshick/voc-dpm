@@ -12,12 +12,9 @@ using namespace std;
 // stopping condition parameters
 //
 // max number of iterations
-//static const int ITER = 10e6;
-static const int ITER = 5e5;
-//const int ITER = 5e6;
+static const int ITER = 10e6;
 // minimum number of iterations before termination
-//static const int MIN_ITER = 5e6;
-static const int MIN_ITER = 5e5;
+static const int MIN_ITER = 5e6;
 // convergence threshold
 static const double DELTA_STOP = 0.9995;
 // number of times in a row the convergence threshold

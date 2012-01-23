@@ -14,8 +14,10 @@ else
   VOCyear = '2007';
 end
 
+proj = 'fv_cache';
+
 % directory for caching models, intermediate data, and results
-cachedir = ['/var/tmp/rbg/YOURPATH/' VOCyear '/'];
+cachedir = ['/var/tmp/rbg/' proj '/' VOCyear '/'];
 
 if exist(cachedir) == 0
   unix(['mkdir -p ' cachedir]);
@@ -25,7 +27,7 @@ if exist(cachedir) == 0
 end
 
 % directory for LARGE temporary files created during training
-tmpdir = ['/var/tmp/rbg/YOURPATH/dat/' VOCyear '/'];
+tmpdir = ['/var/tmp/rbg/' proj '/dat/' VOCyear '/'];
 
 if exist(tmpdir) == 0
   unix(['mkdir -p ' tmpdir]);

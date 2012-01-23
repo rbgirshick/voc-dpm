@@ -14,7 +14,7 @@ widths = [pos(:).x2]' - [pos(:).x1]' + 1;
 numpos = length(pos);
 warped = cell(numpos);
 cropsize = (fsize+2) * model.sbin;
-for i = 1:numpos
+parfor i = 1:numpos
   fprintf('%s: warp: %d/%d\n', model.class, i, numpos);
   im = imreadx(pos(i));
   padx = model.sbin * widths(i) / pixels(2);

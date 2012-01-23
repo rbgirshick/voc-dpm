@@ -51,40 +51,23 @@ maxnum = max(length(pos)*10, maxnum+length(pos));
 bytelimit = 1.5*2^31;
 
 globals;
-hdrfile = [tmpdir name '.hdr'];
-datfile = [tmpdir name '.dat'];
-modfile = [tmpdir name '.mod'];
-inffile = [tmpdir name '.inf'];
-lobfile = [tmpdir name '.lob'];
-cmpfile = [tmpdir name '.cmp'];
-objfile = [tmpdir name '.obj'];
 
-labelsize = 5;  % [label id level x y]
 negpos = 0;     % last position in data mining
 
 if ~cont
-  % reset data file
-  fid = fopen(datfile, 'wb');
-  fclose(fid);
-  % reset header file
-  writeheader(hdrfile, 0, labelsize, model);  
-  % reset info file
-  fid = fopen(inffile, 'w');
-  fclose(fid);
-  % reset initial model 
-  fid = fopen(modfile, 'wb');
-  fwrite(fid, zeros(sum(model.blocksizes), 1), 'double');
-  fclose(fid);
-  % reset lower bounds
-  writelob(lobfile, model)
+  fv_cache('init', maxnum);
 end
 
 datamine = true;
 pos_loss = zeros(iter,2);
 for t = 1:iter
   fprintf('%s iter: %d/%d\n', procid(), t, iter);
-  [labels, vals, unique] = readinfo(inffile);
-  num = length(labels);
+  % label, score, is_unqiue, dataid, x, y, scale, byte size
+  info    = fv_cache('info');
+  labels  = info(:, 1);
+  vals    = info(:, 2);
+  unique  = info(:, 3);
+  num     = length(labels);
   
   if ~cont || t > 1
     % compute loss on positives before relabeling
@@ -96,20 +79,18 @@ for t = 1:iter
     end
   
     % remove old positives
-    I = find(labels == -1);
-    rewritedat(datfile, inffile, hdrfile, I);
+    I = sort(find(labels == -1));
+    fv_cache('shrink', int32(I));
     num = length(I);
 
     % add new positives
-    fid = fopen(datfile, 'a');
     if warp > 0
-      numadded = poswarp(name, t, model, warp, pos, fid);
+      numadded = poswarp(name, t, model, warp, pos);
       fusage = numadded;
     else
-      [numadded, fusage, scores] = poslatent(name, t, iter, model, pos, overlap, fid);
+      [numadded, fusage, scores] = poslatent(name, t, iter, model, pos, overlap);
     end
     num = num + numadded;
-    fclose(fid);
 
     % save positive filter usage statistics
     model.fusage = fusage;
@@ -147,14 +128,15 @@ for t = 1:iter
        
     if datamine
       % add new negatives
-      fid = fopen(datfile, 'a');
       if randneg > 0
-        num = num + negrandom(name, t, model, randneg, neg, maxnum-num, fid);
+        numadded = negrandom(name, t, model, randneg, neg, maxnum-num); 
+        num = num + numadded;
         randneg = randneg - 1;
+        fusage = numadded;
       else
         [numadded, negpos, fusage, scores, complete] = ...
             neghard(name, tneg, negiter, model, neg, bytelimit, ...
-                    fid, negpos, maxnum-num);
+                    negpos, maxnum-num);
         num = num + numadded;
         hinge = max(0, 1+scores);
         neg_loss(tneg) = C*sum(hinge);
@@ -168,7 +150,6 @@ for t = 1:iter
                   cache_val, full_val, full_val/cache_val);
         end
       end
-      fclose(fid);
 
       fprintf('\nFilter usage stats:\n');
       for i = 1:model.numfilters
@@ -192,24 +173,27 @@ for t = 1:iter
     end
     
     % learn model
-    writeheader(hdrfile, num, labelsize, model);
-    writemodel(modfile, model);
-    writecomponentinfo(cmpfile, model);
     logtag = [name '_' phase '_' num2str(t) '_' num2str(tneg)];
-    cmd = sprintf('./learn %.6f %.6f %s %s %s %s %s %s %s %s %s', ...
-                  C, J, hdrfile, datfile, modfile, inffile, lobfile, ...
-                  cmpfile, objfile, cachedir, logtag);
-    fprintf('executing: %s\n', cmd);
-    status = unix(cmd);
-    if status ~= 0
-      fprintf('command `%s` failed\n', cmd);
-      keyboard;
-    end
-        
+    [blocks, lb, rm, lm, cmps] = fv_model_args(model);
+    fv_cache('set_model', blocks, lb, rm, lm, cmps, C, J);
+    % optimize with SGD
+    [nl, pl, rt] = fv_cache('sgd', cachedir, logtag);
+
     fprintf('parsing model\n');
-    blocks = readmodel(modfile, model);
+    blocks = fv_cache('get_model');
     model = parsemodel(model, blocks);
-    [labels, vals, unique] = readinfo(inffile);
+
+    cache(tneg,:) = [nl pl rt nl+pl+rt];
+    for tt = 1:tneg
+      fprintf('cache objective, neg: %f, pos: %f, reg: %f, total: %f\n', ...
+              cache(tt,1), cache(tt,2), cache(tt,3), cache(tt,4));
+    end
+
+    % label, score, is_unqiue, dataid, x, y, scale, byte size
+    info    = fv_cache('info');
+    labels  = info(:, 1);
+    vals    = info(:, 2);
+    unique  = info(:, 3);
     
     % compute threshold for high recall
     P = find((labels == 1) .* unique);
@@ -223,14 +207,8 @@ for t = 1:iter
     % keep negative support vectors?
     neg_sv = 0;
     if keepsv
-      % compute max number of elements that could fit into cache based
-      % on average element size
-      datinfo = dir(datfile);
-      % bytes per example
-      exsz = datinfo.bytes/length(labels);
-      % estimated number of examples that will fit in the cache
-      % respecting the byte limit
-      maxcachesize = min(maxnum, round(bytelimit/exsz));
+      % TODO: FIXME: handle byte size limit
+      maxcachesize = maxnum;
       U = find((labels == -1) .* unique);
       V = vals(U);
       [ignore, S] = sort(-V);
@@ -246,26 +224,25 @@ for t = 1:iter
     else
       N = [];
     end    
-    fprintf('rewriting data file\n');
-    I = [P; N];
-    rewritedat(datfile, inffile, hdrfile, I);
+    fprintf('shrinking cache\n');
+    I = sort([P; N]);
+    fv_cache('shrink', int32(I));
     num = length(I);    
     fprintf('cached %d positive and %d negative examples\n', ...
             length(P), length(N));    
     fprintf('# neg SVs: %d\n# pos SVs: %d\n', neg_sv, pos_sv);
-    
-    [nl pl rt] = textread(objfile, '%f%f%f', 'delimiter', '\t');
-    cache(tneg,:) = [nl pl rt nl+pl+rt];
-    for tt = 1:tneg
-      fprintf('cache objective, neg: %f, pos: %f, reg: %f, total: %f\n', ...
-              cache(tt,1), cache(tt,2), cache(tt,3), cache(tt,4));
-    end
+
+    % Sanity check
+    info    = fv_cache('info');
+    labels  = info(:, 1);
+    assert(length(find(labels == +1)) == length(P));
+    assert(length(find(labels == -1)) == length(N));   
   end
 end
 
 % get positive examples by warping positive bounding boxes
 % we create virtual examples by flipping each image left to right
-function num = poswarp(name, t, model, ind, pos, fid)
+function num = poswarp(name, t, model, ind, pos)
 % assumption: the model only has a single structure rule 
 % of the form Q -> F.
 globals;
@@ -291,10 +268,9 @@ for i = 1:numpos
   feat = features(im, model.sbin);
   % + 3 for the 2 blocklabels + 1-dim offset
   dim = numel(feat) + 3;
-  fwrite(fid, [1 i 0 0 0 2 dim], 'int32');
-  fwrite(fid, [obl 1], 'single');
-  fwrite(fid, fbl, 'single');
-  fwrite(fid, feat, 'single');    
+  key = [1 i 0 0 0];
+  fv = [obl; 1; fbl; feat(:)];
+  fv_cache('add', int32(key), 2, dim, single(fv)); 
   num = num+1;
 end
 
@@ -302,7 +278,7 @@ end
 % get positive examples using latent detections
 % we create virtual examples by flipping each image left to right
 function [num, fusage, scores] ...
-  = poslatent(name, t, iter, model, pos, overlap, fid)
+  = poslatent(name, t, iter, model, pos, overlap)
 numpos = length(pos);
 model.interval = 5;
 pixels = model.minsize * model.sbin;
@@ -346,7 +322,7 @@ for i = 1:batchsize:numpos
       continue;
     end
     j = i+k-1;
-    bs = gdetectwrite(data{k}.pyra, model, data{k}.bs, data{k}.info, 1, fid, j);
+    bs = gdetectwrite(data{k}.pyra, model, data{k}.bs, data{k}.info, 1, j);
     if ~isempty(bs)
       fusage = fusage + getfusage(bs);
       num = num+1;
@@ -358,7 +334,7 @@ end
 
 % get hard negative examples
 function [num, j, fusage, scores, complete] ...
-  = neghard(name, t, negiter, model, neg, maxsize, fid, negpos, maxnum)
+  = neghard(name, t, negiter, model, neg, maxsize, negpos, maxnum)
 model.interval = 4;
 fusage = zeros(model.numfilters, 1);
 numneg = length(neg);
@@ -385,13 +361,14 @@ for i = 1:batchsize:numneg
   for k = 1:thisbatchsize
     j = inds(i+k-1);
     bs = gdetectwrite(data{k}.pyra, model, data{k}.bs, data{k}.info, ...
-                      -1, fid, j, maxsize, maxnum-num);
+                      -1, j, maxsize, maxnum-num);
     if ~isempty(bs)
       fusage = fusage + getfusage(bs);
       scores = [scores; bs(:,end)];
     end
     num = num+size(bs, 1);
-    if ftell(fid) >= maxsize || num >= maxnum
+    byte_size = fv_cache('byte_size');
+    if byte_size >= maxsize || num >= maxnum
       fprintf('reached memory limit\n');
       complete = 0;
       break;
@@ -404,7 +381,7 @@ end
 
 
 % get random negative examples
-function num = negrandom(name, t, model, c, neg, maxnum, fid)
+function num = negrandom(name, t, model, c, neg, maxnum)
 numneg = length(neg);
 rndneg = floor(maxnum/numneg);
 fi = model.symbols(model.rules{model.start}.rhs).filter;
@@ -424,10 +401,9 @@ for i = 1:numneg
       y = random('unid', size(feat,1)-rsize(1)+1);
       f = feat(y:y+rsize(1)-1, x:x+rsize(2)-1,:);
       dim = numel(f) + 3;
-      fwrite(fid, [-1 (i-1)*rndneg+j 0 0 0 2 dim], 'int32');
-      fwrite(fid, [obl 1], 'single');
-      fwrite(fid, fbl, 'single');
-      fwrite(fid, f, 'single');
+      key = [-1 (i-1)*rndneg+j 0 0 0];
+      fv = [obl; 1; fbl; f(:)];
+      fv_cache('add', int32(key), 2, dim, single(fv)); 
     end
     num = num+rndneg;
   end
