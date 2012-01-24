@@ -1,3 +1,4 @@
 *.mex*
 learn
 svm_mex601
+.nfs*

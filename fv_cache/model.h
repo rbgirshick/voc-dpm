@@ -72,7 +72,7 @@ struct model {
   }
 
   // compute the score of a cache entry
-  inline double score_entry(const fv &f) {
+  inline double score_fv(const fv &f) {
 //    // short circuit if the feat vector is zero
 //    if (ent->is_zero)
 //      return 0;

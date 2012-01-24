@@ -9,48 +9,54 @@ using namespace std;
 
 // Feature vector (fv) struct
 struct fv {
-  // metadata fields
-  //  'file' :: field is read from the cache file
-  //  'mem'  :: field exists only in memory (not stored in the cache file)
-  static const int key_len = 5;
-  int key[key_len];   // file (binary label, dataid, x, y, scale)
-  int num_blocks;     // 
-  int feat_dim;       // 
-  //int is_belief;      // 
-  //int is_mined;       // 
-  bool is_unique;      //
-  //int is_zero;        //
-  //double margin;      //
-  double score;       //
-  //float loss;         //
+  
+  enum { KEY_LABEL = 0,
+         KEY_DATA_ID,
+         KEY_X,
+         KEY_Y,
+         KEY_SCALE,
+         KEY_LEN };
+
+  int key[KEY_LEN];
+  int num_blocks;
+  int feat_dim;
+  //int is_belief;
+  //int is_mined;
+  bool is_unique;
+  //int is_zero;
+  //double margin;
+  double score;
+  //float loss;
 
   // feature vector
-  float *feat;        //
+  float *feat;
 
   void init(const int *_key, const int _num_blocks, 
             const int _feat_dim, const float *_feat) {
-    num_blocks = _num_blocks;
-    feat_dim = _feat_dim;
-    copy(_key, _key+key_len, key);
-    feat = new float[_feat_dim];
+    is_unique   = true;
+    num_blocks  = _num_blocks;
+    feat_dim    = _feat_dim;
+    feat        = new float[_feat_dim];
     copy(_feat, _feat+_feat_dim, feat);
-    is_unique = true;
+    copy(_key, _key+KEY_LEN, key);
   }
 
   int free() {
     delete [] feat;
     feat = NULL;
-    return feat_dim;
+    return sizeof(float)*feat_dim;
   }
 
   void print() {
-    mexPrintf("label: %d  dataid: %d  x: %d  y: %d  scale: %d  &feat: %x  uniq: %d\n", 
-              key[0], key[1], key[2], key[3], key[4], feat, is_unique);
+    mexPrintf("label: %d  dataid: %d  x: %d  y: %d  "
+              "scale: %d  &feat: %x  uniq: %d\n", 
+              key[KEY_LABEL], key[KEY_DATA_ID], key[KEY_X], key[KEY_Y], 
+              key[KEY_SCALE], feat, is_unique);
   }
 
   // compare the example keys in two cache entries
   static inline int key_cmp(const fv &a, const fv &b) {
-    for (int i = 0; i < key_len; i++)
+    for (int i = 0; i < KEY_LEN; i++)
       if (a.key[i] < b.key[i])
         return -1;
       else if (a.key[i] > b.key[i])
@@ -103,12 +109,9 @@ struct fv {
 typedef vector<fv> fv_cache;
 typedef fv_cache::iterator fv_iter;
 
-// an example is a sequence of cache entries that share the same
-// example key
+// an example is a sequence of feature vectors that share the same key
 struct ex {
   fv_iter begin, end;
-  // number of cache entries in the example
-  int num;
 };
 
 typedef vector<ex> ex_cache;

@@ -24,6 +24,9 @@ struct context {
 };
 static context gctx;
 
+/** -----------------------------------------------------------------
+ ** Print the entire feature vector cache. Useful for debugging.
+ **/
 void print_fv_cache() {
   for (fv_iter i = gctx.F.begin(), i_end = gctx.F.end(); i != i_end; ++i) {
     mexPrintf("%10d: ", i - gctx.F.begin());
@@ -31,6 +34,9 @@ void print_fv_cache() {
   }
 }
 
+/** -----------------------------------------------------------------
+ ** Construct the example cache from the feature vector cache.
+ **/
 void build_ex_cache() {
   // Take local references
   fv_cache &F = gctx.F;
@@ -41,7 +47,7 @@ void build_ex_cache() {
     sort(F.begin(), F.end(), fv::cmp_weak);
     //Dprintf("\n");
     //print_fv_cache();
-    mexPrintf("done!\n");
+    mexPrintf("done\n");
     mexPrintf("Cache holds %d feature vectors\n", F.size());
   }
 
@@ -67,7 +73,7 @@ void build_ex_cache() {
         gctx.byte_size -= i->free();
     }
     F.erase(new_end, F.end());
-    mexPrintf("done!\n");
+    mexPrintf("done\n");
     mexPrintf("Cache holds %d feature vectors\n", F.size());
   }
 
@@ -83,15 +89,13 @@ void build_ex_cache() {
     for (fv_iter i = e.begin+1; i != F.end(); ++i) {
       if (fv::key_cmp(*(e.begin), *i) != 0) {
         e.end = i;
-        e.num = e.end - e.begin;
         E.push_back(e);
         e.begin = i;
       }
     }
     e.end = F.end();
-    e.num = e.end - e.begin;
     E.push_back(e);
-    mexPrintf("done!\n");
+    mexPrintf("done\n");
     mexPrintf("Cache holds %d examples\n", E.size());
   }
 
@@ -106,6 +110,10 @@ void build_ex_cache() {
 //  }
 }
 
+/** -----------------------------------------------------------------
+ ** Free all allocated memory. Resets the feature vector cache, 
+ ** example cache, and model.
+ **/
 void free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   Dprintf("Free handler\n");
 
@@ -114,10 +122,15 @@ void free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   gctx.F.clear();
   gctx.E.clear();
   gctx.M.free();
-  mxAssert(gctx.byte_size == 0, "Byte size is not 0 after freeing all feature vectors");
+  mexPrintf("After freeing cache byte size is: %d ?= 0\n", gctx.byte_size);
   gctx.byte_size = 0;
 }
 
+/** -----------------------------------------------------------------
+ ** Initialize the feature vector cache. Calls free_handler first.
+ ** Optionally reserves a specified cache capacity to reduce dynamic
+ ** resizing.
+ **/
 void init_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // matlab inputs
   // prhs[1]    expected capacity
@@ -136,6 +149,9 @@ void init_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   }
 }
 
+/** -----------------------------------------------------------------
+ ** Insert a new feature vector into the cache.
+ **/
 void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // Dprintf("Add handler\n");
   // matlab inputs
@@ -163,10 +179,17 @@ void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     plhs[0] = mxCreateDoubleScalar(gctx.byte_size);
 }
 
+/** -----------------------------------------------------------------
+ ** Handle requests to print the entire cache.
+ **/
 void print_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   print_fv_cache();
 }
 
+/** -----------------------------------------------------------------
+ ** Shrink the cache so that it contains only a specific subset of 
+ ** feature vectors (specified by indicies in increasing order).
+ **/
 void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   Dprintf("Shrink handler\n");
   // matlab inputs
@@ -204,11 +227,16 @@ void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) 
   //print_fv_cache();
 }
 
+/** -----------------------------------------------------------------
+ ** Return the gradient on the cache at a specific point.
+ **/
 void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   Dprintf("Gradient handler\n");
 }
 
-
+/** -----------------------------------------------------------------
+ ** Optimize the model using stochastic subgradient descent.
+ **/
 void sgd_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   Dprintf("SGD handler\n");
   build_ex_cache();
@@ -229,32 +257,41 @@ void sgd_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   gctx.E.clear();
 }
 
+/** -----------------------------------------------------------------
+ ** Return detailed information about each feature vector in the 
+ ** cache.
+ **/
 void info_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   Dprintf("Info handler\n");
   if (nlhs != 1)
     return;
 
-  int dims[] = { gctx.F.size(), 8 };
-  mxArray *mx_info = mxCreateNumericArray(2, dims, mxDOUBLE_CLASS, mxREAL);
-  double *info = mxGetPr(mx_info);
+  // Info fields
+  enum { LABEL = 0, SCORE, UNIQUE, DATA_ID, X, Y, L, BYTE_SIZE, NUM };
 
-  fv_iter begin = gctx.F.begin();
-  for (fv_iter i = begin, i_end = gctx.F.end(); i != i_end; ++i) {
-    double score = gctx.M.score_entry(*i);
-    *(info + 0*dims[0]) = i->key[0];    // label
-    *(info + 1*dims[0]) = score;        // score
-    *(info + 2*dims[0]) = i->is_unique; // unique
-    *(info + 3*dims[0]) = i->key[1];    // dataid
-    *(info + 4*dims[0]) = i->key[2];    // x
-    *(info + 5*dims[0]) = i->key[3];    // y
-    *(info + 6*dims[0]) = i->key[4];    // scale
-    *(info + 7*dims[0]) = sizeof(float) * i->feat_dim;  // byte size
+  int dims[]       = { gctx.F.size(), NUM };
+  mxArray *mx_info = mxCreateNumericArray(2, dims, mxDOUBLE_CLASS, mxREAL);
+  double *info     = mxGetPr(mx_info);
+
+  for (fv_iter i = gctx.F.begin(), i_end = gctx.F.end(); i != i_end; ++i) {
+    *(info + dims[0]*LABEL)     = i->key[fv::KEY_LABEL];
+    *(info + dims[0]*SCORE)     = gctx.M.score_fv(*i);
+    *(info + dims[0]*UNIQUE)    = i->is_unique;
+    *(info + dims[0]*DATA_ID)   = i->key[fv::KEY_DATA_ID];
+    *(info + dims[0]*X)         = i->key[fv::KEY_X];
+    *(info + dims[0]*Y)         = i->key[fv::KEY_Y];
+    *(info + dims[0]*L)         = i->key[fv::KEY_SCALE];
+    *(info + dims[0]*BYTE_SIZE) = sizeof(float)*i->feat_dim;
     info++;
   }
 
   plhs[0] = mx_info;
 }
 
+/** -----------------------------------------------------------------
+ ** Return the current model parameters as a cell array of parameter
+ ** blocks.
+ **/
 void get_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   Dprintf("Get model handler\n");
   if (nlhs != 1)
@@ -273,6 +310,11 @@ void get_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[
   }
 }
 
+/** -----------------------------------------------------------------
+ ** Set the current model (parameters, their lower bounds, 
+ ** regularization multipliers, learning rate multipliers,
+ ** component block composition, C, and J).
+ **/
 void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   Dprintf("Set model handler\n");
   // matlab inputs
@@ -333,7 +375,8 @@ void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[
     M.component_sizes[i] = mxGetDimensions(mx_comp)[0];
     M.component_blocks[i] = new int[M.component_sizes[i]];
     copy(comp, comp+M.component_sizes[i], M.component_blocks[i]);
-    mexPrintf("Comp %d has %d blocks:\n\t", i, M.component_sizes[i]);
+    // Display some useful information
+    mexPrintf("Comp %d has %d blocks\n  ", i, M.component_sizes[i]);
     for (int j = 0; j < M.component_sizes[i]; j++)
       mexPrintf("%d ", M.component_blocks[i][j]);
     mexPrintf("\n");
@@ -343,6 +386,9 @@ void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[
   M.J = mxGetScalar(prhs[7]);
 }
 
+/** -----------------------------------------------------------------
+ ** Return the current byte size of the cache's feature vector data.
+ **/
 void byte_size_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // Dprintf("Byte size handler\n");
   // matlab inputs
@@ -352,7 +398,9 @@ void byte_size_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[
     plhs[0] = mxCreateDoubleScalar(gctx.byte_size);
 }
 
-
+/** -----------------------------------------------------------------
+ ** Available commands.
+ **/
 namespace cmds {
   // Command names
   static const char *cmds[] = {
@@ -386,8 +434,10 @@ namespace cmds {
   };
 }
 
-// matlab entry point
-// fv_cache(cmd, arg1, arg2, ...)
+
+/** -----------------------------------------------------------------
+ ** matlab entry point: fv_cache(cmd, arg1, arg2, ...)
+ **/
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) { 
   char *cmd = mxArrayToString(prhs[0]);
 

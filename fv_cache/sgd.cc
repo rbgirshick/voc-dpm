@@ -99,7 +99,7 @@ static void compute_loss(double out[3], ex_cache &E, model &M) {
 
     double V = -INFINITY;
     for (fv_iter m = i->begin; m != i->end; m++) {
-      double score = M.score_entry(*m);
+      double score = M.score_fv(*m);
       if (score > V)
         V = score;
     }
@@ -214,7 +214,7 @@ void sgd(double losses[3], ex_cache &E, model &M, string log_dir, string log_tag
       double V = -INFINITY;
       fv_iter I = x.begin;
       for (fv_iter m = x.begin; m != x.end; m++) {
-        double score = M.score_entry(*m);
+        double score = M.score_fv(*m);
         if (score > V) {
           V = score;
           I = m;
