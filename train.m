@@ -171,6 +171,8 @@ for t = 1:iter
       fprintf('The model has not changed since the last data mining iteration.\n');
       datamine = true;
     end
+
+    pool_size = close_parallel_pool();
     
     % learn model
     logtag = [name '_' phase '_' num2str(t) '_' num2str(tneg)];
@@ -203,12 +205,18 @@ for t = 1:iter
 
     % cache model
     save([cachedir name '_model_' phase '_' num2str(t) '_' num2str(tneg)], 'model');
-    
+
     % keep negative support vectors?
     neg_sv = 0;
     if keepsv
-      % TODO: FIXME: handle byte size limit
-      maxcachesize = maxnum;
+      % compute max number of elements that could fit into cache based
+      % on average element size
+      byte_size = fv_cache('byte_size');
+      % bytes per example
+      exsz = byte_size/length(labels);
+      % estimated number of examples that will fit in the cache
+      % respecting the byte limit
+      maxcachesize = min(maxnum, round(bytelimit/exsz));
       U = find((labels == -1) .* unique);
       V = vals(U);
       [ignore, S] = sort(-V);
@@ -230,6 +238,8 @@ for t = 1:iter
     num = length(I);    
     fprintf('cached %d positive and %d negative examples\n', ...
             length(P), length(N));    
+    % # neg SVs overcounts because it's counting feature vectors
+    % not examples
     fprintf('# neg SVs: %d\n# pos SVs: %d\n', neg_sv, pos_sv);
 
     % Sanity check
@@ -237,6 +247,9 @@ for t = 1:iter
     labels  = info(:, 1);
     assert(length(find(labels == +1)) == length(P));
     assert(length(find(labels == -1)) == length(N));   
+
+    % Reopen parallel pool (if applicable)
+    reopen_parallel_pool(pool_size);
   end
 end
 
@@ -285,7 +298,7 @@ pixels = model.minsize * model.sbin;
 minsize = prod(pixels);
 fusage = zeros(model.numfilters, 1);
 num = 0;
-batchsize = 16;
+batchsize = max(1, try_get_matlabpool_size());
 % collect positive examples in parallel batches
 for i = 1:batchsize:numpos
   % do batches of detections in parallel
@@ -341,7 +354,7 @@ numneg = length(neg);
 num = 0;
 scores = [];
 complete = 1;
-batchsize = 4;
+batchsize = max(1, try_get_matlabpool_size());
 inds = circshift(1:numneg, [0 -negpos]);
 for i = 1:batchsize:numneg
   % do batches of detections in parallel
@@ -422,4 +435,34 @@ for i = 1:numfilters
   y2 = boxes(:,4+(i-1)*4);
   ndel = sum((x1 == 0) .* (x2 == 0) .* (y1 == 0) .* (y2 == 0));
   u(i) = nboxes - ndel;
+end
+
+function s = close_parallel_pool()
+try
+  s = matlabpool('size');
+  if s > 0
+    matlabpool('close', 'force');
+  end
+catch
+  s = 0;
+end
+
+function reopen_parallel_pool(s)
+if s > 0
+  while true
+    try
+      matlabpool('open', s);
+      break;
+    catch
+      fprintf('Ugg! Something bad happened. Trying again in 10 seconds...\n');
+      pause(10);
+    end
+  end
+end
+
+function s = try_get_matlabpool_size()
+try
+  s = matlabpool('size');
+catch
+  s = 0;
 end

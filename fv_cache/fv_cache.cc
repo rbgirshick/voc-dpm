@@ -192,15 +192,14 @@ void print_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
  ** feature vectors (specified by indicies in increasing order).
  **/
 void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-  Dprintf("Shrink handler\n");
   // matlab inputs
   // prhs[1]    list of entry indicies to save (must be sort small to large)
 
-  //print_fv_cache();
-
   fv_cache &F = gctx.F;
 
-  mexPrintf("Cache holds %d feature vectors\n", F.size());
+  mexPrintf("Shrinking cache...\n");
+  mexPrintf("Cache holds %d feature vectors (%dMB) prior to shrinking\n", 
+            F.size(), gctx.byte_size/(1024*1024));
 
   const mxArray *mx_inds = prhs[1];
   const int *inds_dims = mxGetDimensions(prhs[1]);
@@ -220,12 +219,10 @@ void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) 
       gctx.byte_size -= i->free();
     }
   }
-
   F.erase(new_end, F.end());
 
-  mexPrintf("After shrinking\n");
-  mexPrintf("Cache holds %d feature vectors\n", F.size());
-  //print_fv_cache();
+  mexPrintf("Cache holds %d feature vectors (%dMB) after shrinking\n", 
+            F.size(), gctx.byte_size/(1024*1024));
 }
 
 /** -----------------------------------------------------------------
@@ -486,7 +483,7 @@ void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[
     M.component_blocks[i] = new int[M.component_sizes[i]];
     copy(comp, comp+M.component_sizes[i], M.component_blocks[i]);
     // Display some useful information
-    mexPrintf("Comp %d has %d blocks\n  ", i, M.component_sizes[i]);
+    mexPrintf("Component %d has %d blocks\n  ", i, M.component_sizes[i]);
     for (int j = 0; j < M.component_sizes[i]; j++)
       mexPrintf("%d ", M.component_blocks[i][j]);
     mexPrintf("\n");
