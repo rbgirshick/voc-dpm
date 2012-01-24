@@ -231,7 +231,106 @@ void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) 
  ** Return the gradient on the cache at a specific point.
  **/
 void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-  Dprintf("Gradient handler\n");
+  // matlab inputs
+  //  prhs[1]   current model parameters
+
+  bool compute_grad = (nlhs > 1);
+
+  model &M    = gctx.M;
+  fv_cache &F = gctx.F;
+  ex_cache &F = gctx.E;
+  double **w  = M.w;
+
+  // Update the model with the current parameters
+  int dim = 0;
+  const mxArray *mx_w = prhs[1];
+  const double *w = mxGetPr(mx_w);
+  for (int i = 0; i < M.num_blocks; i++) {
+    int s = M.block_sizes[i];
+    copy(w, w+s, M.w[i]);
+    w += s;
+    dim += s;
+  }
+
+  mxArray *mx_grad = NULL;
+  double *grad = NULL
+
+  if (compute_grad) {
+    mx_grad = mxCreateNumericArray(1, &dim, mxDOUBLE_CLASS, mxREAL);
+    grad = mxGetPr(mx_grad);
+  }
+
+  double obj_val = 0;
+
+  { // Loss and gradient of the regularization term
+    int maxc = -1;
+    for (int c = 0; c < M.num_components; c++) {
+      double val = 0;
+      for (int i = 0; i < M.component_sizes[c]; i++) {
+        int b = M.component_blocks[c][i];
+        double reg_mult = M.reg_mult[b];
+        double *wb = w[b];
+        double block_val = 0;
+        for (int k = 0; k < M.block_sizes[b]; k++)
+          block_val += wb[k] * wb[k] * reg_mult;
+        val += block_val;
+      }
+      if (val > obj_val) {
+        obj_val = val;
+        maxc = c;
+      }
+    }
+    obj_val *= 0.5;
+
+    if (compute_grad) {
+      double *ptr_grad = grad;
+      for (int i = 0; i < M.component_sizes[maxc]; i++) {
+        int b = M.component_blocks[maxc][i];
+        double reg_mult = M.reg_mult[b];
+        double *wb = w[b];
+        for (int k = 0; k < M.block_sizes[b]; k++)
+          *(ptr_grad++) = wb[k] * reg_mult;
+      }
+    }
+  }
+
+  { // Loss and gradient of each example
+    for (ex_iter i = E.begin(), i_end = E.end(); i != i_end; ++i) {
+      int label = i->begin->key[fv::KEY_LABEL];
+
+      double V = -INFINITY;
+      fv_iter I = i->begin;
+      for (fv_iter m = i->begin; m != i->end; m++) {
+        double score = M.score_fv(*m);
+        if (score > V) {
+          V = score;
+          I = m;
+        }
+      }
+      double mult = M.C * (binary_label == 1 ? M.J : 1);
+      hinge_loss = mult * max(0.0, 1.0 - label*V);
+      obj_val += hinge_loss;
+
+      if (compute_grad && hinge_loss >= 0) {
+        double *ptr_grad = grad;
+        const float *feat = I->feat;
+        int blocks = I->num_blocks;
+        for (int j = 0; j < blocks; j++) {
+          int b = fv::get_block_label(feat);
+          feat++;
+          double *wb = w[b];
+          for (int k = 0; k < M.block_sizes[b]; k++)
+            *(ptr_grad++) -= label * feat[k];
+          feat += M.block_sizes[b];
+        }
+      }
+    }
+  }
+
+  if (nlhs > 0)
+    plhs[0] = mxCreateDoubleScalar(obj_val);
+  if (compute_grad)
+    plhs[1] = mx_grad;
 }
 
 /** -----------------------------------------------------------------
