@@ -1,6 +1,4 @@
 #include "sgd.h"
-//#include <stdio.h>
-//#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <errno.h>
@@ -60,7 +58,7 @@ static inline void update(const fv &f, model &M, double rate_x_dir) {
 //  out[0] : loss on negative examples
 //  out[1] : loss on positive examples
 //  out[2] : regularization term's value
-static void compute_loss(double out[3], ex_cache &E, model &M) {
+void compute_loss(double out[3], ex_cache &E, model &M) {
   // local reference
   double **w = M.w;
 
@@ -93,12 +91,12 @@ static void compute_loss(double out[3], ex_cache &E, model &M) {
 
   out[2] *= 0.5;
 
-  for (ex_iter i = E.begin(), i_end = E.end(); i != i_end; i++) {
+  for (ex_iter i = E.begin(), i_end = E.end(); i != i_end; ++i) {
     int binary_label = i->begin->key[0];
     int subset = (binary_label == -1) ? 0 : 1;
 
     double V = -INFINITY;
-    for (fv_iter m = i->begin; m != i->end; m++) {
+    for (fv_iter m = i->begin; m != i->end; ++m) {
       double score = M.score_fv(*m);
       if (score > V)
         V = score;
@@ -213,7 +211,7 @@ void sgd(double losses[3], ex_cache &E, model &M, string log_dir, string log_tag
 
       double V = -INFINITY;
       fv_iter I = x.begin;
-      for (fv_iter m = x.begin; m != x.end; m++) {
+      for (fv_iter m = x.begin; m != x.end; ++m) {
         double score = M.score_fv(*m);
         if (score > V) {
           V = score;

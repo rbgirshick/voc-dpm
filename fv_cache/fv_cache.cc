@@ -4,6 +4,7 @@
 #include "sgd.h"
 #include <cstring>
 #include <iostream>
+#include <cmath>
 // TODO: look into signal handling: 
 // http://linuxtoosx.blogspot.com/2010/10/ctrl-c-signal-catching-from-c-program.html
 // #include <csignal>
@@ -235,32 +236,39 @@ void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]
   //  prhs[1]   current model parameters
 
   bool compute_grad = (nlhs > 1);
+  //bool compute_grad = true;
 
   model &M    = gctx.M;
-  fv_cache &F = gctx.F;
-  ex_cache &F = gctx.E;
+  ex_cache &E = gctx.E;
   double **w  = M.w;
 
   // Update the model with the current parameters
   int dim = 0;
-  const mxArray *mx_w = prhs[1];
-  const double *w = mxGetPr(mx_w);
+  const mxArray *mx_cur_w = prhs[1];
+  const double *cur_w = (const double *)mxGetPr(mx_cur_w);
   for (int i = 0; i < M.num_blocks; i++) {
     int s = M.block_sizes[i];
-    copy(w, w+s, M.w[i]);
-    w += s;
+    copy(cur_w, cur_w+s, w[i]);
+    cur_w += s;
     dim += s;
   }
 
-  mxArray *mx_grad = NULL;
-  double *grad = NULL
+  mxArray *mx_grad      = NULL;
+  double *grad          = NULL;
+  double **grad_blocks  = NULL;
 
   if (compute_grad) {
     mx_grad = mxCreateNumericArray(1, &dim, mxDOUBLE_CLASS, mxREAL);
     grad = mxGetPr(mx_grad);
+    grad_blocks = new double*[M.num_blocks];
+    int off = 0;
+    for (int i = 0; i < M.num_blocks; i++) {
+      grad_blocks[i] = grad + off;
+      off += M.block_sizes[i];
+    }
   }
 
-  double obj_val = 0;
+  double obj_val = -INFINITY;
 
   { // Loss and gradient of the regularization term
     int maxc = -1;
@@ -283,11 +291,11 @@ void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]
     obj_val *= 0.5;
 
     if (compute_grad) {
-      double *ptr_grad = grad;
       for (int i = 0; i < M.component_sizes[maxc]; i++) {
         int b = M.component_blocks[maxc][i];
         double reg_mult = M.reg_mult[b];
         double *wb = w[b];
+        double *ptr_grad = grad_blocks[b];
         for (int k = 0; k < M.block_sizes[b]; k++)
           *(ptr_grad++) = wb[k] * reg_mult;
       }
@@ -300,27 +308,27 @@ void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]
 
       double V = -INFINITY;
       fv_iter I = i->begin;
-      for (fv_iter m = i->begin; m != i->end; m++) {
+      for (fv_iter m = i->begin; m != i->end; ++m) {
         double score = M.score_fv(*m);
         if (score > V) {
           V = score;
           I = m;
         }
       }
-      double mult = M.C * (binary_label == 1 ? M.J : 1);
-      hinge_loss = mult * max(0.0, 1.0 - label*V);
+      double mult = M.C * (label == 1 ? M.J : 1);
+      double hinge_loss = mult * max(0.0, 1.0 - label*V);
       obj_val += hinge_loss;
 
-      if (compute_grad && hinge_loss >= 0) {
-        double *ptr_grad = grad;
+      if (compute_grad && label*V < 1) {
+        double mult = -1.0 * label * M.C * (label == 1 ? M.J : 1);
         const float *feat = I->feat;
         int blocks = I->num_blocks;
         for (int j = 0; j < blocks; j++) {
           int b = fv::get_block_label(feat);
           feat++;
-          double *wb = w[b];
+          double *ptr_grad = grad_blocks[b];
           for (int k = 0; k < M.block_sizes[b]; k++)
-            *(ptr_grad++) -= label * feat[k];
+            *(ptr_grad++) += mult * feat[k];
           feat += M.block_sizes[b];
         }
       }
@@ -329,8 +337,11 @@ void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]
 
   if (nlhs > 0)
     plhs[0] = mxCreateDoubleScalar(obj_val);
-  if (compute_grad)
+  
+  if (compute_grad) {
     plhs[1] = mx_grad;
+    delete [] grad_blocks;
+  }
 }
 
 /** -----------------------------------------------------------------
@@ -498,6 +509,33 @@ void byte_size_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[
 }
 
 /** -----------------------------------------------------------------
+ ** 
+ **/
+void obj_val_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  double losses[3];
+  compute_loss(losses, gctx.E, gctx.M);
+
+  for (int i = 0; i < 3; i++)
+    if (nlhs > i)
+      plhs[i] = mxCreateDoubleScalar(losses[i]);
+}
+
+/** -----------------------------------------------------------------
+ ** 
+ **/
+void ex_prepare_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  build_ex_cache();
+}
+
+/** -----------------------------------------------------------------
+ ** 
+ **/
+void ex_free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  gctx.E.clear();
+}
+
+
+/** -----------------------------------------------------------------
  ** Available commands.
  **/
 namespace cmds {
@@ -514,6 +552,9 @@ namespace cmds {
     "set_model",
     "get_model",
     "byte_size",
+    "obj_val",
+    "ex_prepare",
+    "ex_free",
     NULL
   };
 
@@ -530,6 +571,9 @@ namespace cmds {
     &set_model_handler,
     &get_model_handler,
     &byte_size_handler,
+    &obj_val_handler,
+    &ex_prepare_handler,
+    &ex_free_handler,
   };
 }
 
