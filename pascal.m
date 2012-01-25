@@ -26,6 +26,7 @@ if nargin < 3
   note = datestr(datevec(now()), 'HH-MM-SS');
 end
 model = pascal_train(cls, n, note);
+fv_cache('free');
 % lower threshold to get high recall
 model.thresh = min(-1.1, model.thresh);
 
@@ -36,9 +37,4 @@ ap1 = pascal_eval(cls, boxes1, 'test', testyear, testyear);
 % compute detections on the trainval dataset (used for context rescoring)
 if dotrainval
   trainval(cls);
-end
-
-% remove dat file if configured to do so
-if cleantmpdir
-  unix(['rm ' tmpdir cls '.dat']);
 end

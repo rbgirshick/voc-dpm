@@ -26,15 +26,5 @@ if exist(cachedir) == 0
   end
 end
 
-% directory for LARGE temporary files created during training
-tmpdir = ['/var/tmp/rbg/' proj '/dat/' VOCyear '/'];
-
-if exist(tmpdir) == 0
-  unix(['mkdir -p ' tmpdir]);
-end
-
-% should the tmpdir be cleaned after training a model?
-cleantmpdir = true;
-
 % directory with PASCAL VOC development kit and dataset
 VOCdevkit = ['/var/tmp/rbg/VOC' VOCyear '/VOCdevkit/'];

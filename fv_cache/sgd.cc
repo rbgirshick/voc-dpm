@@ -150,7 +150,7 @@ void sgd(double losses[3], ex_cache &E, model &M, string log_dir, string log_tag
   bool converged = false;
   int stop_count = 0;
   int t = 0;
-  while (t < ITER && !converged) {
+  while (t < ITER && !converged && !INTERRUPTED) {
     // pick random permutation
     for (int i = 0; i < num; i++)
       perm[i] = i;
@@ -282,9 +282,11 @@ void sgd(double losses[3], ex_cache &E, model &M, string log_dir, string log_tag
   }
 
   if (converged)
-    mexPrintf("\nTermination criteria reached after %d iterations.\n", t);
+    mexPrintf("\nTermination criteria reached after %d iterations\n", t);
+  else if (INTERRUPTED)
+    mexPrintf("\nInterrupted by Ctrl-C\n");
   else
-    mexPrintf("\nMax iteration count reached.\n");
+    mexPrintf("\nMax iteration count reached\n");
 
   delete [] perm;
   delete [] W;

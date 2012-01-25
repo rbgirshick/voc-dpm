@@ -179,7 +179,11 @@ for t = 1:iter
     [blocks, lb, rm, lm, cmps] = fv_model_args(model);
     fv_cache('set_model', blocks, lb, rm, lm, cmps, C, J);
     % optimize with SGD
-    [nl, pl, rt] = fv_cache('sgd', cachedir, logtag);
+    [nl, pl, rt, status] = fv_cache('sgd', cachedir, logtag);
+    if status ~= 0
+      fprintf('parameter learning interrupted\n');
+      keyboard;
+    end
 
     fprintf('parsing model\n');
     blocks = fv_cache('get_model');

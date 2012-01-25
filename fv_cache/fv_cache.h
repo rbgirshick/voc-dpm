@@ -7,9 +7,18 @@
 
 using namespace std;
 
-// Feature vector (fv) struct
+/** -----------------------------------------------------------------
+ ** Global representing if we've received SIGINT (Ctrl-C)
+ ** Defined in fv_cache.cc
+ **/
+extern bool INTERRUPTED;
+
+
+/** -----------------------------------------------------------------
+ ** Feature vector (fv) struct
+ **/
 struct fv {
-  
+  // Feature vector key fields  
   enum { KEY_LABEL = 0,
          KEY_DATA_ID,
          KEY_X,
@@ -28,9 +37,24 @@ struct fv {
   double score;
   //float loss;
 
-  // feature vector
+  // feature data
   float *feat;
+  
+  /** -----------------------------------------------------------------
+   ** Constructor
+   **/
+  fv() {
+    fill(key, key+KEY_LEN, 0);
+    num_blocks  = 0;
+    feat_dim    = 0;
+    is_unique   = false;
+    score       = 0;
+    feat        = NULL;
+  }
 
+  /** -----------------------------------------------------------------
+   ** Load data into a feature vector
+   **/
   void init(const int *_key, const int _num_blocks, 
             const int _feat_dim, const float *_feat) {
     is_unique   = true;
@@ -41,12 +65,24 @@ struct fv {
     copy(_key, _key+KEY_LEN, key);
   }
 
+  /** -----------------------------------------------------------------
+   ** Free feature vector data
+   **/
   int free() {
+    if (feat == NULL)
+      return 0;
+
+    int freed = sizeof(float)*feat_dim;
     delete [] feat;
-    feat = NULL;
-    return sizeof(float)*feat_dim;
+
+    feat      = NULL;
+    feat_dim  = 0;
+    return freed;
   }
 
+  /** -----------------------------------------------------------------
+   ** Print cache key and other information
+   **/
   void print() {
     mexPrintf("label: %d  dataid: %d  x: %d  y: %d  "
               "scale: %d  &feat: %x  uniq: %d\n", 
@@ -54,7 +90,9 @@ struct fv {
               key[KEY_SCALE], feat, is_unique);
   }
 
-  // compare the example keys in two cache entries
+  /** -----------------------------------------------------------------
+   ** Compare the keys in two cache entries
+   **/
   static inline int key_cmp(const fv &a, const fv &b) {
     for (int i = 0; i < KEY_LEN; i++)
       if (a.key[i] < b.key[i])
@@ -65,9 +103,12 @@ struct fv {
     return 0;
   }
 
-  // compare two cache entries to see if they are duplicates
-  // entries are considered duplicates if they have the same example keys and feature vectors
-  static int cmp_strong(const fv &a, const fv &b) {
+  /** -----------------------------------------------------------------
+   ** Compare two cache entries to see if they are duplicates
+   ** entries are considered duplicates if they have the same key and 
+   ** feature vectors
+   **/
+  static int cmp_total(const fv &a, const fv &b) {
     // compare example keys
     int c = key_cmp(a, b);
     if (c < 0)
@@ -92,15 +133,21 @@ struct fv {
     return 0;
   }
 
+  /** -----------------------------------------------------------------
+   ** Strict weak ordering version of cmp_total
+   ** (For use with std::sort)
+   **/
   static bool cmp_weak(const fv &a, const fv &b) {
-    int c = cmp_strong(a, b);
-    if (c <= 0)
+    int c = cmp_total(a, b);
+    if (c < 0)
       return true;
     else
       return false;
   }
 
-  // block label (converted to 0-based index)
+  /** -----------------------------------------------------------------
+   ** Get block label (converted to 0-based index)
+   **/
   static inline int get_block_label(const float *feat) {
     return (int)feat[0] - 1;
   }
@@ -109,7 +156,11 @@ struct fv {
 typedef vector<fv> fv_cache;
 typedef fv_cache::iterator fv_iter;
 
-// an example is a sequence of feature vectors that share the same key
+
+/** -----------------------------------------------------------------
+ ** An example is a sequence of feature vectors that share the 
+ ** same key
+ **/
 struct ex {
   fv_iter begin, end;
 };

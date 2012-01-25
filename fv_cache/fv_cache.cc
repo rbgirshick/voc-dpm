@@ -2,43 +2,55 @@
 #include "model.h"
 #include "fv_cache.h"
 #include "sgd.h"
-#include <cstring>
-#include <iostream>
 #include <cmath>
-// TODO: look into signal handling: 
-// http://linuxtoosx.blogspot.com/2010/10/ctrl-c-signal-catching-from-c-program.html
-// #include <csignal>
+#include <csignal>
 
 using namespace std;
 
-#ifndef NDEBUG
-#define Dprintf(...) mexPrintf(__VA_ARGS__)
-#else
-#define Dprintf(...)
-#endif
+/** -----------------------------------------------------------------
+ ** Global representing if we've received SIGINT (Ctrl-C)
+ **/
+bool INTERRUPTED;
 
+
+/** -----------------------------------------------------------------
+ ** Commands and handler functions
+ **/
+struct handler_registry {
+  string cmd;
+  void (*func)(int, mxArray **, int, const mxArray **);
+};
+
+
+/** -----------------------------------------------------------------
+ ** Wrap (almost) all globals into one global context
+ **/
 struct context {
   fv_cache F;
   ex_cache E;
   model M;
-  int byte_size;
+  long long byte_size;
+  static bool cleanup_reg;
 };
+bool context::cleanup_reg = false;
 static context gctx;
+
 
 /** -----------------------------------------------------------------
  ** Print the entire feature vector cache. Useful for debugging.
  **/
-void print_fv_cache() {
+static void print_fv_cache() {
   for (fv_iter i = gctx.F.begin(), i_end = gctx.F.end(); i != i_end; ++i) {
     mexPrintf("%10d: ", i - gctx.F.begin());
     i->print();
   }
 }
 
+
 /** -----------------------------------------------------------------
  ** Construct the example cache from the feature vector cache.
  **/
-void build_ex_cache() {
+static void build_ex_cache() {
   // Take local references
   fv_cache &F = gctx.F;
   ex_cache &E = gctx.E;
@@ -57,7 +69,7 @@ void build_ex_cache() {
     cur->is_unique = true;
     cur++;
     while (cur != F.end()) {
-      cur->is_unique = (fv::cmp_strong(*(cur-1), *cur) == 0) ? false : true;
+      cur->is_unique = (fv::cmp_total(*(cur-1), *cur) == 0) ? false : true;
       cur++;
     }
   }
@@ -111,19 +123,19 @@ void build_ex_cache() {
 //  }
 }
 
+
 /** -----------------------------------------------------------------
  ** Free all allocated memory. Resets the feature vector cache, 
  ** example cache, and model.
  **/
-void free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-  Dprintf("Free handler\n");
-
+static void free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   for (fv_iter i = gctx.F.begin(), i_end = gctx.F.end(); i != i_end; ++i)
     gctx.byte_size -= i->free();
+
   gctx.F.clear();
   gctx.E.clear();
   gctx.M.free();
-  mexPrintf("After freeing cache byte size is: %d ?= 0\n", gctx.byte_size);
+  mexPrintf("Cache freed; byte size is: %d\n", gctx.byte_size);
   gctx.byte_size = 0;
 }
 
@@ -132,10 +144,9 @@ void free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
  ** Optionally reserves a specified cache capacity to reduce dynamic
  ** resizing.
  **/
-void init_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+static void init_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // matlab inputs
   // prhs[1]    expected capacity
-  Dprintf("Init handler\n");
 
   // Free existing cache
   free_handler(nlhs, plhs, nrhs, prhs);
@@ -144,17 +155,16 @@ void init_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // vector resizing operations
   if (nrhs > 1) {
     const int capacity = (int)mxGetScalar(prhs[1]);
-    Dprintf("Capacity %d\n", capacity);
     gctx.F.reserve(capacity);
     gctx.E.reserve(capacity);
   }
 }
 
+
 /** -----------------------------------------------------------------
  ** Insert a new feature vector into the cache.
  **/
-void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-  // Dprintf("Add handler\n");
+static void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // matlab inputs
   //  prhs[1]   key (binary label, dataid, x, y, scale)
   //  prhs[2]   num_blocks
@@ -180,18 +190,20 @@ void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     plhs[0] = mxCreateDoubleScalar(gctx.byte_size);
 }
 
+
 /** -----------------------------------------------------------------
  ** Handle requests to print the entire cache.
  **/
-void print_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+static void print_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   print_fv_cache();
 }
+
 
 /** -----------------------------------------------------------------
  ** Shrink the cache so that it contains only a specific subset of 
  ** feature vectors (specified by indicies in increasing order).
  **/
-void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+static void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // matlab inputs
   // prhs[1]    list of entry indicies to save (must be sort small to large)
 
@@ -209,8 +221,8 @@ void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) 
 
   fv_iter begin = F.begin();
   fv_iter new_end = F.begin();
-  for (fv_iter i = F.begin(), i_end = F.end(); i != i_end && inds < inds_end; ++i) {
-    int save_ind = (*inds) - 1;
+  for (fv_iter i = F.begin(), i_end = F.end(); i != i_end; ++i) {
+    int save_ind = (inds < inds_end) ? (*inds)-1 : -1;
     int cur_ind = i - begin;
     if (cur_ind == save_ind) {
       *(new_end++) = *i;
@@ -225,10 +237,11 @@ void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) 
             F.size(), gctx.byte_size/(1024*1024));
 }
 
+
 /** -----------------------------------------------------------------
  ** Return the gradient on the cache at a specific point.
  **/
-void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // matlab inputs
   //  prhs[1]   current model parameters
 
@@ -341,11 +354,11 @@ void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]
   }
 }
 
+
 /** -----------------------------------------------------------------
  ** Optimize the model using stochastic subgradient descent.
  **/
-void sgd_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-  Dprintf("SGD handler\n");
+static void sgd_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   build_ex_cache();
 
   char *log_dir = mxArrayToString(prhs[1]);
@@ -359,17 +372,20 @@ void sgd_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     if (nlhs > i)
       plhs[i] = mxCreateDoubleScalar(losses[i]);
 
+  if (nlhs > 3)
+    plhs[3] = mxCreateDoubleScalar(INTERRUPTED);
+
   mxFree(log_dir);
   mxFree(log_tag);
   gctx.E.clear();
 }
 
+
 /** -----------------------------------------------------------------
  ** Return detailed information about each feature vector in the 
  ** cache.
  **/
-void info_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-  Dprintf("Info handler\n");
+static void info_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   if (nlhs != 1)
     return;
 
@@ -395,12 +411,12 @@ void info_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   plhs[0] = mx_info;
 }
 
+
 /** -----------------------------------------------------------------
  ** Return the current model parameters as a cell array of parameter
  ** blocks.
  **/
-void get_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-  Dprintf("Get model handler\n");
+static void get_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   if (nlhs != 1)
     return;
 
@@ -417,13 +433,13 @@ void get_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[
   }
 }
 
+
 /** -----------------------------------------------------------------
  ** Set the current model (parameters, their lower bounds, 
  ** regularization multipliers, learning rate multipliers,
  ** component block composition, C, and J).
  **/
-void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-  Dprintf("Set model handler\n");
+static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // matlab inputs
   // prhs[1]    model params as cell array of vectors
   // prhs[2]    lower bounds as cell array of vectors
@@ -464,9 +480,8 @@ void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[
   copy(learn_mult, learn_mult+M.num_blocks, M.learn_mult);
 
   printf("block size, regularization multiplier, learning rate multiplier\n");
-  for (int i = 0; i < M.num_blocks; i++) {
-    printf("%d, %.2f, %.2f\n", M.block_sizes[i], M.reg_mult[i], M.learn_mult[i]);
-  }
+  for (int i = 0; i < M.num_blocks; i++)
+    printf("%6d, %6.4f, %6.4f\n", M.block_sizes[i], M.reg_mult[i], M.learn_mult[i]);
 
   const mxArray *mx_comps = prhs[5];
   M.num_components = mxGetDimensions(mx_comps)[0];
@@ -493,11 +508,11 @@ void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[
   M.J = mxGetScalar(prhs[7]);
 }
 
+
 /** -----------------------------------------------------------------
  ** Return the current byte size of the cache's feature vector data.
  **/
-void byte_size_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-  // Dprintf("Byte size handler\n");
+static void byte_size_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // matlab inputs
   // matlab outputs
   //  plhs[0]   current fv cache size in bytes
@@ -505,10 +520,11 @@ void byte_size_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[
     plhs[0] = mxCreateDoubleScalar(gctx.byte_size);
 }
 
+
 /** -----------------------------------------------------------------
  ** 
  **/
-void obj_val_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+static void obj_val_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   double losses[3];
   compute_loss(losses, gctx.E, gctx.M);
 
@@ -517,74 +533,100 @@ void obj_val_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
       plhs[i] = mxCreateDoubleScalar(losses[i]);
 }
 
+
 /** -----------------------------------------------------------------
- ** 
+ ** Build the example cache (e.g., to prepare for gradient requests)
  **/
-void ex_prepare_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+static void ex_prepare_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   build_ex_cache();
 }
 
+
 /** -----------------------------------------------------------------
- ** 
+ ** Free example change (e.g., when done making gradient requests)
  **/
-void ex_free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+static void ex_free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   gctx.E.clear();
+}
+
+
+/** -----------------------------------------------------------------
+ ** Unlock mex file so it can be unloaded 
+ ** (Disables safegaurd for debugging)
+ **/
+static void unlock_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  if (mexIsLocked() == 1)
+    mexUnlock();
+}
+
+
+/** -----------------------------------------------------------------
+ ** mexAtExit callback
+ **/
+static void cleanup() {
+  free_handler(0, NULL, 0, NULL);
+}
+
+
+/** -----------------------------------------------------------------
+ ** SIGINT (Ctrl-C) handler so long running commands can be 
+ ** interrupted
+ **/
+void sigproc_ctrl_c(int sig) {
+  INTERRUPTED = true;
 }
 
 
 /** -----------------------------------------------------------------
  ** Available commands.
  **/
-namespace cmds {
-  // Command names
-  static const char *cmds[] = {
-    "init",
-    "add",
-    "free",
-    "print",
-    "shrink",
-    "gradient",
-    "sgd",
-    "info",
-    "set_model",
-    "get_model",
-    "byte_size",
-    "obj_val",
-    "ex_prepare",
-    "ex_free",
-    NULL
-  };
-
-  // Pointers to command handler functions
-  void (*handlers[])(int, mxArray **, int, const mxArray **) = { 
-    &init_handler,
-    &add_handler,
-    &free_handler,
-    &print_handler,
-    &shrink_handler,
-    &gradient_handler,
-    &sgd_handler,
-    &info_handler,
-    &set_model_handler,
-    &get_model_handler,
-    &byte_size_handler,
-    &obj_val_handler,
-    &ex_prepare_handler,
-    &ex_free_handler,
-  };
-}
+static handler_registry handlers[] = {
+  { "init",       &init_handler       },
+  { "add",        &add_handler        },
+  { "free",       &free_handler       },
+  { "print",      &print_handler      },
+  { "shrink",     &shrink_handler     },
+  { "gradient",   &gradient_handler   },
+  { "sgd",        &sgd_handler        },
+  { "info",       &info_handler       },
+  { "set_model",  &set_model_handler  },
+  { "get_model",  &get_model_handler  },
+  { "byte_size",  &byte_size_handler  },
+  { "obj_val",    &obj_val_handler    },
+  { "ex_prepare", &ex_prepare_handler },
+  { "ex_free",    &ex_free_handler    },
+  { "unlock",     &unlock_handler     },
+  { "END",        NULL                },
+};
 
 
 /** -----------------------------------------------------------------
  ** matlab entry point: fv_cache(cmd, arg1, arg2, ...)
  **/
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) { 
+  // Prevent accidental unloading
+  if (mexIsLocked() == 0)
+    mexLock();
+
+  // Ensure that memory is cleanup when eventually unloaded
+  if (!context::cleanup_reg) {
+    mexAtExit(cleanup);
+    context::cleanup_reg = true;
+  }
+
+  // Set up SIGINT (Ctrl-C) handler
+  INTERRUPTED = false;
+  struct sigaction act, old_act;
+  act.sa_handler = sigproc_ctrl_c;
+  sigaction(SIGINT, &act, &old_act);
+
   char *cmd = mxArrayToString(prhs[0]);
-
   // Dispatch to cmd handler
-  for (int i = 0; cmds::cmds[i] != NULL; i++)
-    if (strcmp(cmd, cmds::cmds[i]) == 0)
-      cmds::handlers[i](nlhs, plhs, nrhs, prhs);
-
+  for (int i = 0; handlers[i].func != NULL; i++)
+    if (handlers[i].cmd.compare(cmd) == 0)
+      handlers[i].func(nlhs, plhs, nrhs, prhs);
   mxFree(cmd);
+
+  // Put the default matlab handler back
+  sigaction(SIGINT, &old_act, &act);
 }

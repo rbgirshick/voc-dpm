@@ -3,7 +3,9 @@
 
 #include "fv_cache.h"
 
-// model and objective function parameters
+/** -----------------------------------------------------------------
+ ** Model and objective function parameters
+ **/
 struct model {
   // weight vector
   double **w;
@@ -24,6 +26,9 @@ struct model {
   int *component_sizes;
   int **component_blocks;
 
+  /** -----------------------------------------------------------------
+   ** Constructor
+   **/
   model() {
     C                 = 0;
     J                 = 0;
@@ -38,6 +43,9 @@ struct model {
     component_blocks  = NULL;
   }
 
+  /** -----------------------------------------------------------------
+   ** Free memory allocated for a model
+   **/
   void free() {
     if (w != NULL)
       for (int i = 0; i < num_blocks; i++)
@@ -71,7 +79,9 @@ struct model {
     num_components = 0;
   }
 
-  // compute the score of a cache entry
+  /** -----------------------------------------------------------------
+   ** Compute the score of a cache entry
+   **/
   inline double score_fv(const fv &f) {
 //    // short circuit if the feat vector is zero
 //    if (ent->is_zero)
