@@ -33,7 +33,7 @@ struct context {
   bool model_is_set;
   bool cache_is_built;
   bool cleanup_reg;
-  struct sigaction act, old_act;
+  struct sigaction act, matlab_act;
 
   context() {
     byte_size       = 0;
@@ -55,7 +55,7 @@ static context gctx;
 void checker(bool e, const string file, int line, const string msg) {
   if (!e) {
     mexUnlock();
-    sigaction(SIGINT, &gctx.old_act, &gctx.act);
+    sigaction(SIGINT, &gctx.matlab_act, &gctx.act);
     ostringstream out;
     out << file << ":" << line << " " << msg;
     mexErrMsgTxt(out.str().c_str());
@@ -222,9 +222,9 @@ static void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs
   const int feat_dim    = (const int)mxGetScalar(prhs[3]);
   const float *feat     = (const float *)mxGetPr(prhs[4]);
 
-  fv e;
-  e.init(key, num_blocks, feat_dim, feat);
-  gctx.F.push_back(e);
+  fv f;
+  f.init(key, num_blocks, feat_dim, feat);
+  gctx.F.push_back(f);
 
   gctx.byte_size += sizeof(float)*feat_dim;
   if (nlhs > 0)
@@ -576,21 +576,30 @@ void sigproc_ctrl_c(int sig) {
  ** Available commands.
  **/
 static handler_registry handlers[] = {
+  // Feature vector cache management
   { "init",       &init_handler       },
   { "add",        &add_handler        },
   { "free",       &free_handler       },
   { "print",      &print_handler      },
   { "shrink",     &shrink_handler     },
-  { "gradient",   &gradient_handler   },
-  { "sgd",        &sgd_handler        },
   { "info",       &info_handler       },
-  { "set_model",  &set_model_handler  },
-  { "get_model",  &get_model_handler  },
   { "byte_size",  &byte_size_handler  },
-  { "obj_val",    &obj_val_handler    },
+
+  // Example cache management
   { "ex_prepare", &ex_prepare_handler },
   { "ex_free",    &ex_free_handler    },
+
+  // Objective function / optimization 
+  { "obj_val",    &obj_val_handler    },
+  { "gradient",   &gradient_handler   },
+  { "sgd",        &sgd_handler        },
+  { "set_model",  &set_model_handler  },
+  { "get_model",  &get_model_handler  },
+
+  // Misc mex-related commands
   { "unlock",     &unlock_handler     },
+
+  // The end.
   { "END",        NULL                },
 };
 
@@ -614,7 +623,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     sigemptyset(&gctx.act.sa_mask);
     gctx.act.sa_handler = sigproc_ctrl_c;
     gctx.act.sa_flags   = 0;
-    sigaction(SIGINT, &gctx.act, &gctx.old_act);
+    sigaction(SIGINT, &gctx.act, &gctx.matlab_act);
   }
 
   { // Handle input command
@@ -627,6 +636,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   }
 
   // Put the default matlab handler back
-  sigaction(SIGINT, &gctx.old_act, &gctx.act);
+  sigaction(SIGINT, &gctx.matlab_act, &gctx.act);
   INTERRUPTED = false;
 }
