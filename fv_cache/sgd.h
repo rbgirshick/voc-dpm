@@ -10,7 +10,7 @@
  ** subgradient descent
  **/
 void sgd(double losses[3], ex_cache &E, model &M, 
-         string log_dir, string log_tag, double tao);
+         string log_dir, string log_tag);
 
 /** -----------------------------------------------------------------
  ** Compute the objective function value

@@ -1,7 +1,5 @@
 #include "sgd.h"
-#include <string.h>
 #include <math.h>
-#include <errno.h>
 #include <fstream>
 #include <iostream>
 
@@ -51,6 +49,66 @@ static inline void update(const fv &f, model &M, double rate_x_dir) {
     for (int k = 0; k < M.block_sizes[b]; k++)
       wb[k] += mult * feat[k];
     feat += M.block_sizes[b];
+  }
+}
+
+static inline void project_lb(model &M) {
+  // local references
+  double **w  = M.w;
+  double **lb = M.lb;
+
+  // apply lowerbounds
+  for (int j = 0; j < M.num_blocks; j++) {
+    double *wj  = w[j];
+    double *lbj = lb[j];
+    for (int k = 0; k < M.block_sizes[j]; k++)
+      wj[k] = max(wj[k], lbj[k]);
+  }
+}
+
+static inline void regularize(model &M, double eta) {
+  // local references
+  double **w  = M.w;
+
+  // update model
+//for (int j = 0; j < M.numblocks; j++) {
+//  double mult = eta * M.regmult[j] * M.learnmult[j];
+//  mult = pow((1-mult), REG_FREQ);
+//  for (int k = 0; k < M.blocksizes[j]; k++) {
+//    w[j][k] = mult * w[j][k];
+//  }
+//}
+
+  // max regularization
+  // assume simple mixture model
+  int maxc = -1;
+  double best_val = -INFINITY;
+  for (int c = 0; c < M.num_components; c++) {
+    double val = 0;
+    for (int i = 0; i < M.component_sizes[c]; i++) {
+      int b             = M.component_blocks[c][i];
+      double *wb        = w[b];
+      double reg_mult   = M.reg_mult[b];
+      double block_val  = 0;
+      for (int k = 0; k < M.block_sizes[b]; k++)
+        block_val += wb[k] * wb[k] * reg_mult;
+      val += block_val;
+    }
+    if (val > best_val) {
+      maxc = c;
+      best_val = val;
+    }
+  }
+
+  check(maxc != -1);
+  
+  for (int i = 0; i < M.component_sizes[maxc]; i++) {
+    int b       = M.component_blocks[maxc][i];
+    double mult = eta * M.reg_mult[b] * M.learn_mult[b];        
+    mult        = pow((1-mult), REG_FREQ);
+    double *wb  = w[b];
+    for (int k = 0; k < M.block_sizes[b]; k++)
+      wb[k] = mult * wb[k];
   }
 }
 
@@ -107,24 +165,11 @@ void compute_loss(double out[3], ex_cache &E, model &M) {
 }
 
 
-// seed the random number generator with an arbitrary (fixed) value
-static void seed_rand() {
-  srand48(3);
-}
-
-// error checking
-#define check(e)  \
-(e ? (void)0 :    \
-     (mexPrintf("%s:%u error: %s\n%s\n", __FILE__, __LINE__, \
-                 #e, strerror(errno)), exit(1)))
-
 // stochastic subgradient descent
-void sgd(double losses[3], ex_cache &E, model &M, string log_dir, string log_tag, double tao) {
-  seed_rand();
-
-  // local references
-  double **w = M.w;
-  double **lb = M.lb;
+void sgd(double losses[3], ex_cache &E, model &M, 
+         string log_dir, string log_tag) {
+  // seed the random number generator with an arbitrary (fixed) value
+  srand48(3);
 
   ofstream logfile;
   string filepath = log_dir + "/learnlog/" + log_tag + ".log";
@@ -135,12 +180,12 @@ void sgd(double losses[3], ex_cache &E, model &M, string log_dir, string log_tag
   int num = E.size();
   
   // state for random permutations
-  int *perm = new int[num];
+  int *perm = new (nothrow) int[num];
   check(perm != NULL);
 
   // initial state for the adaptive inner cache
   // all examples start on the fence
-  int *W = new int[num];
+  int *W = new (nothrow) int[num];
   check(W != NULL);
   for (int j = 0; j < num; j++)
     W[j] = IN_CACHE;
@@ -182,8 +227,9 @@ void sgd(double losses[3], ex_cache &E, model &M, string log_dir, string log_tag
       // learning rate
       double T = min(ITER/2.0, t + 10000.0);
       double rateX = cnum * M.C / T;
-
       t++;
+
+      // Check termination condition and update progress
       if (t % 100000 == 0) {
         compute_loss(losses, E, M);
         double loss = losses[0] + losses[1] + losses[2];
@@ -207,8 +253,7 @@ void sgd(double losses[3], ex_cache &E, model &M, string log_dir, string log_tag
           break;
       }
 
-      int binary_label = x.begin->key[0];
-
+      // Compute max over feature vectors for the current example
       double V = -INFINITY;
       fv_iter I = x.begin;
       for (fv_iter m = x.begin; m != x.end; ++m) {
@@ -219,9 +264,10 @@ void sgd(double losses[3], ex_cache &E, model &M, string log_dir, string log_tag
         }
       }
 
-      mxAssert(V != -INFINITY, "sgd: V == -INFINITY");
+      check(V != -INFINITY);
 
-      if (binary_label*V <= 1.0) {
+      int binary_label = x.begin->key[0];
+      if (binary_label*V < 1.0) {
         update(*I, M, binary_label*rateX);
         W[i] = 0;
       } else {
@@ -233,53 +279,13 @@ void sgd(double losses[3], ex_cache &E, model &M, string log_dir, string log_tag
 
       // periodically regularize the model
       if (t % REG_FREQ == 0) {
-        // apply lowerbounds
-        for (int j = 0; j < M.num_blocks; j++)
-          for (int k = 0; k < M.block_sizes[j]; k++)
-            w[j][k] = max(w[j][k], lb[j][k]);
-
-        double rateR = 1.0 / T;
-
-        // update model
-//        for (int j = 0; j < M.numblocks; j++) {
-//          double mult = rateR * M.regmult[j] * M.learnmult[j];
-//          mult = pow((1-mult), REG_FREQ);
-//          for (int k = 0; k < M.blocksizes[j]; k++) {
-//            w[j][k] = mult * w[j][k];
-//          }
-//        }
-
-        // max regularization
-        // assume simple mixture model
-        int maxc = 0;
-        double best_val = 0;
-        for (int c = 0; c < M.num_components; c++) {
-          double val = 0;
-          for (int i = 0; i < M.component_sizes[c]; i++) {
-            int b = M.component_blocks[c][i];
-            double block_val = 0;
-            double *wb = w[b];
-            double reg_mult = M.reg_mult[b];
-            for (int k = 0; k < M.block_sizes[b]; k++)
-              block_val += wb[k] * wb[k] * reg_mult;
-            val += block_val;
-          }
-          if (val > best_val) {
-            maxc = c;
-            best_val = val;
-          }
-        }
-        for (int i = 0; i < M.component_sizes[maxc]; i++) {
-          int b = M.component_blocks[maxc][i];
-          double mult = rateR * M.reg_mult[b] * M.learn_mult[b];        
-          mult = pow((1-mult), REG_FREQ);
-          double *wb = w[b];
-          for (int k = 0; k < M.block_sizes[b]; k++)
-            wb[k] = mult * wb[k];
-        }
+        project_lb(M);
+        regularize(M, 1.0 / T);
       }
     }
   }
+
+  project_lb(M);
 
   if (converged)
     mexPrintf("\nTermination criteria reached after %d iterations\n", t);
@@ -287,6 +293,9 @@ void sgd(double losses[3], ex_cache &E, model &M, string log_dir, string log_tag
     mexPrintf("\nInterrupted by Ctrl-C\n");
   else
     mexPrintf("\nMax iteration count reached\n");
+
+  // Hack to make matlab flush mexPrintf buffer to screen
+  mexEvalString("drawnow");
 
   delete [] perm;
   delete [] W;

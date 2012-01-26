@@ -35,10 +35,10 @@ struct model {
     num_blocks        = 0;
     num_components    = 0;
     w                 = NULL;
+    lb                = NULL;
     block_sizes       = NULL;
     reg_mult          = NULL;
     learn_mult        = NULL;
-    lb                = NULL;
     component_sizes   = NULL;
     component_blocks  = NULL;
   }
@@ -47,18 +47,20 @@ struct model {
    ** Free memory allocated for a model
    **/
   void free() {
-    if (w != NULL)
+    if (w != NULL) {
       for (int i = 0; i < num_blocks; i++)
         if (w[i] != NULL)
           delete [] w[i];
-    delete [] w;
+      delete [] w;
+    }
     w = NULL;
 
-    if (lb != NULL)
+    if (lb != NULL) {
       for (int i = 0; i < num_blocks; i++)
         if (lb[i] != NULL)
           delete [] lb[i];
-    delete [] lb;
+      delete [] lb;
+    }
     lb = NULL;
 
     if (block_sizes != NULL)
@@ -73,11 +75,24 @@ struct model {
       delete [] learn_mult;
     learn_mult = NULL;
 
+    if (component_sizes != NULL)
+      delete [] component_sizes;
+    component_sizes = NULL;
+
+    if (component_blocks != NULL) {
+      for (int i = 0; i < num_components; i++)
+        if (component_blocks[i] != NULL)
+          delete [] component_blocks[i];
+      delete [] component_blocks;
+    }
+    component_blocks = NULL;
+
     C = 0;
     J = 0;
     num_blocks = 0;
     num_components = 0;
   }
+
 
   /** -----------------------------------------------------------------
    ** Compute the score of a cache entry

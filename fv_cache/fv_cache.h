@@ -2,10 +2,31 @@
 #define FV_CACHE_H
 
 #include "mex.h"
+#include <string>
+#include <sstream>
+#include <cstring>
+#include <cerrno>
 #include <vector>
 #include <algorithm>
 
 using namespace std;
+
+/** -----------------------------------------------------------------
+ ** Error checking and reporting
+ **/
+#define check(e) \
+  checker(e, __FILE__, __LINE__, "(no message; see source)");
+
+#define checkM(e, msg) \
+  checker(e, __FILE__, __LINE__, msg);
+
+static inline void checker(bool e, const string file, int line, const string msg) {
+  if (!e) {
+    ostringstream out;
+    out << file << ":" << line << " " << msg;
+    mexErrMsgTxt(out.str().c_str());
+  }
+}
 
 /** -----------------------------------------------------------------
  ** Global representing if we've received SIGINT (Ctrl-C)
@@ -60,7 +81,8 @@ struct fv {
     is_unique   = true;
     num_blocks  = _num_blocks;
     feat_dim    = _feat_dim;
-    feat        = new float[_feat_dim];
+    feat        = new (nothrow) float[_feat_dim];
+    check(feat != NULL);
     copy(_feat, _feat+_feat_dim, feat);
     copy(_key, _key+KEY_LEN, key);
   }

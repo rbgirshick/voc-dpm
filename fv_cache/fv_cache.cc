@@ -30,9 +30,17 @@ struct context {
   ex_cache E;
   model M;
   long long byte_size;
-  static bool cleanup_reg;
+  bool model_is_set;
+  bool cache_is_built;
+  bool cleanup_reg;
+
+  context() {
+    byte_size       = 0;
+    model_is_set    = false;
+    cleanup_reg     = false;
+    cache_is_built  = false;
+  }
 };
-bool context::cleanup_reg = false;
 static context gctx;
 
 
@@ -48,9 +56,20 @@ static void print_fv_cache() {
 
 
 /** -----------------------------------------------------------------
- ** Construct the example cache from the feature vector cache.
+ ** Free the example cache
+ **/
+static void free_ex_cache() {
+  gctx.E.clear();
+  gctx.cache_is_built = false;
+}
+
+
+/** -----------------------------------------------------------------
+ ** Construct the example cache from the feature vector cache
  **/
 static void build_ex_cache() {
+  free_ex_cache();
+
   // Take local references
   fv_cache &F = gctx.F;
   ex_cache &E = gctx.E;
@@ -112,6 +131,8 @@ static void build_ex_cache() {
     mexPrintf("Cache holds %d examples\n", E.size());
   }
 
+  gctx.cache_is_built = true;
+
 //  Dprintf("Printing example cache\n");
 //  for (unsigned int i = 0; i < E.size(); i++) {
 //    ex e = E[i];
@@ -133,10 +154,11 @@ static void free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
     gctx.byte_size -= i->free();
 
   gctx.F.clear();
-  gctx.E.clear();
   gctx.M.free();
+  gctx.model_is_set = false;
+  free_ex_cache();
   mexPrintf("Cache freed; byte size is: %d\n", gctx.byte_size);
-  gctx.byte_size = 0;
+  check(gctx.byte_size == 0);
 }
 
 /** -----------------------------------------------------------------
@@ -245,6 +267,9 @@ static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray 
   // matlab inputs
   //  prhs[1]   current model parameters
 
+  check(gctx.cache_is_built);
+  check(gctx.model_is_set);
+
   bool compute_grad = (nlhs > 1);
   //bool compute_grad = true;
 
@@ -270,7 +295,8 @@ static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray 
   if (compute_grad) {
     mx_grad = mxCreateNumericArray(1, &dim, mxDOUBLE_CLASS, mxREAL);
     grad = mxGetPr(mx_grad);
-    grad_blocks = new double*[M.num_blocks];
+    grad_blocks = new (nothrow) double*[M.num_blocks];
+    check(grad_blocks != NULL);
     int off = 0;
     for (int i = 0; i < M.num_blocks; i++) {
       grad_blocks[i] = grad + off;
@@ -359,14 +385,15 @@ static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray 
  ** Optimize the model using stochastic subgradient descent.
  **/
 static void sgd_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  check(gctx.model_is_set);
+
   build_ex_cache();
 
   char *log_dir = mxArrayToString(prhs[1]);
   char *log_tag = mxArrayToString(prhs[2]);
 
-  //std(ex_cache &E, model &M, string log_dir, string log_tag, 10000);
   double losses[3];
-  sgd(losses, gctx.E, gctx.M, log_dir, log_tag, 10000);
+  sgd(losses, gctx.E, gctx.M, log_dir, log_tag);
 
   for (int i = 0; i < 3; i++)
     if (nlhs > i)
@@ -386,6 +413,8 @@ static void sgd_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs
  ** cache.
  **/
 static void info_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  check(gctx.model_is_set);
+
   if (nlhs != 1)
     return;
 
@@ -417,6 +446,8 @@ static void info_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
  ** blocks.
  **/
 static void get_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  check(gctx.model_is_set);
+
   if (nlhs != 1)
     return;
 
@@ -450,14 +481,20 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
   // prhs[7]    J
 
   model &M = gctx.M;
+  
+  // Free memory is a model already exists
+  M.free();
 
   const mxArray *mx_w = prhs[1];
   const mxArray *mx_lb = prhs[2];
 
   M.num_blocks = mxGetDimensions(mx_w)[0];
-  M.block_sizes = new int[M.num_blocks];
-  M.w = new double*[M.num_blocks];
-  M.lb = new double*[M.num_blocks];
+  M.block_sizes = new (nothrow) int[M.num_blocks];
+  M.w = new (nothrow) double*[M.num_blocks];
+  M.lb = new (nothrow) double*[M.num_blocks];
+  check(M.block_sizes != NULL);
+  check(M.w != NULL);
+  check(M.lb != NULL);
 
   for (int i = 0; i < M.num_blocks; i++) {
     const mxArray *mx_wi = mxGetCell(mx_w, i);
@@ -466,14 +503,18 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
     const double *lbi = (const double *)mxGetPr(mx_lbi);
     const int s = mxGetDimensions(mx_wi)[0];
     M.block_sizes[i] = s;
-    M.w[i] = new double[s];
-    M.lb[i] = new double[s];
+    M.w[i] = new (nothrow) double[s];
+    M.lb[i] = new (nothrow) double[s];
+    check(M.w[i] != NULL);
+    check(M.lb[i] != NULL);
     copy(wi, wi+s, M.w[i]);
     copy(lbi, lbi+s, M.lb[i]);
   }
 
-  M.reg_mult = new float[M.num_blocks];
-  M.learn_mult = new float[M.num_blocks];
+  M.reg_mult = new (nothrow) float[M.num_blocks];
+  M.learn_mult = new (nothrow) float[M.num_blocks];
+  check(M.reg_mult != NULL);
+  check(M.learn_mult != NULL);
   const float *reg_mult = (const float *)mxGetPr(prhs[3]);
   const float *learn_mult = (const float *)mxGetPr(prhs[4]);
   copy(reg_mult, reg_mult+M.num_blocks, M.reg_mult);
@@ -485,17 +526,21 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
 
   const mxArray *mx_comps = prhs[5];
   M.num_components = mxGetDimensions(mx_comps)[0];
-  M.component_sizes = new int[M.num_components];
-  M.component_blocks = new int*[M.num_components];
+  M.component_sizes = new (nothrow) int[M.num_components];
+  M.component_blocks = new (nothrow) int*[M.num_components];
+  check(M.component_sizes != NULL);
+  check(M.component_blocks != NULL);
   for (int i = 0; i < M.num_components; i++) {
     const mxArray *mx_comp = mxGetCell(mx_comps, i);
     if (mx_comp == NULL) {
-      M.component_sizes[i] = 0;
+      M.component_sizes[i]  = 0;
+      M.component_blocks[i] = NULL;
       continue;
     }
     const int *comp = (const int *)mxGetPr(mx_comp);
     M.component_sizes[i] = mxGetDimensions(mx_comp)[0];
-    M.component_blocks[i] = new int[M.component_sizes[i]];
+    M.component_blocks[i] = new (nothrow) int[M.component_sizes[i]];
+    check(M.component_blocks[i] != NULL);
     copy(comp, comp+M.component_sizes[i], M.component_blocks[i]);
     // Display some useful information
     mexPrintf("Component %d has %d blocks\n  ", i, M.component_sizes[i]);
@@ -506,6 +551,8 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
 
   M.C = mxGetScalar(prhs[6]);
   M.J = mxGetScalar(prhs[7]);
+
+  gctx.model_is_set = true;
 }
 
 
@@ -525,6 +572,8 @@ static void byte_size_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
  ** 
  **/
 static void obj_val_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  check(gctx.model_is_set);
+
   double losses[3];
   compute_loss(losses, gctx.E, gctx.M);
 
@@ -546,7 +595,7 @@ static void ex_prepare_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArra
  ** Free example change (e.g., when done making gradient requests)
  **/
 static void ex_free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-  gctx.E.clear();
+  free_ex_cache();
 }
 
 
@@ -604,28 +653,34 @@ static handler_registry handlers[] = {
  ** matlab entry point: fv_cache(cmd, arg1, arg2, ...)
  **/
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) { 
-  // Prevent accidental unloading
-  if (mexIsLocked() == 0)
-    mexLock();
+  struct sigaction act, old_act;
+  
+  { // Lock mex file and register cleanup handler
+    if (mexIsLocked() == 0)
+      mexLock();
 
-  // Ensure that memory is cleanup when eventually unloaded
-  if (!context::cleanup_reg) {
-    mexAtExit(cleanup);
-    context::cleanup_reg = true;
+    if (!gctx.cleanup_reg) {
+      mexAtExit(cleanup);
+      gctx.cleanup_reg = true;
+    }
   }
 
-  // Set up SIGINT (Ctrl-C) handler
-  INTERRUPTED = false;
-  struct sigaction act, old_act;
-  act.sa_handler = sigproc_ctrl_c;
-  sigaction(SIGINT, &act, &old_act);
+  { // Set up SIGINT (Ctrl-C) handler
+    INTERRUPTED = false;
+    sigemptyset(&act.sa_mask);
+    act.sa_handler = sigproc_ctrl_c;
+    act.sa_flags   = 0;
+    sigaction(SIGINT, &act, &old_act);
+  }
 
-  char *cmd = mxArrayToString(prhs[0]);
-  // Dispatch to cmd handler
-  for (int i = 0; handlers[i].func != NULL; i++)
-    if (handlers[i].cmd.compare(cmd) == 0)
-      handlers[i].func(nlhs, plhs, nrhs, prhs);
-  mxFree(cmd);
+  { // Handle input command
+    char *cmd = mxArrayToString(prhs[0]);
+    // Dispatch to cmd handler
+    for (int i = 0; handlers[i].func != NULL; i++)
+      if (handlers[i].cmd.compare(cmd) == 0)
+        handlers[i].func(nlhs, plhs, nrhs, prhs);
+    mxFree(cmd);
+  }
 
   // Put the default matlab handler back
   sigaction(SIGINT, &old_act, &act);

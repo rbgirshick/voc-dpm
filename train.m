@@ -108,7 +108,7 @@ for t = 1:iter
         fprintf('positive loss before: %f, after: %f, ratio: %f\n', ...
                 pos_loss(tt,1), pos_loss(tt,2), pos_loss(tt,2)/pos_loss(tt,1));
       end
-      if t > 1 && pos_loss(t,2) > pos_loss(t,1)
+      if t > 1 && pos_loss(t,2)*0.99999 > pos_loss(t,1)
         fprintf('warning: pos loss went up\n');
         keyboard;
       end
