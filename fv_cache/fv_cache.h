@@ -4,8 +4,6 @@
 #include "mex.h"
 #include <string>
 #include <sstream>
-#include <cstring>
-#include <cerrno>
 #include <csignal>
 #include <vector>
 #include <algorithm>
@@ -21,14 +19,8 @@ using namespace std;
 #define checkM(e, msg) \
   checker(e, __FILE__, __LINE__, msg);
 
-static inline void checker(bool e, const string file, int line, const string msg) {
-  if (!e) {
-    //sigaction(SIGINT, &gctx.old_act, &gctx.act);
-    ostringstream out;
-    out << file << ":" << line << " " << msg;
-    mexErrMsgTxt(out.str().c_str());
-  }
-}
+void checker(bool e, const string file, int line, const string msg);
+
 
 /** -----------------------------------------------------------------
  ** Global representing if we've received SIGINT (Ctrl-C)
@@ -49,19 +41,29 @@ struct fv {
          KEY_SCALE,
          KEY_LEN };
 
-  int key[KEY_LEN];
-  int num_blocks;
-  int feat_dim;
-  //int is_belief;
-  //int is_mined;
-  bool is_unique;
-  //int is_zero;
-  //double margin;
-  double score;
-  //float loss;
+  int     key[KEY_LEN];
+  int     num_blocks;
+  int     feat_dim;
+  bool    is_unique;
+  double  score;
 
-  // feature data
+  // Feature data format
+  // "f = A{n}" notation means "f is A repeated n times"
+  //
+  //  feat = DATA{num_blocks}
+  //
+  //  DATA =
+  //    block_label   float{1}
+  //    block_data    float{model.block_sizes[block_label]}
   float *feat;
+
+  // For future use in wl-ssvm
+  //int     is_zero;
+  //float   loss;
+  //double  margin;
+  //int     is_belief;
+  //int     is_mined;
+
   
   /** -----------------------------------------------------------------
    ** Constructor

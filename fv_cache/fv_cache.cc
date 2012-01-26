@@ -1,7 +1,7 @@
 #include "mex.h"
 #include "model.h"
 #include "fv_cache.h"
-#include "sgd.h"
+#include "obj_func.h"
 #include <cmath>
 #include <csignal>
 
@@ -43,6 +43,24 @@ struct context {
   }
 };
 static context gctx;
+
+
+/** -----------------------------------------------------------------
+ ** Handle an error
+ **  - Unlock the MEX file (because you might need to recompile after 
+ **    seeing this error and fixing a bug)
+ **  - Reset the SIGINT handler
+ **  - Print a useful message about the error
+ **/
+void checker(bool e, const string file, int line, const string msg) {
+  if (!e) {
+    mexUnlock();
+    sigaction(SIGINT, &gctx.old_act, &gctx.act);
+    ostringstream out;
+    out << file << ":" << line << " " << msg;
+    mexErrMsgTxt(out.str().c_str());
+  }
+}
 
 
 /** -----------------------------------------------------------------
@@ -262,26 +280,30 @@ static void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *p
 
 
 /** -----------------------------------------------------------------
- ** Return the gradient on the cache at a specific point.
+ ** Return the gradient on the cache at a specific point in parameter
+ ** space.
  **/
 static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // matlab inputs
   //  prhs[1]   current model parameters
 
+  // Check preconditions
   check(gctx.cache_is_built);
   check(gctx.model_is_set);
 
   bool compute_grad = (nlhs > 1);
-  //bool compute_grad = true;
+  
+  model &M          = gctx.M;
+  double **w        = M.w;
+  mxArray *mx_grad  = NULL;
+  double *grad      = NULL;
+  double obj_val    = 0.0;
 
-  model &M    = gctx.M;
-  ex_cache &E = gctx.E;
-  double **w  = M.w;
+  const mxArray *mx_cur_w = prhs[1];
+  const double *cur_w     = (const double *)mxGetPr(mx_cur_w);
 
   // Update the model with the current parameters
   int dim = 0;
-  const mxArray *mx_cur_w = prhs[1];
-  const double *cur_w = (const double *)mxGetPr(mx_cur_w);
   for (int i = 0; i < M.num_blocks; i++) {
     int s = M.block_sizes[i];
     copy(cur_w, cur_w+s, w[i]);
@@ -289,96 +311,18 @@ static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray 
     dim += s;
   }
 
-  mxArray *mx_grad      = NULL;
-  double *grad          = NULL;
-  double **grad_blocks  = NULL;
-
   if (compute_grad) {
     mx_grad = mxCreateNumericArray(1, &dim, mxDOUBLE_CLASS, mxREAL);
     grad = mxGetPr(mx_grad);
-    grad_blocks = new (nothrow) double*[M.num_blocks];
-    check(grad_blocks != NULL);
-    int off = 0;
-    for (int i = 0; i < M.num_blocks; i++) {
-      grad_blocks[i] = grad + off;
-      off += M.block_sizes[i];
-    }
   }
 
-  double obj_val = -INFINITY;
-
-  { // Loss and gradient of the regularization term
-    int maxc = -1;
-    for (int c = 0; c < M.num_components; c++) {
-      double val = 0;
-      for (int i = 0; i < M.component_sizes[c]; i++) {
-        int b = M.component_blocks[c][i];
-        double reg_mult = M.reg_mult[b];
-        double *wb = w[b];
-        double block_val = 0;
-        for (int k = 0; k < M.block_sizes[b]; k++)
-          block_val += wb[k] * wb[k] * reg_mult;
-        val += block_val;
-      }
-      if (val > obj_val) {
-        obj_val = val;
-        maxc = c;
-      }
-    }
-    obj_val *= 0.5;
-
-    if (compute_grad) {
-      for (int i = 0; i < M.component_sizes[maxc]; i++) {
-        int b = M.component_blocks[maxc][i];
-        double reg_mult = M.reg_mult[b];
-        double *wb = w[b];
-        double *ptr_grad = grad_blocks[b];
-        for (int k = 0; k < M.block_sizes[b]; k++)
-          *(ptr_grad++) = wb[k] * reg_mult;
-      }
-    }
-  }
-
-  { // Loss and gradient of each example
-    for (ex_iter i = E.begin(), i_end = E.end(); i != i_end; ++i) {
-      int label = i->begin->key[fv::KEY_LABEL];
-
-      double V = -INFINITY;
-      fv_iter I = i->begin;
-      for (fv_iter m = i->begin; m != i->end; ++m) {
-        double score = M.score_fv(*m);
-        if (score > V) {
-          V = score;
-          I = m;
-        }
-      }
-      double mult = M.C * (label == 1 ? M.J : 1);
-      double hinge_loss = mult * max(0.0, 1.0 - label*V);
-      obj_val += hinge_loss;
-
-      if (compute_grad && label*V < 1) {
-        double mult = -1.0 * label * M.C * (label == 1 ? M.J : 1);
-        const float *feat = I->feat;
-        int blocks = I->num_blocks;
-        for (int j = 0; j < blocks; j++) {
-          int b = fv::get_block_label(feat);
-          feat++;
-          double *ptr_grad = grad_blocks[b];
-          for (int k = 0; k < M.block_sizes[b]; k++)
-            *(ptr_grad++) += mult * feat[k];
-          feat += M.block_sizes[b];
-        }
-      }
-    }
-  }
-
+  gradient(&obj_val, grad, gctx.E, M);
+  
   if (nlhs > 0)
     plhs[0] = mxCreateDoubleScalar(obj_val);
   
-  if (compute_grad) {
+  if (compute_grad)
     plhs[1] = mx_grad;
-    delete [] grad_blocks;
-  }
 }
 
 
@@ -575,12 +519,12 @@ static void byte_size_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
 static void obj_val_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   check(gctx.model_is_set);
 
-  double losses[3];
-  compute_loss(losses, gctx.E, gctx.M);
+  double terms[3];
+  obj_val(terms, gctx.E, gctx.M);
 
   for (int i = 0; i < 3; i++)
     if (nlhs > i)
-      plhs[i] = mxCreateDoubleScalar(losses[i]);
+      plhs[i] = mxCreateDoubleScalar(terms[i]);
 }
 
 

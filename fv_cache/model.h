@@ -4,47 +4,74 @@
 #include "fv_cache.h"
 
 /** -----------------------------------------------------------------
- ** Model and objective function parameters
+ ** This struct conflates three logically separate components
+ **  - Block-sparse representation of feature vectors and parameters
+ **  - Objective function (LSVM)
+ **  - Optimization algorithm to solve the objective function (SGD)
+ **
+ ** These pieces could be factored in order to define a more generic
+ ** framework where different objective functions could be defined
+ ** over the cache, and different optimization algorithms could be
+ ** defined for solving the objective function. For simplicity,
+ ** all of these pieces are packaged together into the 'model'.
  **/
 struct model {
-  // weight vector
-  double **w;
-
-  // training equation parameters
-  double C;
-  double J;
-
-  // model metadata
+  /** ---------------------------------------------------------------
+   ** Model description
+   **/
+  // Block-sparse representation
   int num_blocks;
   int *block_sizes;
-  float *reg_mult;
-  float *learn_mult;
-  double **lb;
 
-  // for max regularization
+  /** ---------------------------------------------------------------
+   ** LSVM objective function, parameters, hyper-parameters, and 
+   ** constraints
+   **/
+  // Weight vector (parameters to solve for)
+  double **w;
+  // Lower-bound box constraints
+  double **lb;
+  // Regularization tradeoff
+  double C;
+  // Positive vs. negative example loss balance
+  double J;
+  // Per-block regularization cost
+  float *reg_mult;
+  // Component block-composition for max-regularization
   int num_components;
   int *component_sizes;
   int **component_blocks;
 
-  /** -----------------------------------------------------------------
+  /** ---------------------------------------------------------------
+   ** Optimization algorithm parameters
+   **/
+  // Per-block learning rate gain
+  float *learn_mult;
+
+  /** ---------------------------------------------------------------
    ** Constructor
    **/
   model() {
-    C                 = 0;
-    J                 = 0;
+    // Model
     num_blocks        = 0;
-    num_components    = 0;
+    block_sizes       = NULL;
     w                 = NULL;
     lb                = NULL;
-    block_sizes       = NULL;
+
+    // Obj. function
+    C                 = 0;
+    J                 = 0;
     reg_mult          = NULL;
-    learn_mult        = NULL;
+    num_components    = 0;
     component_sizes   = NULL;
     component_blocks  = NULL;
+
+    // Opt. algo.
+    learn_mult        = NULL;
   }
 
-  /** -----------------------------------------------------------------
-   ** Free memory allocated for a model
+  /** ---------------------------------------------------------------
+   ** Free allocated memory
    **/
   void free() {
     if (w != NULL) {
@@ -94,12 +121,12 @@ struct model {
   }
 
 
-  /** -----------------------------------------------------------------
+  /** ---------------------------------------------------------------
    ** Compute the score of a cache entry
    **/
   inline double score_fv(const fv &f) {
 //    // short circuit if the feat vector is zero
-//    if (ent->is_zero)
+//    if (f.is_zero)
 //      return 0;
 
     double val = 0.0;

@@ -1,12 +1,13 @@
-%  // prhs[1]    model params as cell array of vectors
-%  // prhs[2]    lower bounds as cell array of vectors
-%  // prhs[3]    regmult as 1d vector
-%  // prhs[4]    learnmult as 1d vector
-%  // prhs[5]    componentblocks as cell array of vectors
-%  // prhs[6]    C
-%  // prhs[7]    J
 function [blocks, lower_bounds, reg_mult, learn_mult, comps] ...
   = fv_model_args(model)
+% fv_model_args(model) returns the arguments (<args>) needed by the 
+% fv_cache('set_model', <args>)
+%
+% blocks          Cell array of model parameter blocks (double)
+% lower_bounds    Cell array of lower-bound box constraints (double)
+% reg_mult        Array of per-block regularization factors (single)
+% learn_mult      Array of per-block learn rate gains (single)
+% comps           Cell array of per-component block usage (int32)
 
 blocks        = get_blocks(model);
 lower_bounds  = get_lb(model);
