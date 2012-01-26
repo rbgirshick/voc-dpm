@@ -1,13 +1,15 @@
-mex -O resize.cc
-mex -O dt.cc
-mex -O features.cc
-mex -O getdetections.cc
+fv_compile();
+
+mex -O CXXOPTIMFLAGS="-O3 -DNDEBUG" LDOPTIMFLAGS="-O3" CXXFLAGS="\$CXXFLAGS -Wall" LDFLAGS="\$LDFLAGS -Wall" resize.cc
+mex -O CXXOPTIMFLAGS="-O3 -DNDEBUG" LDOPTIMFLAGS="-O3" CXXFLAGS="\$CXXFLAGS -Wall" LDFLAGS="\$LDFLAGS -Wall" dt.cc
+mex -O CXXOPTIMFLAGS="-O3 -DNDEBUG" LDOPTIMFLAGS="-O3" CXXFLAGS="\$CXXFLAGS -Wall" LDFLAGS="\$LDFLAGS -Wall" features.cc
+mex -O CXXOPTIMFLAGS="-O3 -DNDEBUG" LDOPTIMFLAGS="-O3" CXXFLAGS="\$CXXFLAGS -Wall" LDFLAGS="\$LDFLAGS -Wall" getdetections.cc
 
 % use one of the following depending on your setup
 % 0 is fastest, 3 is slowest 
 
 % 0) multithreaded convolution using SSE
-mex -O fconvsse.cc -o fconv
+mex -O CXXOPTIMFLAGS="-O3 -DNDEBUG" LDOPTIMFLAGS="-O3" CXXFLAGS="\$CXXFLAGS -Wall" LDFLAGS="\$LDFLAGS -Wall" fconvsse.cc -o fconv
 
 % 1) multithreaded convolution using blas
 %    WARNING: the blas version does not work with matlab >= 2010b 
