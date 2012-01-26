@@ -33,6 +33,7 @@ struct context {
   bool model_is_set;
   bool cache_is_built;
   bool cleanup_reg;
+  struct sigaction act, old_act;
 
   context() {
     byte_size       = 0;
@@ -614,6 +615,7 @@ static void unlock_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *p
  **/
 static void cleanup() {
   free_handler(0, NULL, 0, NULL);
+  INTERRUPTED = false;
 }
 
 
@@ -653,8 +655,6 @@ static handler_registry handlers[] = {
  ** matlab entry point: fv_cache(cmd, arg1, arg2, ...)
  **/
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) { 
-  struct sigaction act, old_act;
-  
   { // Lock mex file and register cleanup handler
     if (mexIsLocked() == 0)
       mexLock();
@@ -667,10 +667,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
   { // Set up SIGINT (Ctrl-C) handler
     INTERRUPTED = false;
-    sigemptyset(&act.sa_mask);
-    act.sa_handler = sigproc_ctrl_c;
-    act.sa_flags   = 0;
-    sigaction(SIGINT, &act, &old_act);
+    sigemptyset(&gctx.act.sa_mask);
+    gctx.act.sa_handler = sigproc_ctrl_c;
+    gctx.act.sa_flags   = 0;
+    sigaction(SIGINT, &gctx.act, &gctx.old_act);
   }
 
   { // Handle input command
@@ -683,5 +683,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   }
 
   // Put the default matlab handler back
-  sigaction(SIGINT, &old_act, &act);
+  sigaction(SIGINT, &gctx.old_act, &gctx.act);
+  INTERRUPTED = false;
 }

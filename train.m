@@ -58,6 +58,9 @@ if ~cont
   fv_cache('init', maxnum);
 end
 
+[blocks, lb, rm, lm, cmps] = fv_model_args(model);
+fv_cache('set_model', blocks, lb, rm, lm, cmps, C, J);
+
 datamine = true;
 pos_loss = zeros(iter,2);
 for t = 1:iter

@@ -6,6 +6,7 @@
 #include <sstream>
 #include <cstring>
 #include <cerrno>
+#include <csignal>
 #include <vector>
 #include <algorithm>
 
@@ -22,6 +23,7 @@ using namespace std;
 
 static inline void checker(bool e, const string file, int line, const string msg) {
   if (!e) {
+    //sigaction(SIGINT, &gctx.old_act, &gctx.act);
     ostringstream out;
     out << file << ":" << line << " " << msg;
     mexErrMsgTxt(out.str().c_str());
