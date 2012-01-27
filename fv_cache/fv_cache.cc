@@ -207,23 +207,23 @@ static void init_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
  **/
 static void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // matlab inputs
-  //  prhs[1]   key (binary label, dataid, x, y, scale)
-  //  prhs[2]   num_blocks
-  //  prhs[3]   feat_dim
-  //  prhs[4]   sparse feat array
+  //
+  //  prhs[1]   key (binary label, dataid, x, y, scale) (int32)
+  //  prhs[2]   block labels (int32) 
+  //  prhs[3]   sparse feat array (single)
   // matlab outputs
   //  plhs[0]   current fv cache size in bytes
 
-  if (nrhs != 5)
-    mexErrMsgTxt("Wrong number of inputs for 'add' command");
-
-  const int *key        = (int *)mxGetPr(prhs[1]);
-  const int num_blocks  = (const int)mxGetScalar(prhs[2]);
-  const int feat_dim    = (const int)mxGetScalar(prhs[3]);
-  const float *feat     = (const float *)mxGetPr(prhs[4]);
+  const int *key          = (int *)mxGetPr(prhs[1]);
+  const mxArray *mx_bls   = prhs[2];
+  const int num_blocks    = mxGetDimensions(mx_bls)[0];
+  const int *bls          = (const int *)mxGetPr(mx_bls);
+  const mxArray *mx_feat  = prhs[3];
+  const int feat_dim      = mxGetDimensions(mx_feat)[0];
+  const float *feat       = (const float *)mxGetPr(mx_feat);
 
   fv f;
-  f.init(key, num_blocks, feat_dim, feat);
+  f.set(key, num_blocks, bls, feat_dim, feat);
   gctx.F.push_back(f);
 
   gctx.byte_size += sizeof(float)*feat_dim;

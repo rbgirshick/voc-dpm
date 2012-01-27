@@ -286,11 +286,10 @@ for i = 1:numpos
   % get example
   im = warped{i};
   feat = features(im, model.sbin);
-  % + 3 for the 2 blocklabels + 1-dim offset
-  dim = numel(feat) + 3;
   key = [1 i 0 0 0];
-  fv = [obl; 1; fbl; feat(:)];
-  fv_cache('add', int32(key), 2, dim, single(fv)); 
+  bls = [obl; fbl] - 1;
+  feat = [1; feat(:)];
+  fv_cache('add', int32(key), int32(bls), single(feat)); 
   num = num+1;
 end
 
@@ -420,10 +419,10 @@ for i = 1:numneg
       x = random('unid', size(feat,2)-rsize(2)+1);
       y = random('unid', size(feat,1)-rsize(1)+1);
       f = feat(y:y+rsize(1)-1, x:x+rsize(2)-1,:);
-      dim = numel(f) + 3;
       key = [-1 (i-1)*rndneg+j 0 0 0];
-      fv = [obl; 1; fbl; f(:)];
-      fv_cache('add', int32(key), 2, dim, single(fv)); 
+      bls = [obl; fbl] - 1;
+      f = [1; f(:)];
+      fv_cache('add', int32(key), int32(bls), single(f)); 
     end
     num = num+rndneg;
   end

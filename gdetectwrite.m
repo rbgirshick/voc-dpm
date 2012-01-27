@@ -145,16 +145,17 @@ end
 function status = exwrite(ex)
 % ex  example to write
 
-buf = [];
-numblocks = 0;
+feat = [];
+bls = [];
 for i = 1:length(ex.blocks)
-  if ~isempty(ex.blocks(i).w)
-    buf = [buf; i; ex.blocks(i).w];
-    numblocks = numblocks + 1;
+  % skip if empty or all zero
+  if ~isempty(ex.blocks(i).w) && sum(abs(ex.blocks(i).w)) ~= 0
+    feat = [feat; ex.blocks(i).w];
+    bls = [bls; i-1;];
   end
 end
 
-byte_size = fv_cache('add', int32(ex.key), numblocks, length(buf), single(buf)); 
+byte_size = fv_cache('add', int32(ex.key), int32(bls), single(feat)); 
 
 % still under the limit?
 status = (byte_size < ex.maxsize);

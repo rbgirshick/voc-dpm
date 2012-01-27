@@ -46,16 +46,8 @@ struct fv {
   int     feat_dim;
   bool    is_unique;
   double  score;
-
-  // Feature data format
-  // "f = A{n}" notation means "f is A repeated n times"
-  //
-  //  feat = DATA{num_blocks}
-  //
-  //  DATA =
-  //    block_label   float{1}
-  //    block_data    float{model.block_sizes[block_label]}
-  float *feat;
+  int     *block_labels;
+  float   *feat;
 
   // For future use in wl-ssvm
   //int     is_zero;
@@ -70,25 +62,29 @@ struct fv {
    **/
   fv() {
     fill(key, key+KEY_LEN, 0);
-    num_blocks  = 0;
-    feat_dim    = 0;
-    is_unique   = false;
-    score       = 0;
-    feat        = NULL;
+    num_blocks    = 0;
+    feat_dim      = 0;
+    is_unique     = false;
+    score         = 0;
+    feat          = NULL;
+    block_labels  = NULL;
   }
 
   /** -----------------------------------------------------------------
    ** Load data into a feature vector
    **/
-  void init(const int *_key, const int _num_blocks, 
-            const int _feat_dim, const float *_feat) {
-    is_unique   = true;
-    num_blocks  = _num_blocks;
-    feat_dim    = _feat_dim;
-    feat        = new (nothrow) float[_feat_dim];
+  void set(const int *_key, const int _num_blocks, const int *_bls,
+           const int _feat_dim, const float *_feat) {
+    is_unique     = true;
+    num_blocks    = _num_blocks;
+    feat_dim      = _feat_dim;
+    feat          = new (nothrow) float[_feat_dim];
+    block_labels  = new (nothrow) int[_num_blocks];
     check(feat != NULL);
-    copy(_feat, _feat+_feat_dim, feat);
+    check(block_labels != NULL);
     copy(_key, _key+KEY_LEN, key);
+    copy(_feat, _feat+_feat_dim, feat);
+    copy(_bls, _bls+_num_blocks, block_labels);
   }
 
   /** -----------------------------------------------------------------
@@ -101,8 +97,13 @@ struct fv {
     int freed = sizeof(float)*feat_dim;
     delete [] feat;
 
-    feat      = NULL;
-    feat_dim  = 0;
+    if (block_labels != NULL)
+      delete [] block_labels;
+
+    block_labels  = NULL;
+    feat          = NULL;
+    feat_dim      = 0;
+    num_blocks    = 0;
     return freed;
   }
 
@@ -169,13 +170,6 @@ struct fv {
       return true;
     else
       return false;
-  }
-
-  /** -----------------------------------------------------------------
-   ** Get block label (converted to 0-based index)
-   **/
-  static inline int get_block_label(const float *feat) {
-    return (int)feat[0] - 1;
   }
 };
 

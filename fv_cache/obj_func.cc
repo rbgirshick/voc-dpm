@@ -46,13 +46,14 @@ static inline void update(const fv &f, model &M, double rate_x_dir) {
 //  if (f.is_zero)
 //    return;
 
-  double **w = M.w;
+  double **w        = M.w;
   const float *feat = f.feat;
-  int blocks = f.num_blocks;
-  for (int j = 0; j < blocks; j++) {
-    int b = fv::get_block_label(feat);
-    feat++;
-    double *wb = w[b];
+  int nbls          = f.num_blocks;
+  const int *bls    = f.block_labels;
+
+  for (int j = 0; j < nbls; j++) {
+    int b       = bls[j];
+    double *wb  = w[b];
     double mult = rate_x_dir * M.learn_mult[b];
     for (int k = 0; k < M.block_sizes[b]; k++)
       wb[k] += mult * feat[k];
@@ -398,13 +399,14 @@ void gradient(double *obj_val_out, double *grad, ex_cache &E, model &M) {
       obj_val += hinge_loss;
 
       if (compute_grad && label*V < 1) {
-        double mult = -1.0 * label * M.C * (label == 1 ? M.J : 1);
+        double mult       = -1.0 * label * M.C * (label == 1 ? M.J : 1);
         const float *feat = I->feat;
-        int blocks = I->num_blocks;
-        for (int j = 0; j < blocks; j++) {
-          int b = fv::get_block_label(feat);
-          feat++;
-          double *ptr_grad = grad_blocks[b];
+        int nbls          = I->num_blocks;
+        const int *bls    = I->block_labels;
+
+        for (int j = 0; j < nbls; j++) {
+          int b             = bls[j];
+          double *ptr_grad  = grad_blocks[b];
           for (int k = 0; k < M.block_sizes[b]; k++)
             *(ptr_grad++) += mult * feat[k];
           feat += M.block_sizes[b];

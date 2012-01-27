@@ -129,14 +129,15 @@ struct model {
 //    if (f.is_zero)
 //      return 0;
 
-    double val = 0.0;
+    double val        = 0.0;
     const float *feat = f.feat;
-    int blocks = f.num_blocks;
-    for (int j = 0; j < blocks; j++) {
-      int b = fv::get_block_label(feat);
-      feat++;
-      double *wb = w[b];
-      double block_val = 0;
+    int nbls          = f.num_blocks;
+    const int *bls    = f.block_labels;
+
+    for (int j = 0; j < nbls; j++) {
+      int b             = bls[j];
+      double *wb        = w[b];
+      double block_val  = 0;
       for (int k = 0; k < block_sizes[b]; k++)
         block_val += wb[k] * feat[k];
       feat += block_sizes[b];
