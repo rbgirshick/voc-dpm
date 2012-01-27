@@ -17,7 +17,8 @@ try
     mex -g CXXFLAGS="\$CXXFLAGS -Wall" ...
            fv_cache.cc obj_func.cc
   end
-catch
+catch e
+  warning(e.identifier, 'call fv_cache(''unlock'') first');
 end
 
 cd('..');
