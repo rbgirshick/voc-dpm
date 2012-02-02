@@ -1,4 +1,4 @@
-function [boxes, count] = gdetectwrite(pyra, model, boxes, info, label, ...
+function [boxes, count] = gdetectwrite(pyra, model, boxes, trees, label, ...
                                        id, maxsize, maxnum)
 
 % Write detections from gdetect to the feature vector cache.
@@ -6,7 +6,7 @@ function [boxes, count] = gdetectwrite(pyra, model, boxes, info, label, ...
 % pyra     feature pyramid
 % model    object model
 % boxes    detection boxes
-% info     detection info from gdetect.m
+% trees    detection parse trees from gdetect.m
 % label    +1 / -1 binary class label
 % id       id for use in long label (e.g., image number the detection is from)
 % maxsize  max cache size in bytes
@@ -22,72 +22,71 @@ end
 
 if size(boxes,1) > maxnum
   boxes(maxnum+1:end, :) = [];
-  info(:, :, maxnum+1:end) = [];
+  trees(maxnum+1:end) = [];
 end
 
 count = 0;
 if ~isempty(boxes)
-  count = writefeatures(pyra, model, info, label, id, maxsize);
+  count = writefeatures(pyra, model, trees, label, id, maxsize);
   % truncate boxes
   boxes(count+1:end,:) = [];
 end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% writes feature vectors for the detections in info
-function count = writefeatures(pyra, model, info, label, id, maxsize)
+% writes feature vectors for the detections in trees
+function count = writefeatures(pyra, model, trees, label, id, maxsize)
 % pyra     feature pyramid
 % model    object model
-% info     detection info from gdetect.m
+% trees    detection parse trees from gdetect.m
 % label    +1 / -1 binary class label
 % id       id for use in long label (e.g., image number the detection is from)
 % maxsize  max cache size in bytes
 
-% indexes into info from getdetections.cc
-DET_USE = 1;    % current symbol is used
-DET_IND = 2;    % rule index
-DET_X   = 3;    % x coord (filter and deformation)
-DET_Y   = 4;    % y coord (filter and deformation)
-DET_L   = 5;    % level (filter)
-DET_DS  = 6;    % # of 2x scalings relative to the start symbol location
-DET_PX  = 7;    % x coord of "probe" (deformation)
-DET_PY  = 8;    % y coord of "probe" (deformation)
-DET_VAL = 9;    % score of current symbol
-DET_SZ  = 10;   % <count number of constants above>
+% indexes into info from get_detection_trees.cc
+N_PARENT      = 1;
+N_IS_LEAF     = 2;
+N_SYMBOL      = 3;
+N_RULE_INDEX  = 4;
+N_RHS_INDEX   = 5;
+N_X           = 6;
+N_Y           = 7;
+N_L           = 8;
+N_DS          = 9;
+N_DX          = 10;
+N_DY          = 11;
+N_SCORE       = 12;
+N_SZ          = 13;
 
 count = 0;
-for i = 1:size(info,3)
-  r = info(DET_IND, model.start, i);
-  x = info(DET_X, model.start, i);
-  y = info(DET_Y, model.start, i);
-  l = info(DET_L, model.start, i);
+for d = 1:length(trees)
+  r = trees{d}(N_RULE_INDEX, 1);
+  x = trees{d}(N_X, 1);
+  y = trees{d}(N_Y, 1);
+  l = trees{d}(N_L, 1);
   ex = [];
   ex.maxsize = maxsize;
   ex.key = [label; id; l; x; y];
   ex.blocks(model.numblocks).w = [];
 
-  for j = 1:model.numsymbols
-    % skip unused symbols
-    if info(DET_USE, j, i) == 0
-      continue;
-    end
-
-    if model.symbols(j).type == 'T'
-      ex = addfilterfeat(model, ex,               ...
-                         info(DET_X, j, i),       ...
-                         info(DET_Y, j, i),       ...
-                         pyra.padx, pyra.pady,    ...
-                         info(DET_DS, j, i),      ...
-                         model.symbols(j).filter, ...
-                         pyra.feat{info(DET_L, j, i)});
+  for j = 1:size(trees{d}, 2)
+    sym = trees{d}(N_SYMBOL, j);
+    if model.symbols(sym).type == 'T'
+      ex = addfilterfeat(model, ex,                 ...
+                         trees{d}(N_X, j),          ...
+                         trees{d}(N_Y, j),          ...
+                         pyra.padx, pyra.pady,      ...
+                         trees{d}(N_DS, j),         ...
+                         model.symbols(sym).filter, ...
+                         pyra.feat{trees{d}(N_L, j)});
     else
-      ruleind = info(DET_IND, j, i);
-      if model.rules{j}(ruleind).type == 'D'
-        bl = model.rules{j}(ruleind).def.blocklabel;
-        dx = info(DET_PX, j, i) - info(DET_X, j, i);
-        dy = info(DET_PY, j, i) - info(DET_Y, j, i);
+      ruleind = trees{d}(N_RULE_INDEX, j);
+      if model.rules{sym}(ruleind).type == 'D'
+        bl = model.rules{sym}(ruleind).def.blocklabel;
+        dx = trees{d}(N_DX, j);
+        dy = trees{d}(N_DY, j);
         def = [-(dx^2); -dx; -(dy^2); -dy];
-        if model.rules{j}.def.flip
+        if model.rules{sym}(ruleind).def.flip
           def(2) = -def(2);
         end
         if isempty(ex.blocks(bl).w)
@@ -96,7 +95,7 @@ for i = 1:size(info,3)
           ex.blocks(bl).w = ex.blocks(bl).w + def;
         end
       end
-      bl = model.rules{j}(ruleind).offset.blocklabel;
+      bl = model.rules{sym}(ruleind).offset.blocklabel;
       ex.blocks(bl).w = 1;
     end
   end

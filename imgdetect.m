@@ -1,4 +1,4 @@
-function [dets, boxes, info] = imgdetect(input, model, thresh, bbox, overlap)
+function [dets, boxes, trees] = imgdetect(input, model, thresh, bbox, overlap)
 
 % Wrapper that computes detections in the input image.
 %
@@ -22,4 +22,4 @@ if nargin < 5
   overlap = 0;
 end
 
-[dets, boxes, info] = gdetect(pyra, model, thresh, bbox, overlap);
+[dets, boxes, trees] = gdetect(pyra, model, thresh, bbox, overlap);

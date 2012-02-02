@@ -424,11 +424,14 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
   // prhs[5]    componentblocks as cell array of vectors
   // prhs[6]    C
   // prhs[7]    J
+  // prhs[8]    any value => quiet mode
 
   model &M = gctx.M;
   
   // Free memory is a model already exists
   M.free();
+
+  bool quiet = (nrhs >= 9);
 
   const mxArray *mx_w = prhs[1];
   const mxArray *mx_lb = prhs[2];
@@ -465,9 +468,11 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
   copy(reg_mult, reg_mult+M.num_blocks, M.reg_mult);
   copy(learn_mult, learn_mult+M.num_blocks, M.learn_mult);
 
-  printf("block size, regularization multiplier, learning rate multiplier\n");
-  for (int i = 0; i < M.num_blocks; i++)
-    printf("%6d, %6.4f, %6.4f\n", M.block_sizes[i], M.reg_mult[i], M.learn_mult[i]);
+  if (!quiet) {
+    printf("block size, regularization multiplier, learning rate multiplier\n");
+    for (int i = 0; i < M.num_blocks; i++)
+      printf("%6d, %6.4f, %6.4f\n", M.block_sizes[i], M.reg_mult[i], M.learn_mult[i]);
+  }
 
   const mxArray *mx_comps = prhs[5];
   M.num_components = mxGetDimensions(mx_comps)[0];
@@ -487,11 +492,13 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
     M.component_blocks[i] = new (nothrow) int[M.component_sizes[i]];
     check(M.component_blocks[i] != NULL);
     copy(comp, comp+M.component_sizes[i], M.component_blocks[i]);
-    // Display some useful information
-    mexPrintf("Component %d has %d blocks\n  ", i, M.component_sizes[i]);
-    for (int j = 0; j < M.component_sizes[i]; j++)
-      mexPrintf("%d ", M.component_blocks[i][j]);
-    mexPrintf("\n");
+    if (!quiet) {
+      // Display some useful information
+      mexPrintf("Component %d has %d blocks\n  ", i, M.component_sizes[i]);
+      for (int j = 0; j < M.component_sizes[i]; j++)
+        mexPrintf("%d ", M.component_blocks[i][j]);
+      mexPrintf("\n");
+    }
   }
 
   M.C = mxGetScalar(prhs[6]);

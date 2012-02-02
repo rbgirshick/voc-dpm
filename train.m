@@ -59,7 +59,7 @@ if ~cont
 end
 
 [blocks, lb, rm, lm, cmps] = fv_model_args(model);
-fv_cache('set_model', blocks, lb, rm, lm, cmps, C, J);
+fv_cache('set_model', blocks, lb, rm, lm, cmps, C, J, true);
 
 datamine = true;
 pos_loss = zeros(iter,2);
@@ -325,10 +325,10 @@ for i = 1:batchsize:numpos
     im = color(imreadx(pos(j)));
     [im, bbox] = croppos(im, bbox);
     pyra = featpyramid(im, model);
-    [det, bs, info] = gdetect(pyra, model, 0, bbox, overlap);
+    [det, bs, trees] = gdetect(pyra, model, 0, bbox, overlap);
     data{k}.bs = bs;
     data{k}.pyra = pyra;
-    data{k}.info = info;
+    data{k}.trees = trees;
     if ~isempty(bs)
       fprintf(' (comp %d  score %.3f)\n', bs(1,end-1), bs(1,end));
     else
@@ -341,7 +341,7 @@ for i = 1:batchsize:numpos
       continue;
     end
     j = i+k-1;
-    bs = gdetectwrite(data{k}.pyra, model, data{k}.bs, data{k}.info, 1, j);
+    bs = gdetectwrite(data{k}.pyra, model, data{k}.bs, data{k}.trees, 1, j);
     if ~isempty(bs)
       fusage = fusage + getfusage(bs);
       num = num+1;
@@ -371,15 +371,15 @@ for i = 1:batchsize:numneg
     fprintf('%s %s: iter %d/%d: hard negatives: %d/%d (%d)\n', procid(), name, t, negiter, i+k-1, numneg, j);
     im = color(imreadx(neg(j)));
     pyra = featpyramid(im, model);
-    [dets, bs, info] = gdetect(pyra, model, -1.002);
+    [dets, bs, trees] = gdetect(pyra, model, -1.002);
     data{k}.bs = bs;
     data{k}.pyra = pyra;
-    data{k}.info = info;
+    data{k}.trees = trees;
   end
   % write feature vectors sequentially 
   for k = 1:thisbatchsize
     j = inds(i+k-1);
-    bs = gdetectwrite(data{k}.pyra, model, data{k}.bs, data{k}.info, ...
+    bs = gdetectwrite(data{k}.pyra, model, data{k}.bs, data{k}.trees, ...
                       -1, j, maxsize, maxnum-num);
     if ~isempty(bs)
       fusage = fusage + getfusage(bs);
