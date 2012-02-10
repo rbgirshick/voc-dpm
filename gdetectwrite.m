@@ -12,11 +12,11 @@ function [boxes, count] = gdetectwrite(pyra, model, boxes, trees, label, ...
 % maxsize  max cache size in bytes
 % maxnum   max number of feature vectors to write
 
-if nargin < 8
+if nargin < 7
   maxsize = inf;
 end
 
-if nargin < 9
+if nargin < 8
   maxnum = inf;
 end
 

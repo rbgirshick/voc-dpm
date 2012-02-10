@@ -283,6 +283,57 @@ static void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *p
  ** Return the gradient on the cache at a specific point in parameter
  ** space.
  **/
+static void gradientOMP_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  // matlab inputs
+  //  prhs[1]   current model parameters
+  //  prhs[2]   number of threads
+
+  // Check preconditions
+  check(gctx.cache_is_built);
+  check(gctx.model_is_set);
+  checkM(nrhs == 3, "Expected three arguments");
+
+  bool compute_grad = (nlhs > 1);
+  
+  model &M          = gctx.M;
+  double **w        = M.w;
+  mxArray *mx_grad  = NULL;
+  double *grad      = NULL;
+  double obj_val    = 0.0;
+
+  const mxArray *mx_cur_w = prhs[1];
+  const double *cur_w     = (const double *)mxGetPr(mx_cur_w);
+  const int num_threads   = (int)mxGetScalar(prhs[2]);
+
+  // Update the model with the current parameters
+  int dim = 0;
+  for (int i = 0; i < M.num_blocks; i++) {
+    int s = M.block_sizes[i];
+    copy(cur_w, cur_w+s, w[i]);
+    cur_w += s;
+    dim += s;
+  }
+
+  if (compute_grad) {
+    mx_grad = mxCreateNumericArray(1, &dim, mxDOUBLE_CLASS, mxREAL);
+    grad = mxGetPr(mx_grad);
+  }
+
+  gradientOMP(&obj_val, grad, dim, gctx.E, M, num_threads);
+  
+  if (nlhs > 0)
+    plhs[0] = mxCreateDoubleScalar(obj_val);
+  
+  if (compute_grad)
+    plhs[1] = mx_grad;
+}
+
+
+
+/** -----------------------------------------------------------------
+ ** Return the gradient on the cache at a specific point in parameter
+ ** space.
+ **/
 static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // matlab inputs
   //  prhs[1]   current model parameters
@@ -584,30 +635,31 @@ void sigproc_ctrl_c(int sig) {
  **/
 static handler_registry handlers[] = {
   // Feature vector cache management
-  { "init",       &init_handler       },
-  { "add",        &add_handler        },
-  { "free",       &free_handler       },
-  { "print",      &print_handler      },
-  { "shrink",     &shrink_handler     },
-  { "info",       &info_handler       },
-  { "byte_size",  &byte_size_handler  },
+  { "init",         init_handler       },
+  { "add",          add_handler        },
+  { "free",         free_handler       },
+  { "print",        print_handler      },
+  { "shrink",       shrink_handler     },
+  { "info",         info_handler       },
+  { "byte_size",    byte_size_handler  },
 
   // Example cache management
-  { "ex_prepare", &ex_prepare_handler },
-  { "ex_free",    &ex_free_handler    },
+  { "ex_prepare",   ex_prepare_handler },
+  { "ex_free",      ex_free_handler    },
 
   // Objective function / optimization 
-  { "obj_val",    &obj_val_handler    },
-  { "gradient",   &gradient_handler   },
-  { "sgd",        &sgd_handler        },
-  { "set_model",  &set_model_handler  },
-  { "get_model",  &get_model_handler  },
+  { "obj_val",      obj_val_handler    },
+  { "gradient",     gradient_handler   },
+  { "gradientOMP",  gradientOMP_handler},
+  { "sgd",          sgd_handler        },
+  { "set_model",    set_model_handler  },
+  { "get_model",    get_model_handler  },
 
   // Misc mex-related commands
-  { "unlock",     &unlock_handler     },
+  { "unlock",       unlock_handler     },
 
   // The end.
-  { "END",        NULL                },
+  { "END",          NULL                },
 };
 
 

@@ -304,6 +304,7 @@ pixels = model.minsize * model.sbin;
 minsize = prod(pixels);
 fusage = zeros(model.numfilters, 1);
 num = 0;
+scores = [];
 batchsize = max(1, try_get_matlabpool_size());
 % collect positive examples in parallel batches
 for i = 1:batchsize:numpos

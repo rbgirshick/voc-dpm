@@ -2,6 +2,7 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
+#include <omp.h>
 
 using namespace std;
 
@@ -415,6 +416,148 @@ void gradient(double *obj_val_out, double *grad, ex_cache &E, model &M) {
     }
   }
   
-  delete [] grad_blocks;
+  if (compute_grad)
+    delete [] grad_blocks;
+
+  *obj_val_out = obj_val;
+}
+
+
+void gradientOMP(double *obj_val_out, double *grad, int dim, const ex_cache &E, 
+                 const model &M, int num_threads) {
+  num_threads = max(1, num_threads);
+  omp_set_num_threads(num_threads);
+
+  double **w = M.w;
+  bool compute_grad = (grad != NULL);
+
+  // Gradient per thread
+  double **grad_threads = NULL;
+  // Pointer to the start of each block in each per-thread gradient
+  double ***grad_blocks = NULL;
+  double *obj_vals = new (nothrow) double[num_threads];
+  check(obj_vals != NULL);
+  fill(obj_vals, obj_vals+num_threads, 0);
+
+  if (compute_grad) {
+    grad_threads = new (nothrow) double*[num_threads];
+    grad_blocks  = new (nothrow) double**[num_threads];
+    check(grad_threads != NULL);
+    check(grad_blocks != NULL);
+
+    for (int t = 0; t < num_threads; t++) {
+      grad_threads[t] = new (nothrow) double[dim];
+      grad_blocks[t]  = new (nothrow) double*[M.num_blocks];
+      check(grad_threads[t] != NULL);
+      check(grad_blocks[t] != NULL);
+      fill(grad_threads[t], grad_threads[t]+dim, 0);
+      int off = 0;
+      for (int i = 0; i < M.num_blocks; i++) {
+        grad_blocks[t][i] = grad_threads[t] + off;
+        off += M.block_sizes[i];
+      }
+    }
+  }
+
+  double obj_val = -INFINITY;
+
+  { // Loss and gradient of the regularization term
+    int maxc = -1;
+    for (int c = 0; c < M.num_components; c++) {
+      double val = 0;
+      for (int i = 0; i < M.component_sizes[c]; i++) {
+        int b = M.component_blocks[c][i];
+        double reg_mult = M.reg_mult[b];
+        double *wb = w[b];
+        double block_val = 0;
+        for (int k = 0; k < M.block_sizes[b]; k++)
+          block_val += wb[k] * wb[k] * reg_mult;
+        val += block_val;
+      }
+      if (val > obj_val) {
+        obj_val = val;
+        maxc = c;
+      }
+    }
+    obj_val *= 0.5;
+
+    if (compute_grad) {
+      for (int i = 0; i < M.component_sizes[maxc]; i++) {
+        int b = M.component_blocks[maxc][i];
+        double reg_mult = M.reg_mult[b];
+        double *wb = w[b];
+        double *ptr_grad = grad_blocks[0][b];
+        for (int k = 0; k < M.block_sizes[b]; k++)
+          *(ptr_grad++) = wb[k] * reg_mult;
+      }
+    }
+  }
+
+  //int CHUNK_SIZE = ceil(E.size()/(100.0*num_threads));
+  //mexPrintf("Chunk size: %d\n", CHUNK_SIZE);
+  int CHUNK_SIZE = 100;
+
+  { // Loss and gradient of each example
+    int th_id;
+    int num_examples = E.size();
+    #pragma omp parallel for schedule(dynamic, CHUNK_SIZE) \
+                             private(th_id) \
+                             shared(grad_blocks)
+                             //num_threads(num_threads)
+    for (int q = 0; q < num_examples; q++) {
+      th_id = omp_get_thread_num();
+      ex i = E[q];
+
+      int label = i.begin->key[fv::KEY_LABEL];
+
+      double V = -INFINITY;
+      fv_iter I = i.begin;
+      for (fv_iter m = i.begin; m != i.end; ++m) {
+        double score = M.score_fv(*m);
+        if (score > V) {
+          V = score;
+          I = m;
+        }
+      }
+      double mult = M.C * (label == 1 ? M.J : 1);
+      double hinge_loss = mult * max(0.0, 1.0 - label*V);
+      obj_vals[th_id] += hinge_loss;
+
+      if (compute_grad && label*V < 1) {
+        double mult       = -1.0 * label * M.C * (label == 1 ? M.J : 1);
+        const float *feat = I->feat;
+        int nbls          = I->num_blocks;
+        const int *bls    = I->block_labels;
+
+        for (int j = 0; j < nbls; j++) {
+          int b             = bls[j];
+          double *ptr_grad  = grad_blocks[th_id][b];
+          for (int k = 0; k < M.block_sizes[b]; k++)
+            *(ptr_grad++) += mult * feat[k];
+          feat += M.block_sizes[b];
+        }
+      }
+    }
+  }
+
+  for (int t = 0; t < num_threads; t++) {
+    obj_val += obj_vals[t];
+    if (compute_grad) {
+      double *ptr_grad = grad_threads[t];
+      for (int i = 0; i < dim; i++)
+        grad[i] += ptr_grad[i];
+    }
+  }
+  
+  if (compute_grad) {
+    for (int t = 0; t < num_threads; t++) {
+      delete [] grad_threads[t];
+      delete [] grad_blocks[t];
+    }
+    delete [] grad_threads;
+    delete [] grad_blocks;
+  }
+  delete [] obj_vals;
+
   *obj_val_out = obj_val;
 }
