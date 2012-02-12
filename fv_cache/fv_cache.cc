@@ -4,6 +4,7 @@
 #include "obj_func.h"
 #include <cmath>
 #include <csignal>
+#include <iostream>
 
 using namespace std;
 
@@ -136,12 +137,17 @@ static void build_ex_cache() {
   { // Construct example cache index
     mexPrintf("Building example cache...");
     ex e;
+    e.margin_bound = -1;
     e.begin = F.begin();
+    e.max_norm = e.begin->norm;
     for (fv_iter i = e.begin+1; i != F.end(); ++i) {
       if (fv::key_cmp(*(e.begin), *i) != 0) {
         e.end = i;
         E.push_back(e);
         e.begin = i;
+        e.max_norm = i->norm;
+      } else {
+        e.max_norm = max(e.max_norm, i->norm);
       }
     }
     e.end = F.end();
@@ -307,19 +313,26 @@ static void gradientOMP_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArr
 
   // Update the model with the current parameters
   int dim = 0;
+  double delta_norm = 0;
   for (int i = 0; i < M.num_blocks; i++) {
     int s = M.block_sizes[i];
-    copy(cur_w, cur_w+s, w[i]);
+    double *wi = w[i];
+    for (int j = 0; j < s; j++) {
+      double d = cur_w[j] - wi[j];
+      delta_norm += d * d;
+    }
+    copy(cur_w, cur_w+s, wi);
     cur_w += s;
     dim += s;
   }
+  delta_norm = sqrt(delta_norm);
 
   if (compute_grad) {
     mx_grad = mxCreateNumericArray(1, &dim, mxDOUBLE_CLASS, mxREAL);
     grad = mxGetPr(mx_grad);
   }
 
-  gradientOMP(&obj_val, grad, dim, gctx.E, M, num_threads);
+  gradientOMP(&obj_val, grad, dim, delta_norm, gctx.E, M, num_threads);
   
   if (nlhs > 0)
     plhs[0] = mxCreateDoubleScalar(obj_val);
@@ -613,6 +626,51 @@ static void unlock_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *p
 
 
 /** -----------------------------------------------------------------
+ ** 
+ ** 
+ **/
+static void save_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  char *filename = mxArrayToString(prhs[1]);
+  ofstream out(filename, ios::binary | ios::trunc);
+
+  int size = gctx.F.size();
+  out.write((char *)&size, sizeof(int));
+  out.write((char *)&(gctx.byte_size), sizeof(long long));
+
+  for (fv_iter i = gctx.F.begin(), i_end = gctx.F.end(); i != i_end; ++i)
+    i->write(out);
+
+  out.close();
+  mxFree(filename);
+}
+
+
+/** -----------------------------------------------------------------
+ ** 
+ ** 
+ **/
+static void load_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  char *filename = mxArrayToString(prhs[1]);
+  ifstream in(filename, ios::binary);
+
+  int size;
+  in.read((char *)&size, sizeof(int));
+  in.read((char *)&(gctx.byte_size), sizeof(long long));
+
+  //cout << "R byte size: " << gctx.byte_size << endl;
+
+  for (int i = 0; i < size; i++) {
+    fv f;
+    f.read(in);
+    gctx.F.push_back(f);
+  }
+
+  in.close();
+  mxFree(filename);
+}
+
+
+/** -----------------------------------------------------------------
  ** mexAtExit callback
  **/
 static void cleanup() {
@@ -657,9 +715,11 @@ static handler_registry handlers[] = {
 
   // Misc mex-related commands
   { "unlock",       unlock_handler     },
+  { "save",         save_handler       },
+  { "load",         load_handler       },
 
   // The end.
-  { "END",          NULL                },
+  { "END",          NULL               },
 };
 
 

@@ -161,7 +161,7 @@ function model = apply_structural_rule(model, r, pady, padx)
 % prepare score for this rule
 score = model.scoretpt;
 for i = 1:length(score)
-  score{i}(:) = r.offset.w;
+  score{i}(:) = r.offset.w*20;
 end
 
 % sum scores from rhs (with appropriate shift and down sample)
@@ -219,7 +219,7 @@ score = model.symbols(r.rhs(1)).score;
 for i = 1:length(score)
   % Note: dt has been changed so that we no longer have to pass in -score{i}
   [score{i}, Ix{i}, Iy{i}] = dt(score{i}, def(1), def(2), def(3), def(4));
-  score{i} = score{i} + r.offset.w;
+  score{i} = score{i} + r.offset.w*20;
 end
 model.rules{r.lhs}(r.i).score = score;
 model.rules{r.lhs}(r.i).Ix = Ix;

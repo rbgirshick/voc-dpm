@@ -4,9 +4,12 @@
 #include "mex.h"
 #include <string>
 #include <sstream>
+#include <fstream>
 #include <csignal>
 #include <vector>
 #include <algorithm>
+#include <numeric>
+#include <cmath>
 
 using namespace std;
 
@@ -48,6 +51,7 @@ struct fv {
   double  score;
   int     *block_labels;
   float   *feat;
+  double  norm;
 
   // For future use in wl-ssvm
   //int     is_zero;
@@ -68,6 +72,7 @@ struct fv {
     score         = 0;
     feat          = NULL;
     block_labels  = NULL;
+    norm          = 0;
   }
 
   /** -----------------------------------------------------------------
@@ -85,6 +90,7 @@ struct fv {
     copy(_key, _key+KEY_LEN, key);
     copy(_feat, _feat+_feat_dim, feat);
     copy(_bls, _bls+_num_blocks, block_labels);
+    norm = sqrt(inner_product(feat, feat+feat_dim, feat, 0.0));
   }
 
   /** -----------------------------------------------------------------
@@ -104,7 +110,45 @@ struct fv {
     feat          = NULL;
     feat_dim      = 0;
     num_blocks    = 0;
+    norm          = 0;
     return freed;
+  }
+
+  /** -----------------------------------------------------------------
+   ** 
+   ** 
+   **/
+  void write(ofstream& out) const {
+    out.write((char *)key,          sizeof(int)*KEY_LEN);
+    out.write((char *)&num_blocks,  sizeof(int));
+    out.write((char *)&feat_dim,    sizeof(int));
+    out.write((char *)&is_unique,   sizeof(bool));
+    out.write((char *)&score,       sizeof(double));
+    out.write((char *)block_labels, sizeof(int)*num_blocks);
+    out.write((char *)feat,         sizeof(float)*feat_dim);
+    out.write((char *)&norm,        sizeof(double));
+  }
+
+  /** -----------------------------------------------------------------
+   ** 
+   ** 
+   **/
+  void read(ifstream &in) {
+    in.read((char *)key,         sizeof(int)*KEY_LEN);
+    in.read((char *)&num_blocks, sizeof(int));
+    in.read((char *)&feat_dim,   sizeof(int));
+    in.read((char *)&is_unique,  sizeof(bool));
+    in.read((char *)&score,      sizeof(double));
+
+    block_labels = new (nothrow) int[num_blocks];
+    check(block_labels != NULL);
+    in.read((char *)block_labels, sizeof(int)*num_blocks);
+
+    feat = new (nothrow) float[feat_dim];
+    check(feat != NULL);
+    in.read((char *)feat, sizeof(float)*feat_dim);
+
+    in.read((char *)&norm, sizeof(double));
   }
 
   /** -----------------------------------------------------------------
@@ -183,6 +227,8 @@ typedef fv_cache::iterator fv_iter;
  **/
 struct ex {
   fv_iter begin, end;
+  double margin_bound;
+  double max_norm;
 };
 
 typedef vector<ex> ex_cache;

@@ -96,7 +96,7 @@ for d = 1:length(trees)
         end
       end
       bl = model.rules{sym}(ruleind).offset.blocklabel;
-      ex.blocks(bl).w = 1;
+      ex.blocks(bl).w = 20;
     end
   end
   status = exwrite(ex);

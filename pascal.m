@@ -25,7 +25,9 @@ diary([cachedir cls '.log']);
 if nargin < 3
   note = datestr(datevec(now()), 'HH-MM-SS');
 end
+th = tic;
 model = pascal_train(cls, n, note);
+toc(th);
 fv_cache('free');
 % lower threshold to get high recall
 model.thresh = min(-1.1, model.thresh);

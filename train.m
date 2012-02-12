@@ -39,7 +39,7 @@ end
 
 if nargin < 14
   % magic constant estimated from models that perform well in practice
-  C = 0.002;
+  C = 0.001;
 end
 
 if nargin < 15
@@ -49,9 +49,10 @@ end
 maxnum = max(length(pos)*10, maxnum+length(pos));
 % 3GB file limit
 bytelimit = 1.5*2^31;
+% optimize with LBFGS by default
+lbfgs = true;
 
 globals;
-
 negpos = 0;     % last position in data mining
 
 if ~cont
@@ -181,17 +182,42 @@ for t = 1:iter
     logtag = [name '_' phase '_' num2str(t) '_' num2str(tneg)];
     [blocks, lb, rm, lm, cmps] = fv_model_args(model);
     fv_cache('set_model', blocks, lb, rm, lm, cmps, C, J);
-    % optimize with SGD
-    [nl, pl, rt, status] = fv_cache('sgd', cachedir, logtag);
-    if status ~= 0
-      fprintf('parameter learning interrupted\n');
-      keyboard;
+
+    if lbfgs
+      % optimize with LBFGS
+      options.verbose = 2;
+      options.maxIter = 1000;
+      %options.optTol = 0.000001*0.1;
+
+      w = cat(1, blocks{:});
+      lb = cat(1, lb{:});
+      ub = inf*ones(size(lb));
+      obj_func = @(w) fv_obj_func(w, 2*pool_size);
+
+      fv_cache('ex_prepare');
+      th = tic;
+      w = minConf_TMP(obj_func, w, lb, ub, options);
+      toc(th);
+      [nl, pl, rt] = fv_cache('obj_val');
+      fv_cache('ex_free');
+
+      base = 1;
+      for i = 1:model.numblocks
+        blocks{i} = w(base:base+model.blocksizes(i)-1);
+        base = base + model.blocksizes(i);
+      end
+    else
+      % optimize with SGD
+      [nl, pl, rt, status] = fv_cache('sgd', cachedir, logtag);
+      if status ~= 0
+        fprintf('parameter learning interrupted\n');
+        keyboard;
+      end
+      blocks = fv_cache('get_model');
     end
 
     fprintf('parsing model\n');
-    blocks = fv_cache('get_model');
     model = parsemodel(model, blocks);
-
     cache(tneg,:) = [nl pl rt nl+pl+rt];
     for tt = 1:tneg
       fprintf('cache objective, neg: %f, pos: %f, reg: %f, total: %f\n', ...
@@ -288,7 +314,7 @@ for i = 1:numpos
   feat = features(im, model.sbin);
   key = [1 i 0 0 0];
   bls = [obl; fbl] - 1;
-  feat = [1; feat(:)];
+  feat = [20; feat(:)];
   fv_cache('add', int32(key), int32(bls), single(feat)); 
   num = num+1;
 end
@@ -422,7 +448,7 @@ for i = 1:numneg
       f = feat(y:y+rsize(1)-1, x:x+rsize(2)-1,:);
       key = [-1 (i-1)*rndneg+j 0 0 0];
       bls = [obl; fbl] - 1;
-      f = [1; f(:)];
+      f = [20; f(:)];
       fv_cache('add', int32(key), int32(bls), single(f)); 
     end
     num = num+rndneg;
