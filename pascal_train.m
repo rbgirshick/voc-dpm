@@ -3,7 +3,7 @@ function model = pascal_train(cls, n, note)
 % model = pascal_train(cls, n, note)
 % Train a model with 2*n components using the PASCAL dataset.
 % note allows you to save a note with the trained model
-% example: note = 'testing FRHOG (FRobnicated HOG)
+% example: note = 'testing FRHOG (FRobnicated HOG)'
 
 % At every "checkpoint" in the training process we reset the 
 % RNG's seed to a fixed value so that experimental results are 
@@ -15,7 +15,7 @@ if nargin < 3
 end
 
 globals; 
-[pos, neg] = pascal_data(cls, true, VOCyear);
+[pos, neg] = pascal_data(cls, VOCyear);
 % split data by aspect ratio into n groups
 spos = split(cls, pos, n);
 

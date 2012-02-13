@@ -34,4 +34,5 @@ offset = model.rules{model.start}.offset.w;
 bl = model.rules{model.start}.offset.blocklabel;
 model = model_addrule(model, 'S', model.start, N2, offset, {[0 0 0]}, 'N', bl);
 model = model_setdetwindow(model, model.start, 2, ...
-                           model.rules{model.start}(1).detwindow);
+                           model.rules{model.start}(1).detwindow, ...
+                           model.rules{model.start}(1).shiftwindow);

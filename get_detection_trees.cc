@@ -20,6 +20,7 @@ struct node {
   int dx;         // relative x displacement of RHS symbol in deformation rule
   int dy;         // relative y displacement of RHS symbol in deformation rule
   double score;   // score for symbol
+  double loss;    // loss associated with this detection
 
   // Symbolic names for fields in the matrix output to matlab
   enum {
@@ -35,6 +36,7 @@ struct node {
     N_DX,
     N_DY,
     N_SCORE,
+    N_LOSS,
     N_SZ
   };
 };
@@ -109,6 +111,7 @@ static void enqueue(node_list &q, int parent_id,
   n.dx         = 0;  // not known until later (or unused)
   n.dy         = 0;  // not known until later (or unused)
   n.score      = score;
+  n.loss       = 0;  // not known until later (or unused)
   q.push_back(n);
 }
 
@@ -119,7 +122,8 @@ static void enqueue(node_list &q, int parent_id,
 // backtrack to find the DP solution for a single detection
 static void backtrack(int det_index, int start_x, int start_y, int start_l, 
                       double start_score, mxArray *mx_trees, double *dets, 
-                      mwSize *dets_dim, double *boxes, mwSize *boxes_dim) {
+                      mwSize *dets_dim, double *boxes, mwSize *boxes_dim,
+                      bool get_loss) {
   // Queue for processing nodes in breadth-first order
   node_list q;
 
@@ -141,6 +145,7 @@ static void backtrack(int det_index, int start_x, int start_y, int start_l,
   n.dx         = 0; // <- set if def rule
   n.dy         = 0; // <- set if def rule
   n.score      = start_score;
+  n.loss       = 0; // <-- set if start symbol
   q.push_back(n);
 
   ctx.next_id = 1;
@@ -230,13 +235,16 @@ static void backtrack(int det_index, int start_x, int start_y, int start_l,
       // get detection window for start_symbol and rule r
       mxArray *mx_det_win = mxGetField(rules, r, "detwindow");
       double *det_win = mxGetPr(mx_det_win);
+      mxArray *mx_shift_win = mxGetField(rules, r, "shiftwindow");
+      double *shift_win = mxGetPr(mx_shift_win);
+
       
       // detection scale
       double scale = mxGetScalar(mxGetField(ctx.model, 0, "sbin"))/ctx.scales[n.l];
       
       // compute and record image coordinates of the detection window
-      double x1 = (n.x-ctx.padx*pow2(n.ds))*scale;
-      double y1 = (n.y-ctx.pady*pow2(n.ds))*scale;
+      double x1 = (n.x-shift_win[1]-ctx.padx*pow2(n.ds))*scale;
+      double y1 = (n.y-shift_win[0]-ctx.pady*pow2(n.ds))*scale;
       double x2 = x1 + det_win[1]*scale - 1;
       double y2 = y1 + det_win[0]*scale - 1;
 
@@ -249,6 +257,13 @@ static void backtrack(int det_index, int start_x, int start_y, int start_l,
       dets[dd0*5] = n.score;
       boxes[boxes_dim[0]*(boxes_dim[1]-2)] = r + 1;
       boxes[boxes_dim[0]*(boxes_dim[1]-1)] = n.score;
+
+      if (get_loss) {
+        const mxArray *mx_loss = mxGetCell(mxGetField(rules, r, "loss"), n.l);
+        const double *loss = mxGetPr(mx_loss);
+        const mwSize *sz = mxGetDimensions(mx_loss);
+        n.loss = loss[n.x*sz[0] + n.y];
+      }
     }
 
     type = mxGetChars(mxGetField(rules, r, "type"))[0];
@@ -329,8 +344,8 @@ static void backtrack(int det_index, int start_x, int start_y, int start_l,
 
 /** -----------------------------------------------------------------
  ** matlab entry point
- **                                            0      1     2     3       4  5  6  7
- ** [dets, boxes, trees] = get_detection_trees(model, padx, pady, scales, X, Y, L, S);
+ **                                            0      1     2     3       4  5  6  7  8
+ ** [dets, boxes, trees] = get_detection_trees(model, padx, pady, scales, X, Y, L, S, get_loss);
  **/
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) { 
   // dim[0] := number of detections to return
@@ -358,6 +373,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   const int *Y          = (int *)mxGetPr(prhs[5]);
   const int *L          = (int *)mxGetPr(prhs[6]);
   const double *S       = mxGetPr(prhs[7]);
+  const bool get_loss   = (bool)mxGetScalar(prhs[8]);
 
   // return empty arrays if there are no detections
   // Detection boxes
@@ -382,5 +398,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // Backtrack solution and write output into out
   for (int i = 0; i < dim[0]; i++)
     backtrack(i, X[i]-1, Y[i]-1, L[i]-1, S[i], 
-              mx_trees, dets++, dets_dim, boxes++, boxes_dim);
+              mx_trees, dets++, dets_dim, boxes++, 
+              boxes_dim, get_loss);
 }

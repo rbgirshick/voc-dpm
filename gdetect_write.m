@@ -1,5 +1,5 @@
-function [boxes, count] = gdetectwrite(pyra, model, boxes, trees, label, ...
-                                       id, maxsize, maxnum)
+function [boxes, count] = gdetect_write(pyra, model, boxes, trees, label, ...
+                                        id, maxsize, maxnum)
 
 % Write detections from gdetect to the feature vector cache.
 %
@@ -56,7 +56,8 @@ N_DS          = 9;
 N_DX          = 10;
 N_DY          = 11;
 N_SCORE       = 12;
-N_SZ          = 13;
+N_LOSS        = 13;
+N_SZ          = 14;
 
 count = 0;
 for d = 1:length(trees)
@@ -68,6 +69,7 @@ for d = 1:length(trees)
   ex.maxsize = maxsize;
   ex.key = [label; id; l; x; y];
   ex.blocks(model.numblocks).w = [];
+  ex.loss = trees{d}(N_LOSS, 1);
 
   for j = 1:size(trees{d}, 2)
     sym = trees{d}(N_SYMBOL, j);

@@ -4,6 +4,7 @@ mex -O CXXOPTIMFLAGS="-O3 -DNDEBUG" LDOPTIMFLAGS="-O3" CXXFLAGS="\$CXXFLAGS -Wal
 mex -O CXXOPTIMFLAGS="-O3 -DNDEBUG" LDOPTIMFLAGS="-O3" CXXFLAGS="\$CXXFLAGS -Wall" LDFLAGS="\$LDFLAGS -Wall" dt.cc
 mex -O CXXOPTIMFLAGS="-O3 -DNDEBUG" LDOPTIMFLAGS="-O3" CXXFLAGS="\$CXXFLAGS -Wall" LDFLAGS="\$LDFLAGS -Wall" features.cc
 mex -O CXXOPTIMFLAGS="-O3 -DNDEBUG" LDOPTIMFLAGS="-O3" CXXFLAGS="\$CXXFLAGS -Wall" LDFLAGS="\$LDFLAGS -Wall" get_detection_trees.cc
+mex -O CXXOPTIMFLAGS="-O3 -DNDEBUG" LDOPTIMFLAGS="-O3" CXXFLAGS="\$CXXFLAGS -Wall" LDFLAGS="\$LDFLAGS -Wall" gdetect/compute_overlap.cc -o gdetect/compute_overlap
 
 % use one of the following depending on your setup
 % 0 is fastest, 3 is slowest 

@@ -89,25 +89,26 @@ for t = 1:iter
 
     % add new positives
     if warp > 0
-      numadded = poswarp(name, t, model, warp, pos);
-      fusage = numadded;
+      num_examples_added = poswarp(name, t, model, warp, pos);
+      fusage = num_examples_added;
     else
-      [numadded, fusage, scores] = poslatent(name, t, iter, model, pos, overlap);
+      num_fp = 0;
+      [num_entries_added, num_examples_added, fusage, component_usage, losses] ...
+          = poslatent(name, t, iter, model, pos, overlap, num_fp);
     end
-    num = num + numadded;
+    num = num + num_examples_added;
 
     % save positive filter usage statistics
     model.fusage = fusage;
     fprintf('\nFilter usage stats:\n');
     for i = 1:model.numfilters
       fprintf('  filter %d got %d/%d (%.2f%%) positives\n', ...
-              i, fusage(i), numadded, 100*fusage(i)/numadded);
+              i, fusage(i), num_examples_added, 100*fusage(i)/num_examples_added);
     end
 
     % compute loss on positives after relabeling
     if warp == 0
-      hinge = max(0, 1-scores);
-      pos_loss(t,2) = J*C*sum(hinge);
+      pos_loss(t,2) = J*C*sum(losses);
       for tt = 1:t
         fprintf('positive loss before: %f, after: %f, ratio: %f\n', ...
                 pos_loss(tt,1), pos_loss(tt,2), pos_loss(tt,2)/pos_loss(tt,1));
@@ -322,57 +323,84 @@ end
 
 % get positive examples using latent detections
 % we create virtual examples by flipping each image left to right
-function [num, fusage, scores] ...
-  = poslatent(name, t, iter, model, pos, overlap)
+function [num_entries, num_examples, fusage, component_usage, losses] ...
+  = poslatent(name, t, iter, model, pos, overlap, num_fp)
 numpos = length(pos);
 model.interval = 5;
+%pixels = model.minsize * model.sbin/2;
 pixels = model.minsize * model.sbin;
 minsize = prod(pixels);
 fusage = zeros(model.numfilters, 1);
-num = 0;
-scores = [];
+component_usage = zeros(length(model.rules{model.start}), 1);
+losses = [];
+num_entries = 0;
+num_examples = 0;
 batchsize = max(1, try_get_matlabpool_size());
 % collect positive examples in parallel batches
 for i = 1:batchsize:numpos
   % do batches of detections in parallel
   thisbatchsize = batchsize - max(0, (i+batchsize-1) - numpos);
   % data for batch
-  data = {};
+  data(thisbatchsize).boxdata = [];
+  data(thisbatchsize).pyra = [];
   parfor k = 1:thisbatchsize
     j = i+k-1;
-    fprintf('%s %s: iter %d/%d: latent positive: %d/%d', procid(), name, t, iter, j, numpos);
-    bbox = [pos(j).x1 pos(j).y1 pos(j).x2 pos(j).y2];
+    msg = sprintf('%s %s: iter %d/%d: latent positive: %d/%d', ...
+                  procid(), name, t, iter, j, numpos);
     % skip small examples
-    if (bbox(3)-bbox(1)+1)*(bbox(4)-bbox(2)+1) < minsize
-      data{k} = [];
-      fprintf(' (too small)\n');
+    if max(pos(j).sizes) < minsize
+      data(k).boxdata = cell(length(pos(j).sizes), 1);
+      fprintf('%s (all too small)\n', msg);
       continue;
     end
-    % get example
+
+    % do whole image operations
     im = color(imreadx(pos(j)));
-    [im, bbox] = croppos(im, bbox);
-    pyra = featpyramid(im, model);
-    [det, bs, trees] = gdetect(pyra, model, 0, bbox, overlap);
-    data{k}.bs = bs;
-    data{k}.pyra = pyra;
-    data{k}.trees = trees;
-    if ~isempty(bs)
-      fprintf(' (comp %d  score %.3f)\n', bs(1,end-1), bs(1,end));
-    else
-      fprintf(' (no overlap)\n');
+    [im, boxes] = croppos(im, pos(j).boxes);
+    [data(k).pyra, model_dp] = gdetect_pos_prepare(im, model, boxes, overlap);
+
+    % process each box in the image
+    num_boxes = size(boxes, 1);
+    for b = 1:num_boxes
+      % skip small examples
+      if pos(j).sizes(b) < minsize
+        data(k).boxdata{b} = [];
+        fprintf('%s (%d: too small)\n', msg, b);
+        continue;
+      end
+      fg_box = b;
+      bg_boxes = 1:num_boxes;
+      bg_boxes(b) = [];
+      [det, bs, trees] = gdetect_pos(data(k).pyra, model_dp, 1+num_fp, ...
+                                     fg_box, overlap, bg_boxes, 0.5);
+      data(k).boxdata{b}.bs = bs;
+      data(k).boxdata{b}.trees = trees;
+      if ~isempty(bs)
+        fprintf('%s (%d: comp %d  score %.3f)\n', msg, b, bs(1,end-1), bs(1,end));
+      else
+        fprintf('%s (%d: no overlap)\n', msg, b);
+      end
     end
   end
   % write feature vectors sequentially 
   for k = 1:thisbatchsize
-    if isempty(data{k})
-      continue;
-    end
     j = i+k-1;
-    bs = gdetectwrite(data{k}.pyra, model, data{k}.bs, data{k}.trees, 1, j);
-    if ~isempty(bs)
-      fusage = fusage + getfusage(bs);
-      num = num+1;
-      scores(num) = bs(1,end);
+    % write feature vectors for each box
+    for b = 1:length(pos(j).dataids)
+      if isempty(data(k).boxdata{b})
+        continue;
+      end
+      dataid = pos(j).dataids(b);
+      bs = gdetect_write(data(k).pyra, model, data(k).boxdata{b}.bs, data(k).boxdata{b}.trees, 1, dataid);
+      if ~isempty(bs)
+        fusage = fusage + getfusage(bs(1,:));
+        component = bs(1,end-1);
+        component_usage(component) = component_usage(component) + 1;
+        num_entries = num_entries + size(bs, 1) + 1;
+        num_examples = num_examples + 1;
+        loss = max([1; bs(:,end)]) - bs(1,end);
+        losses = [losses; loss];
+      end
     end
   end
 end
@@ -406,7 +434,7 @@ for i = 1:batchsize:numneg
   % write feature vectors sequentially 
   for k = 1:thisbatchsize
     j = inds(i+k-1);
-    bs = gdetectwrite(data{k}.pyra, model, data{k}.bs, data{k}.trees, ...
+    bs = gdetect_write(data{k}.pyra, model, data{k}.bs, data{k}.trees, ...
                       -1, j, maxsize, maxnum-num);
     if ~isempty(bs)
       fusage = fusage + getfusage(bs);

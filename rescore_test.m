@@ -1,4 +1,4 @@
-function ap = rescore_test()
+function ap = rescore_test(cls, dataset)
 
 % Rescore detections on the test dataset using the context
 % rescoring SVMs trained by rescore_train.m.
@@ -6,7 +6,9 @@ function ap = rescore_test()
 globals;
 pascal_init;
 
-dataset = 'test';
+if nargin < 2
+  dataset = 'test';
+end
 [boxes, parts, X] = rescore_data(dataset);
 
 % classify the test data
@@ -16,18 +18,21 @@ numcls = length(VOCopts.classes);
 ap = zeros(numcls, 1);
 
 fprintf('Rescoring detections\n');
-for j = 1:numcls
+for j = strmatch(cls, VOCopts.classes)
+
   load([cachedir VOCopts.classes{j} '_rescore_classifier']);
-  fprintf('%d/%d\n', j, numcls);
   for i = 1:numids
     if ~isempty(X{j,i})
       [ignore, s] = svmclassify(X{j,i}, ones(size(X{j,i},1), 1), model);
       boxes{j}{i}(:,end) = s;
+      parts{j}{i}(:,end) = s;
     end
   end
-  ap(j) = pascal_eval(VOCopts.classes{j}, boxes{j}, dataset, VOCyear, ...
-                      ['rescore_' VOCyear]);
+  if ~strcmp(dataset, 'segextra')
+    ap = pascal_eval(VOCopts.classes{j}, boxes{j}, dataset, VOCyear, ...
+                     ['rescore_' VOCyear]);
+  end
 end
 
 save([cachedir 'rescore_boxes_' dataset '_' VOCyear], 'boxes', 'parts');
-fprintf('average = %f\n', sum(ap)/numcls);
+%fprintf('average = %f\n', sum(ap)/numcls);

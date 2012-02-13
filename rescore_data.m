@@ -28,12 +28,13 @@ try
 catch
   boxes = cell(numcls, 1);
   parts = cell(numcls, 1);
-  models = cell(numcls, 1);
+  %models = cell(numcls, 1);
   for i = 1:numcls
-    load([cachedir VOCopts.classes{i} '_final']);
-    models{i} = model;
+      %load([cachedir VOCopts.classes{i} '_final']);
+      %models{i} = model;
     load([cachedir VOCopts.classes{i} '_boxes_' dataset '_bboxpred_' VOCyear]);
     boxes{i} = boxes1;
+    parts{i} = parts1;
   end
   
   for j = 1:numcls
@@ -47,6 +48,7 @@ catch
         if ~isempty(boxes{j}{i})
           I = find(boxes{j}{i}(:,end) >= v);
           boxes{j}{i} = boxes{j}{i}(I,:);
+          parts{j}{i} = parts{j}{i}(I,:);
         end
       end
     end
@@ -58,9 +60,11 @@ catch
   for i = 1:numids
     for j = 1:numcls
       if isempty(boxes{j}{i})
-        maxes(j) = models{j}.thresh;
+        %maxes(j) = models{j}.thresh;
+        maxes(j) = -1.1;
       else
-        maxes(j) = max(models{j}.thresh, max(boxes{j}{i}(:,end)));
+        %maxes(j) = max(models{j}.thresh, max(boxes{j}{i}(:,end)));
+        maxes(j) = max(-1.1, max(boxes{j}{i}(:,end)));
       end
     end
     maxes = 1 ./ (1 + exp(-1.5*maxes));

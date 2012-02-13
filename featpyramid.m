@@ -15,7 +15,7 @@ end
 
 sbin = model.sbin;
 interval = model.interval;
-sc = 2 ^(1/interval);
+sc = 2^(1/interval);
 imsize = [size(im, 1) size(im, 2)];
 max_scale = 1 + floor(log(min(imsize)/(5*sbin))/log(sc));
 pyra.feat = cell(max_scale + interval, 1);
@@ -40,7 +40,9 @@ for i = 1:interval
   end
 end
 
-for i = 1:length(pyra.feat)
+pyra.num_levels = length(pyra.feat);
+
+for i = 1:pyra.num_levels
   % add 1 to padding because feature generation deletes a 1-cell
   % wide border around the feature map
   pyra.feat{i} = padarray(pyra.feat{i}, [pady+1 padx+1 0], 0);
@@ -50,5 +52,6 @@ for i = 1:length(pyra.feat)
   pyra.feat{i}(:, 1:padx+1, 32) = 1;
   pyra.feat{i}(:, end-padx:end, 32) = 1;
 end
+pyra.valid_levels = true(pyra.num_levels, 1);
 pyra.padx = padx;
 pyra.pady = pady;

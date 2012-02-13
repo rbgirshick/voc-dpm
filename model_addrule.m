@@ -45,7 +45,9 @@ m.rules{lhs}(i).type = type;
 m.rules{lhs}(i).lhs = lhs;
 m.rules{lhs}(i).rhs = rhs;
 m.rules{lhs}(i).detwindow = [0 0];
+m.rules{lhs}(i).shiftwindow = [0 0];
 m.rules{lhs}(i).i = i;
+m.rules{lhs}(i).is_low_res = false;
 if isempty(offsetbl)
   if type == 'S'
     [m, offsetbl] = model_addblock(m, 1, 0, 20);

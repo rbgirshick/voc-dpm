@@ -11,7 +11,7 @@ catch
   % load final model for class
   load([cachedir name '_final']);
   % get training data
-  [pos,neg] = pascal_data(model.class, true, model.year);
+  [pos,neg] = pascal_data(model.class, model.year);
 
   numpos = length(pos);
   model.interval = 5;
@@ -35,7 +35,10 @@ catch
     % get example
     im = imreadx(pos(i));
     [im, bbox] = croppos(im, bbox);
-    [det, boxes] = imgdetect(im, model, 0, bbox, 0.7);
+    [pyra, model_dp] = gdetect_pos_prepare(im, model, bbox, 0.7);
+    [det, boxes] = gdetect_pos(pyra, model_dp, 1, ...
+                               1, 0.7, [], 0.5);
+    %[det, boxes] = imgdetect(im, model, 0, bbox, 0.7);
     if ~isempty(det)
       % component index
       c = det(1,end-1);

@@ -1,4 +1,4 @@
-function m = model_setdetwindow(m, lhs, ruleind, win)
+function m = model_setdetwindow(m, lhs, ruleind, win, shift)
 % Set the detection window for a rule.
 %
 % m        object model
@@ -7,5 +7,6 @@ function m = model_setdetwindow(m, lhs, ruleind, win)
 % win      detection window [height width]
 
 m.rules{lhs}(ruleind).detwindow = win;
+m.rules{lhs}(ruleind).shiftwindow = shift;
 m.maxsize = max([win; m.maxsize]);
 m.minsize = min([win; m.minsize]);

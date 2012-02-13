@@ -1,4 +1,4 @@
-function rescore_train()
+function rescore_train(cls)
 
 % Train context rescoring SVMs.
 
@@ -10,8 +10,9 @@ dataset = 'trainval';
 
 % train classifiers
 numcls = length(VOCopts.classes);
-for i = 1:numcls
-  cls = VOCopts.classes{i};
+i = strmatch(cls, VOCopts.classes);
+%for i = 1:numcls
+%  cls = VOCopts.classes{i};
   fprintf('\nTraining rescoring classifier: %d/%d\n', i, numcls);
   try
     load([cachedir cls '_rescore_classifier']);
@@ -30,4 +31,4 @@ for i = 1:numcls
        '-t 1 -d 3 -r 1.0 -s 1.0 -j 2 -c 1.0 -e 0.001 -n 5 -m 500');    
     save([cachedir cls '_rescore_classifier'], 'model');
   end
-end
+%end

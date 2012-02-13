@@ -77,7 +77,7 @@ catch
           labels{i}(idx(d)) = -1;
         end
       else                     
-        labels{i}(idx(d)) = 0;   % difficult
+        labels{i}(idx(d)) = 1;   % difficult
       end
     else
       fp(d)=1;                   % false positive

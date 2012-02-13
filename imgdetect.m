@@ -1,4 +1,4 @@
-function [dets, boxes, trees] = imgdetect(input, model, thresh, bbox, overlap)
+function [dets, boxes, trees] = imgdetect(input, model, thresh)
 
 % Wrapper that computes detections in the input image.
 %
@@ -14,12 +14,4 @@ input = color(input);
 % get the feature pyramid
 pyra = featpyramid(input, model);
 
-if nargin < 4
-  bbox = [];
-end
-
-if nargin < 5
-  overlap = 0;
-end
-
-[dets, boxes, trees] = gdetect(pyra, model, thresh, bbox, overlap);
+[dets, boxes, trees] = gdetect(pyra, model, thresh);
