@@ -4,9 +4,9 @@ function model = gdetect_dp(pyra, model)
 % model      object model
 
 % cache filter response
-model = filterresponses(model, pyra);
+model = filter_responses(model, pyra);
 
-% compute parse scores
+% compute detection scores
 L = model_sort(model);
 for s = L
   for r = model.rules{s}
@@ -145,21 +145,14 @@ model.rules{r.lhs}(r.i).Iy = Iy;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % compute all filter responses (filter score pyramids)
-function model = filterresponses(model, pyra)
+function model = filter_responses(model, pyra)
 % model    object model
 % pyra     feature pyramid
 
 % gather filters for computing match quality responses
-% FIXME: simplify this filter_to_symbol business
-i = 1;
-filters = {};
-filter_to_symbol = [];
-for s = model.symbols
-  if s.type == 'T'
-    filters{i} = model.filters(s.filter).w;
-    filter_to_symbol(i) = s.i;
-    i = i + 1;
-  end
+filters = cell(model.numfilters, 1);
+for i = 1:model.numfilters
+  filters{i} = model.filters(i).w;
 end
 
 for level = 1:length(pyra.feat)
@@ -186,7 +179,8 @@ for level = 1:length(pyra.feat)
     spady = s(1) - size(r{i},1);
     spadx = s(2) - size(r{i},2);
     r{i} = padarray(r{i}, [spady spadx], -inf, 'post');
-    model.symbols(filter_to_symbol(i)).score{level} = r{i};
+    fsym = model.filters(i).symbol;
+    model.symbols(fsym).score{level} = r{i};
   end
   model.scoretpt{level} = zeros(s);
 end
