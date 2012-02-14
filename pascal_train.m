@@ -15,7 +15,7 @@ if nargin < 3
 end
 
 globals; 
-[pos, neg] = pascal_data(cls, VOCyear);
+[pos, neg, impos] = pascal_data(cls, VOCyear);
 % split data by aspect ratio into n groups
 spos = split(cls, pos, n);
 
@@ -57,7 +57,7 @@ try
 catch
   initrand();
   model = mergemodels(models);
-  model = train(cls, model, pos, neg(1:maxneg), 0, 0, 1, 5, ...
+  model = train(cls, model, impos, neg(1:maxneg), 0, 0, 1, 5, ...
                 cachesize, true, 0.7, false, 'mix');
   save([cachedir cls '_mix'], 'model');
 end
@@ -70,9 +70,9 @@ catch
   for i = 1:2:2*n
     model = model_addparts(model, model.start, i, i, 8, [6 6]);
   end
-  model = train(cls, model, pos, neg(1:maxneg), 0, 0, 8, 10, ...
+  model = train(cls, model, impos, neg(1:maxneg), 0, 0, 8, 10, ...
                 cachesize, true, 0.7, false, 'parts_1');
-  model = train(cls, model, pos, neg, 0, 0, 1, 5, ...
+  model = train(cls, model, impos, neg, 0, 0, 1, 5, ...
                 cachesize, true, 0.7, true, 'parts_2');
   save([cachedir cls '_parts'], 'model');
 end

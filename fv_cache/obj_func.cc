@@ -518,11 +518,17 @@ void gradientOMP(double *obj_val_out, double *grad, const int dim,
 
   double obj_val = -INFINITY;
 
-  { // Cost and gradient of the regularization term
+  { // Cost and gradient of the soft-max regularization term
+    const double beta = 1000.0;
+    const double inv_beta = 1.0 / beta;
     double **w = M.w;
 
-    int maxc = -1;
+    double hnrms2[M.num_components];
+    double max_hnrm2 = -INFINITY;
     for (int c = 0; c < M.num_components; c++) {
+      if (M.component_sizes[c] == 0)
+        continue;
+
       double val = 0;
       for (int i = 0; i < M.component_sizes[c]; i++) {
         int b = M.component_blocks[c][i];
@@ -533,22 +539,74 @@ void gradientOMP(double *obj_val_out, double *grad, const int dim,
           block_val += wb[k] * wb[k] * reg_mult;
         val += block_val;
       }
-      if (val > obj_val) {
-        obj_val = val;
-        maxc = c;
+      // val = 1/2 ||w_c||^2
+      val = 0.5 * val;
+      hnrms2[c] = val;
+      if (val > max_hnrm2)
+        max_hnrm2 = val;
+    }
+    
+    double pc[M.num_components];
+    double Z = 0;
+    for (int c = 0; c < M.num_components; c++) {
+      if (M.component_sizes[c] == 0)
+        continue;
+
+      double a = exp(beta * (hnrms2[c] - max_hnrm2));
+      pc[c] = a;
+      Z += a;
+    }
+    double inv_Z = 1.0 / Z;
+
+    obj_val = max_hnrm2 + inv_beta * log(Z);
+
+    for (int c = 0; c < M.num_components; c++) {
+      if (M.component_sizes[c] == 0)
+        continue;
+
+      double cmult = pc[c] * inv_Z;
+      for (int i = 0; i < M.component_sizes[c]; i++) {
+        int b = M.component_blocks[c][i];
+        double reg_mult = M.reg_mult[b];
+        double *wb = w[b];
+        double *ptr_grad = grad_blocks[0][b];
+        for (int k = 0; k < M.block_sizes[b]; k++)
+          *(ptr_grad++) += wb[k] * reg_mult * cmult;
       }
     }
-    obj_val *= 0.5;
-
-    for (int i = 0; i < M.component_sizes[maxc]; i++) {
-      int b = M.component_blocks[maxc][i];
-      double reg_mult = M.reg_mult[b];
-      double *wb = w[b];
-      double *ptr_grad = grad_blocks[0][b];
-      for (int k = 0; k < M.block_sizes[b]; k++)
-        *(ptr_grad++) += wb[k] * reg_mult;
-    }
   }
+
+//  { // Cost and gradient of the regularization term
+//    double **w = M.w;
+//
+//    int maxc = -1;
+//    for (int c = 0; c < M.num_components; c++) {
+//      double val = 0;
+//      for (int i = 0; i < M.component_sizes[c]; i++) {
+//        int b = M.component_blocks[c][i];
+//        double reg_mult = M.reg_mult[b];
+//        double *wb = w[b];
+//        double block_val = 0;
+//        for (int k = 0; k < M.block_sizes[b]; k++)
+//          block_val += wb[k] * wb[k] * reg_mult;
+//        val += block_val;
+//      }
+//      if (val > obj_val) {
+//        obj_val = val;
+//        maxc = c;
+//      }
+//    }
+//    obj_val *= 0.5;
+//
+//    for (int i = 0; i < M.component_sizes[maxc]; i++) {
+//      int b = M.component_blocks[maxc][i];
+//      double reg_mult = M.reg_mult[b];
+//      double *wb = w[b];
+//      double *ptr_grad = grad_blocks[0][b];
+//      for (int k = 0; k < M.block_sizes[b]; k++)
+//        *(ptr_grad++) += wb[k] * reg_mult;
+//    }
+//  }
 
   for (int t = 0; t < num_threads; t++) {
     obj_val += obj_vals[t];
