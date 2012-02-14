@@ -22,8 +22,14 @@ void obj_val(double out[3], ex_cache &E, model &M);
  ** Compute the LSVM function value and gradient at M.w over the 
  ** cache
  **/ 
-void gradient(double *obj_val, double *grad, ex_cache &E, model &M);
-void gradientOMP(double *obj_val, double *grad, int dim, double delta_norm,
-                 ex_cache &E, const model &M, int num_threads);
+void gradient(double *obj_val, double *grad, int dim, double delta_norm,
+              ex_cache &E, const model &M, int num_threads);
+
+
+/** -----------------------------------------------------------------
+ ** Update various (objective function specific) bits of information 
+ ** about each feature vector
+ **/
+void compute_info(const ex_cache &E, fv_cache &F, const model &M);
 
 #endif // OBJ_FUNC_H

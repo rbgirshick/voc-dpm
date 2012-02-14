@@ -125,9 +125,9 @@ struct model {
    ** Compute the score of a cache entry
    **/
   inline double score_fv(const fv &f) const {
-//    // short circuit if the feat vector is zero
-//    if (f.is_zero)
-//      return 0;
+    // short circuit if the feat vector is zero
+    if (f.is_zero)
+      return 0;
 
     double val        = 0.0;
     const float *feat = f.feat;

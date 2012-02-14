@@ -37,7 +37,7 @@ extern bool INTERRUPTED;
  **/
 struct fv {
   // Feature vector key fields  
-  enum { KEY_LABEL = 0,
+  enum { KEY_LABEL = 0,   // LABEL is no longer used
          KEY_DATA_ID,
          KEY_X,
          KEY_Y,
@@ -48,17 +48,17 @@ struct fv {
   int     num_blocks;
   int     feat_dim;
   bool    is_unique;
-  double  score;
   int     *block_labels;
   float   *feat;
   double  norm;
 
-  // For future use in wl-ssvm
-  //int     is_zero;
-  //float   loss;
-  //double  margin;
-  //int     is_belief;
-  //int     is_mined;
+  // For wl-ssvm
+  bool    is_zero;
+  bool    is_belief;
+  bool    is_mined;
+  double  score;
+  double  loss;
+  double  margin;
 
   
   /** -----------------------------------------------------------------
@@ -69,28 +69,41 @@ struct fv {
     num_blocks    = 0;
     feat_dim      = 0;
     is_unique     = false;
-    score         = 0;
     feat          = NULL;
     block_labels  = NULL;
     norm          = 0;
+    is_zero       = false;
+    is_belief     = false;
+    is_mined      = false;
+    loss          = 0;
+    score         = 0;
+    margin        = 0;
   }
 
   /** -----------------------------------------------------------------
    ** Load data into a feature vector
    **/
   void set(const int *_key, const int _num_blocks, const int *_bls,
-           const int _feat_dim, const float *_feat) {
+           const int _feat_dim, const float *_feat, const bool _is_belief,
+           const bool _is_mined, const double _loss) {
     is_unique     = true;
     num_blocks    = _num_blocks;
     feat_dim      = _feat_dim;
-    feat          = new (nothrow) float[_feat_dim];
-    block_labels  = new (nothrow) int[_num_blocks];
-    check(feat != NULL);
-    check(block_labels != NULL);
+    if (num_blocks > 0 && feat_dim > 0) {
+      feat          = new (nothrow) float[_feat_dim];
+      block_labels  = new (nothrow) int[_num_blocks];
+      check(feat != NULL);
+      check(block_labels != NULL);
+      copy(_feat, _feat+_feat_dim, feat);
+      copy(_bls, _bls+_num_blocks, block_labels);
+      norm = sqrt(inner_product(feat, feat+feat_dim, feat, 0.0));
+    }
     copy(_key, _key+KEY_LEN, key);
-    copy(_feat, _feat+_feat_dim, feat);
-    copy(_bls, _bls+_num_blocks, block_labels);
-    norm = sqrt(inner_product(feat, feat+feat_dim, feat, 0.0));
+
+    is_zero   = (num_blocks == 0) ? true : false;
+    is_belief = _is_belief;
+    is_mined  = _is_mined;
+    loss      = _loss;
   }
 
   /** -----------------------------------------------------------------
@@ -111,12 +124,15 @@ struct fv {
     feat_dim      = 0;
     num_blocks    = 0;
     norm          = 0;
+    is_zero       = false;
+    is_belief     = false;
+    is_mined      = false;
+    loss          = 0;
     return freed;
   }
 
   /** -----------------------------------------------------------------
-   ** 
-   ** 
+   ** Write feature vector to a file
    **/
   void write(ofstream& out) const {
     out.write((char *)key,          sizeof(int)*KEY_LEN);
@@ -124,14 +140,19 @@ struct fv {
     out.write((char *)&feat_dim,    sizeof(int));
     out.write((char *)&is_unique,   sizeof(bool));
     out.write((char *)&score,       sizeof(double));
-    out.write((char *)block_labels, sizeof(int)*num_blocks);
-    out.write((char *)feat,         sizeof(float)*feat_dim);
+    if (num_blocks > 0) {
+      out.write((char *)block_labels, sizeof(int)*num_blocks);
+      out.write((char *)feat,         sizeof(float)*feat_dim);
+    }
     out.write((char *)&norm,        sizeof(double));
+    out.write((char *)&is_zero,     sizeof(bool));
+    out.write((char *)&is_belief,   sizeof(bool));
+    out.write((char *)&is_mined,    sizeof(bool));
+    out.write((char *)&loss,        sizeof(double));
   }
 
   /** -----------------------------------------------------------------
-   ** 
-   ** 
+   ** Read feature vector from a file
    **/
   void read(ifstream &in) {
     in.read((char *)key,         sizeof(int)*KEY_LEN);
@@ -140,15 +161,21 @@ struct fv {
     in.read((char *)&is_unique,  sizeof(bool));
     in.read((char *)&score,      sizeof(double));
 
-    block_labels = new (nothrow) int[num_blocks];
-    check(block_labels != NULL);
-    in.read((char *)block_labels, sizeof(int)*num_blocks);
+    if (num_blocks > 0) {
+      block_labels = new (nothrow) int[num_blocks];
+      check(block_labels != NULL);
+      in.read((char *)block_labels, sizeof(int)*num_blocks);
 
-    feat = new (nothrow) float[feat_dim];
-    check(feat != NULL);
-    in.read((char *)feat, sizeof(float)*feat_dim);
+      feat = new (nothrow) float[feat_dim];
+      check(feat != NULL);
+      in.read((char *)feat, sizeof(float)*feat_dim);
+    }
 
-    in.read((char *)&norm, sizeof(double));
+    in.read((char *)&norm,      sizeof(double));
+    in.read((char *)&is_zero,   sizeof(bool));
+    in.read((char *)&is_belief, sizeof(bool));
+    in.read((char *)&is_mined,  sizeof(bool));
+    in.read((char *)&loss,      sizeof(double));
   }
 
   /** -----------------------------------------------------------------
@@ -226,8 +253,17 @@ typedef fv_cache::iterator fv_iter;
  ** same key
  **/
 struct ex {
+  // Pointers to the [beginning, end) interval of the feature
+  // vector cache that contain the feature vectors for this
+  // example
   fv_iter begin, end;
+
+  // For keeping track on the bound that determines if a an
+  // example might possibly have a non-zero loss
   double margin_bound;
+
+  // Maximum L2 norm of the feature vectors for this example
+  // (used in conjunction with margin_bound)
   double max_norm;
 };
 

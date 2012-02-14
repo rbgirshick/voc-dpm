@@ -1,5 +1,5 @@
-function [boxes, count] = gdetect_write(pyra, model, boxes, trees, label, ...
-                                        id, maxsize, maxnum)
+function [boxes, count] = gdetect_write(pyra, model, boxes, trees, from_pos, ...
+                                        dataid, maxsize, maxnum)
 
 % Write detections from gdetect to the feature vector cache.
 %
@@ -27,7 +27,7 @@ end
 
 count = 0;
 if ~isempty(boxes)
-  count = writefeatures(pyra, model, trees, label, id, maxsize);
+  count = writefeatures(pyra, model, trees, from_pos, dataid, maxsize);
   % truncate boxes
   boxes(count+1:end,:) = [];
 end
@@ -35,7 +35,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % writes feature vectors for the detections in trees
-function count = writefeatures(pyra, model, trees, label, id, maxsize)
+function count = writefeatures(pyra, model, trees, from_pos, dataid, maxsize)
 % pyra     feature pyramid
 % model    object model
 % trees    detection parse trees from gdetect.m
@@ -59,6 +59,12 @@ N_SCORE       = 12;
 N_LOSS        = 13;
 N_SZ          = 14;
 
+if from_pos
+  is_belief = 1;
+else
+  is_belief = 0;
+end
+
 count = 0;
 for d = 1:length(trees)
   r = trees{d}(N_RULE_INDEX, 1);
@@ -67,7 +73,7 @@ for d = 1:length(trees)
   l = trees{d}(N_L, 1);
   ex = [];
   ex.maxsize = maxsize;
-  ex.key = [label; id; l; x; y];
+  ex.key = [0; dataid; l; x; y];
   ex.blocks(model.numblocks).w = [];
   ex.loss = trees{d}(N_LOSS, 1);
 
@@ -101,8 +107,12 @@ for d = 1:length(trees)
       ex.blocks(bl).w = 20;
     end
   end
-  status = exwrite(ex);
+  status = exwrite(ex, from_pos, is_belief);
   count = count + 1;
+  if from_pos
+    % by convention, only the first feature vector is the belief
+    is_belief = 0;
+  end
   if ~status
     break
   end
@@ -143,8 +153,19 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % write ex to fv cache
-function status = exwrite(ex)
+function status = exwrite(ex, from_pos, is_belief)
 % ex  example to write
+
+if from_pos
+  loss = ex.loss;
+  is_mined = 0;
+  ex.key(3) = 0; % remove scale
+  ex.key(4) = 0; % remove x position
+  ex.key(5) = 0; % remove y position
+else
+  loss = 1;
+  is_mined = 1;
+end
 
 feat = [];
 bls = [];
@@ -156,7 +177,14 @@ for i = 1:length(ex.blocks)
   end
 end
 
-byte_size = fv_cache('add', int32(ex.key), int32(bls), single(feat)); 
+if ~from_pos || is_belief
+  % write zero belief vector if this came from neg[]
+  % write zero non-belief vector if this came from pos[]
+  write_zero_fv(from_pos, ex.key);
+end
+
+byte_size = fv_cache('add', int32(ex.key), int32(bls), single(feat), ...
+                            int32(is_belief), int32(is_mined), loss); 
 
 % still under the limit?
 status = (byte_size < ex.maxsize);

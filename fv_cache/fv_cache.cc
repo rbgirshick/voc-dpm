@@ -94,6 +94,11 @@ static void build_ex_cache() {
   fv_cache &F = gctx.F;
   ex_cache &E = gctx.E;
 
+  if (F.empty()) {
+    gctx.cache_is_built = true;
+    return;
+  }
+
   { // Sort cache entries
     mexPrintf("Sorting cache entries...");
     sort(F.begin(), F.end(), fv::cmp_weak);
@@ -217,6 +222,10 @@ static void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs
   //  prhs[1]   key (binary label, dataid, x, y, scale) (int32)
   //  prhs[2]   block labels (int32) 
   //  prhs[3]   sparse feat array (single)
+  //  prhs[4]   is this fv a belief
+  //  prhs[5]   is this fv from a data-mined example
+  //  prhs[6]   loss for the output that generated this fv
+  //
   // matlab outputs
   //  plhs[0]   current fv cache size in bytes
 
@@ -227,9 +236,12 @@ static void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs
   const mxArray *mx_feat  = prhs[3];
   const int feat_dim      = mxGetDimensions(mx_feat)[0];
   const float *feat       = (const float *)mxGetPr(mx_feat);
+  const bool is_belief    = (bool)mxGetScalar(prhs[4]);
+  const bool is_mined     = (bool)mxGetScalar(prhs[5]);
+  const double loss       = mxGetScalar(prhs[6]);
 
   fv f;
-  f.set(key, num_blocks, bls, feat_dim, feat);
+  f.set(key, num_blocks, bls, feat_dim, feat, is_belief, is_mined, loss);
   gctx.F.push_back(f);
 
   gctx.byte_size += sizeof(float)*feat_dim;
@@ -289,7 +301,7 @@ static void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *p
  ** Return the gradient on the cache at a specific point in parameter
  ** space.
  **/
-static void gradientOMP_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // matlab inputs
   //  prhs[1]   current model parameters
   //  prhs[2]   number of threads
@@ -332,55 +344,7 @@ static void gradientOMP_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArr
     grad = mxGetPr(mx_grad);
   }
 
-  gradientOMP(&obj_val, grad, dim, delta_norm, gctx.E, M, num_threads);
-  
-  if (nlhs > 0)
-    plhs[0] = mxCreateDoubleScalar(obj_val);
-  
-  if (compute_grad)
-    plhs[1] = mx_grad;
-}
-
-
-
-/** -----------------------------------------------------------------
- ** Return the gradient on the cache at a specific point in parameter
- ** space.
- **/
-static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-  // matlab inputs
-  //  prhs[1]   current model parameters
-
-  // Check preconditions
-  check(gctx.cache_is_built);
-  check(gctx.model_is_set);
-
-  bool compute_grad = (nlhs > 1);
-  
-  model &M          = gctx.M;
-  double **w        = M.w;
-  mxArray *mx_grad  = NULL;
-  double *grad      = NULL;
-  double obj_val    = 0.0;
-
-  const mxArray *mx_cur_w = prhs[1];
-  const double *cur_w     = (const double *)mxGetPr(mx_cur_w);
-
-  // Update the model with the current parameters
-  int dim = 0;
-  for (int i = 0; i < M.num_blocks; i++) {
-    int s = M.block_sizes[i];
-    copy(cur_w, cur_w+s, w[i]);
-    cur_w += s;
-    dim += s;
-  }
-
-  if (compute_grad) {
-    mx_grad = mxCreateNumericArray(1, &dim, mxDOUBLE_CLASS, mxREAL);
-    grad = mxGetPr(mx_grad);
-  }
-
-  gradient(&obj_val, grad, gctx.E, M);
+  gradient(&obj_val, grad, dim, delta_norm, gctx.E, M, num_threads);
   
   if (nlhs > 0)
     plhs[0] = mxCreateDoubleScalar(obj_val);
@@ -423,26 +387,35 @@ static void sgd_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs
  **/
 static void info_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   check(gctx.model_is_set);
+  check(gctx.cache_is_built);
 
   if (nlhs != 1)
     return;
 
   // Info fields
-  enum { LABEL = 0, SCORE, UNIQUE, DATA_ID, X, Y, L, BYTE_SIZE, NUM };
+  enum { LABEL = 0, SCORE, UNIQUE, DATA_ID, X, Y, SCALE, BYTE_SIZE, 
+         MARGIN, BELIEF, ZERO, MINED, NUM };
 
   int dims[]       = { gctx.F.size(), NUM };
   mxArray *mx_info = mxCreateNumericArray(2, dims, mxDOUBLE_CLASS, mxREAL);
   double *info     = mxGetPr(mx_info);
 
+  // Compute fv.score and fv.margin
+  compute_info(gctx.E, gctx.F, gctx.M);
+
   for (fv_iter i = gctx.F.begin(), i_end = gctx.F.end(); i != i_end; ++i) {
     *(info + dims[0]*LABEL)     = i->key[fv::KEY_LABEL];
-    *(info + dims[0]*SCORE)     = gctx.M.score_fv(*i);
+    *(info + dims[0]*SCORE)     = i->score;
     *(info + dims[0]*UNIQUE)    = i->is_unique;
     *(info + dims[0]*DATA_ID)   = i->key[fv::KEY_DATA_ID];
     *(info + dims[0]*X)         = i->key[fv::KEY_X];
     *(info + dims[0]*Y)         = i->key[fv::KEY_Y];
-    *(info + dims[0]*L)         = i->key[fv::KEY_SCALE];
+    *(info + dims[0]*SCALE)     = i->key[fv::KEY_SCALE];
     *(info + dims[0]*BYTE_SIZE) = sizeof(float)*i->feat_dim;
+    *(info + dims[0]*MARGIN)    = i->margin;
+    *(info + dims[0]*BELIEF)    = i->is_belief;
+    *(info + dims[0]*ZERO)      = i->is_zero;
+    *(info + dims[0]*MINED)     = i->is_mined;
     info++;
   }
 
@@ -626,8 +599,7 @@ static void unlock_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *p
 
 
 /** -----------------------------------------------------------------
- ** 
- ** 
+ ** Save the fv cache to a file
  **/
 static void save_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   char *filename = mxArrayToString(prhs[1]);
@@ -646,8 +618,7 @@ static void save_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
 
 
 /** -----------------------------------------------------------------
- ** 
- ** 
+ ** Load the fv cache from a file
  **/
 static void load_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   char *filename = mxArrayToString(prhs[1]);
@@ -656,8 +627,6 @@ static void load_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
   int size;
   in.read((char *)&size, sizeof(int));
   in.read((char *)&(gctx.byte_size), sizeof(long long));
-
-  //cout << "R byte size: " << gctx.byte_size << endl;
 
   for (int i = 0; i < size; i++) {
     fv f;
@@ -708,7 +677,6 @@ static handler_registry handlers[] = {
   // Objective function / optimization 
   { "obj_val",      obj_val_handler    },
   { "gradient",     gradient_handler   },
-  { "gradientOMP",  gradientOMP_handler},
   { "sgd",          sgd_handler        },
   { "set_model",    set_model_handler  },
   { "get_model",    get_model_handler  },

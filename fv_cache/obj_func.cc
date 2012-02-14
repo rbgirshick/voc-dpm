@@ -7,36 +7,102 @@
 using namespace std;
 
 /** -----------------------------------------------------------------
- ** Stopping condition parameters
+ ** Softmax parameters
+ **  softmax(x_1,...,x_i) = 1/beta * log[sum_i[exp(x_i)^beta]]
  **/
-// max number of iterations
-static const int ITER = 10e6;
-// minimum number of iterations before termination
-static const int MIN_ITER = 5e6;
-// convergence threshold
-static const double DELTA_STOP = 0.9995;
-// number of times in a row the convergence threshold
-// must be reached before stopping
-static const int STOP_COUNT = 5;
+static const double beta = 1000.0;
+static const double inv_beta = 1.0 / beta;
+
+
+// TODO: Implement different regularizers (L2 and softmax) and
+// the ability to switch between them
 
 
 /** -----------------------------------------------------------------
- ** Adapative inner cache parameters
+ ** Compute the value of the object function on the cache
  **/
-// wait values <= IN_CACHE indicates membership in the inner
-static const int IN_CACHE = 25;
-// minimum wait value for an example evicted from the inner cache
-static const int MIN_WAIT = IN_CACHE + 25;
-// noise added to wait values is uniform over the interval 
-// [0, MAX_RND_WAIT-1]
-static const int MAX_RND_WAIT = 50;
+//  out[0] : loss on negative examples
+//  out[1] : loss on positive examples
+//  out[2] : regularization term's value
+void obj_val(double out[3], ex_cache &E, model &M) {
+  // local reference
+  double **w = M.w;
 
+  out[0] = 0.0; // background examples (from neg)
+  out[1] = 0.0; // foreground examples (from pos)
+  out[2] = 0.0; // regularization
 
-/** -----------------------------------------------------------------
- ** Regularization parameters
- **/
-// number of iterations to wait before doing a lazy regularization update
-static const int REG_FREQ = 20;
+//  // compute ||w||^2
+//  for (int j = 0; j < M.numblocks; j++) {
+//    for (int k = 0; k < M.blocksizes[j]; k++) {
+//      out[2] += w[j][k] * w[j][k] * M.regmult[j];
+//    }
+//  }
+
+  { // Compute softmax regularization cost
+    double hnrms2[M.num_components];
+    double max_hnrm2 = -INFINITY;
+    for (int c = 0; c < M.num_components; c++) {
+      if (M.component_sizes[c] == 0)
+        continue;
+
+      double val = 0;
+      for (int i = 0; i < M.component_sizes[c]; i++) {
+        int b            = M.component_blocks[c][i];
+        double reg_mult  = M.reg_mult[b];
+        double *wb       = w[b];
+        double block_val = 0;
+        for (int k = 0; k < M.block_sizes[b]; k++)
+          block_val += wb[k] * wb[k] * reg_mult;
+        val += block_val;
+      }
+      // val = 1/2 ||w_c||^2
+      val = 0.5 * val;
+      hnrms2[c] = val;
+      if (val > max_hnrm2)
+        max_hnrm2 = val;
+    }
+    
+    double pc[M.num_components];
+    double Z = 0;
+    for (int c = 0; c < M.num_components; c++) {
+      if (M.component_sizes[c] == 0)
+        continue;
+
+      double a = exp(beta * (hnrms2[c] - max_hnrm2));
+      pc[c] = a;
+      Z += a;
+    }
+
+    out[2] = max_hnrm2 + inv_beta * log(Z);
+  }
+
+  for (ex_iter i = E.begin(), i_end = E.end(); i != i_end; ++i) {
+    fv_iter I = i->begin;
+    fv_iter belief_I = i->begin;
+    double V = -INFINITY;
+    double belief_score = 0;
+    int subset = 1;
+    for (fv_iter m = i->begin; m != i->end; ++m) {
+      double score = M.score_fv(*m);
+
+      if (m->is_belief) {
+        belief_score = score;
+        belief_I = m;
+        if (m->is_zero)
+          subset = 0;
+      }
+      
+      score += m->loss;
+      if (score > V) {
+        I = m;
+        V = score;
+      }
+    }
+    out[subset] += M.C * (V - belief_score);
+  }
+}
+
 
 
 /** -----------------------------------------------------------------
@@ -66,7 +132,7 @@ static inline void update(const fv &f, model &M, double rate_x_dir) {
 /** -----------------------------------------------------------------
  ** Apply a regularization update
  **/
-static inline void regularize(model &M, double eta) {
+static inline void regularize(model &M, double eta, int reg_freq) {
   // local reference
   double **w  = M.w;
 
@@ -106,7 +172,7 @@ static inline void regularize(model &M, double eta) {
   for (int i = 0; i < M.component_sizes[maxc]; i++) {
     int b       = M.component_blocks[maxc][i];
     double mult = eta * M.reg_mult[b] * M.learn_mult[b];        
-    mult        = pow((1-mult), REG_FREQ);
+    mult        = pow((1-mult), reg_freq);
     double *wb  = w[b];
     for (int k = 0; k < M.block_sizes[b]; k++)
       wb[k] = mult * wb[k];
@@ -133,65 +199,45 @@ static inline void project(model &M) {
 
 
 /** -----------------------------------------------------------------
- ** Compute the value of the object function on the cache
- **/
-//  out[0] : loss on negative examples
-//  out[1] : loss on positive examples
-//  out[2] : regularization term's value
-void obj_val(double out[3], ex_cache &E, model &M) {
-  // local reference
-  double **w = M.w;
-
-  out[0] = 0.0; // examples from neg
-  out[1] = 0.0; // examples from pos
-  out[2] = 0.0; // regularization
-
-//  // compute ||w||^2
-//  for (int j = 0; j < M.numblocks; j++) {
-//    for (int k = 0; k < M.blocksizes[j]; k++) {
-//      out[2] += w[j][k] * w[j][k] * M.regmult[j];
-//    }
-//  }
-
-  // compute max norm^2 component
-  for (int c = 0; c < M.num_components; c++) {
-    double val = 0;
-    for (int i = 0; i < M.component_sizes[c]; i++) {
-      int b = M.component_blocks[c][i];
-      double reg_mult = M.reg_mult[b];
-      double *wb = w[b];
-      double block_val = 0;
-      for (int k = 0; k < M.block_sizes[b]; k++)
-        block_val += wb[k] * wb[k] * reg_mult;
-      val += block_val;
-    }
-    if (val > out[2])
-      out[2] = val;
-  }
-
-  out[2] *= 0.5;
-
-  for (ex_iter i = E.begin(), i_end = E.end(); i != i_end; ++i) {
-    int binary_label = i->begin->key[0];
-    int subset = (binary_label == -1) ? 0 : 1;
-
-    double V = -INFINITY;
-    for (fv_iter m = i->begin; m != i->end; ++m) {
-      double score = M.score_fv(*m);
-      if (score > V)
-        V = score;
-    }
-    double mult = M.C * (binary_label == 1 ? M.J : 1);
-    out[subset] += mult * max(0.0, 1.0 - binary_label*V);
-  }
-}
-
-
-/** -----------------------------------------------------------------
  ** Stochastic subgradient descent (SGD) LSVM solver
  **/
 void sgd(double losses[3], ex_cache &E, model &M, 
          string log_dir, string log_tag) {
+
+  /** -----------------------------------------------------------------
+   ** Stopping condition parameters
+   **/
+  // max number of iterations
+  const int ITER = 10e6;
+  // minimum number of iterations before termination
+  const int MIN_ITER = 5e6;
+  // convergence threshold
+  const double DELTA_STOP = 0.9995;
+  // number of times in a row the convergence threshold
+  // must be reached before stopping
+  const int STOP_COUNT = 5;
+
+
+  /** -----------------------------------------------------------------
+   ** Adapative inner cache parameters
+   **/
+  // wait values <= IN_CACHE indicates membership in the inner
+  const int IN_CACHE = 25;
+  // minimum wait value for an example evicted from the inner cache
+  const int MIN_WAIT = IN_CACHE + 25;
+  // noise added to wait values is uniform over the interval 
+  // [0, MAX_RND_WAIT-1]
+  const int MAX_RND_WAIT = 50;
+
+
+  /** -----------------------------------------------------------------
+   ** Regularization parameters
+   **/
+  // number of iterations to wait before doing a lazy regularization update
+  const int REG_FREQ = 20;
+
+
+
   // seed the random number generator with an arbitrary (fixed) value
   srand48(3);
 
@@ -304,7 +350,7 @@ void sgd(double losses[3], ex_cache &E, model &M,
       // periodically regularize the model
       if (t % REG_FREQ == 0) {
         project(M);
-        regularize(M, 1.0 / T);
+        regularize(M, 1.0/T, REG_FREQ);
       }
     }
   }
@@ -327,105 +373,53 @@ void sgd(double losses[3], ex_cache &E, model &M,
 }
 
 
-/** -----------------------------------------------------------------
- ** Compute the LSVM function value and the gradient at M.w over the
- ** cache (for use with black box solvers that require a function
- ** evaluation and gradient)
- **/
-void gradient(double *obj_val_out, double *grad, ex_cache &E, model &M) {
-  double **w  = M.w;
-  bool compute_grad = (grad != NULL);
+void compute_info(const ex_cache &E, fv_cache &F, const model &M) {
+  const int num_examples = E.size();
 
-  double **grad_blocks = NULL;
+  //#pragma omp parallel for schedule(static)
+  for (int q = 0; q < num_examples; q++) {
+    ex i = E[q];
+    double belief_score = 0;
+    for (fv_iter m = i.begin; m != i.end; ++m) {
+      double score = M.score_fv(*m);
 
-  if (compute_grad) {
-    grad_blocks = new (nothrow) double*[M.num_blocks];
-    check(grad_blocks != NULL);
-    int off = 0;
-    for (int i = 0; i < M.num_blocks; i++) {
-      grad_blocks[i] = grad + off;
-      off += M.block_sizes[i];
+      // record score of belief
+      if (m->is_belief)
+        belief_score = score;
+
+      m->score = score;
     }
+
+    // compute margin for each entry in this example
+    for (fv_iter m = i.begin; m != i.end; ++m)
+      m->margin = belief_score - (m->score + m->loss);
   }
-
-  double obj_val = -INFINITY;
-
-  { // Loss and gradient of the regularization term
-    int maxc = -1;
-    for (int c = 0; c < M.num_components; c++) {
-      double val = 0;
-      for (int i = 0; i < M.component_sizes[c]; i++) {
-        int b = M.component_blocks[c][i];
-        double reg_mult = M.reg_mult[b];
-        double *wb = w[b];
-        double block_val = 0;
-        for (int k = 0; k < M.block_sizes[b]; k++)
-          block_val += wb[k] * wb[k] * reg_mult;
-        val += block_val;
-      }
-      if (val > obj_val) {
-        obj_val = val;
-        maxc = c;
-      }
-    }
-    obj_val *= 0.5;
-
-    if (compute_grad) {
-      for (int i = 0; i < M.component_sizes[maxc]; i++) {
-        int b = M.component_blocks[maxc][i];
-        double reg_mult = M.reg_mult[b];
-        double *wb = w[b];
-        double *ptr_grad = grad_blocks[b];
-        for (int k = 0; k < M.block_sizes[b]; k++)
-          *(ptr_grad++) = wb[k] * reg_mult;
-      }
-    }
-  }
-
-  { // Loss and gradient of each example
-    for (ex_iter i = E.begin(), i_end = E.end(); i != i_end; ++i) {
-      int label = i->begin->key[fv::KEY_LABEL];
-
-      double V = -INFINITY;
-      fv_iter I = i->begin;
-      for (fv_iter m = i->begin; m != i->end; ++m) {
-        double score = M.score_fv(*m);
-        if (score > V) {
-          V = score;
-          I = m;
-        }
-      }
-      double mult = M.C * (label == 1 ? M.J : 1);
-      double hinge_loss = mult * max(0.0, 1.0 - label*V);
-      obj_val += hinge_loss;
-
-      if (compute_grad && label*V < 1) {
-        double mult       = -1.0 * label * M.C * (label == 1 ? M.J : 1);
-        const float *feat = I->feat;
-        int nbls          = I->num_blocks;
-        const int *bls    = I->block_labels;
-
-        for (int j = 0; j < nbls; j++) {
-          int b             = bls[j];
-          double *ptr_grad  = grad_blocks[b];
-          for (int k = 0; k < M.block_sizes[b]; k++)
-            *(ptr_grad++) += mult * feat[k];
-          feat += M.block_sizes[b];
-        }
-      }
-    }
-  }
-  
-  if (compute_grad)
-    delete [] grad_blocks;
-
-  *obj_val_out = obj_val;
 }
 
 
-void gradientOMP(double *obj_val_out, double *grad, const int dim, 
-                 const double delta_norm, ex_cache &E, const model &M, 
-                 int num_threads) {
+static inline void update_gradient(const model &M, const fv_iter I, 
+                                   double **grad_blocks, double mult) {
+  // short circuit if the feat vector is zero
+  if (I->is_zero)
+    return;
+
+  const float *feat = I->feat;
+  int nbls          = I->num_blocks;
+  const int *bls    = I->block_labels;
+
+  for (int j = 0; j < nbls; j++) {
+    int b             = bls[j];
+    double *ptr_grad  = grad_blocks[b];
+    for (int k = 0; k < M.block_sizes[b]; k++)
+      *(ptr_grad++) += mult * feat[k];
+    feat += M.block_sizes[b];
+  }
+}
+
+
+void gradient(double *obj_val_out, double *grad, const int dim, 
+              const double delta_norm, ex_cache &E, const model &M, 
+              int num_threads) {
   num_threads = max(1, num_threads);
   omp_set_num_threads(num_threads);
 
@@ -451,7 +445,6 @@ void gradientOMP(double *obj_val_out, double *grad, const int dim,
 //  }
 //  mexPrintf("update: %d/%d %.3f\n", num_to_update, num_examples, 
 //                                    num_to_update/(double)num_examples);
-
 
   #pragma omp parallel default(none) shared(grad_threads, grad_blocks, obj_vals)
   {
@@ -482,45 +475,42 @@ void gradientOMP(double *obj_val_out, double *grad, const int dim,
 
       ex i = E[q];
 
-      int label = i.begin->key[fv::KEY_LABEL];
-
-      double V = -INFINITY;
       fv_iter I = i.begin;
+      fv_iter belief_I = i.begin;
+      double V = -INFINITY;
+      double belief_score = 0;
+      double max_nonbelief_score = -INFINITY;
       for (fv_iter m = i.begin; m != i.end; ++m) {
         double score = M.score_fv(*m);
-        if (score > V) {
-          V = score;
+        double loss_adj_score = score + m->loss;
+
+        // record score of belief
+        if (m->is_belief) {
+          belief_score = score;
+          belief_I = m;
+        } else if (loss_adj_score > max_nonbelief_score) {
+          max_nonbelief_score = loss_adj_score;
+        }
+        
+        if (loss_adj_score > V) {
           I = m;
+          V = loss_adj_score;
         }
       }
-      double mult = M.C * (label == 1 ? M.J : 1);
-      double hinge_loss = mult * max(0.0, 1.0 - label*V);
-      obj_vals[th_id] += hinge_loss;
 
-      E[q].margin_bound = label*V - 1.0;
+      obj_vals[th_id] += M.C * (V - belief_score);
+      E[q].margin_bound = belief_score - max_nonbelief_score;
 
-      if (label*V < 1) {
-        double mult       = -1.0 * label * M.C * (label == 1 ? M.J : 1);
-        const float *feat = I->feat;
-        int nbls          = I->num_blocks;
-        const int *bls    = I->block_labels;
-
-        for (int j = 0; j < nbls; j++) {
-          int b             = bls[j];
-          double *ptr_grad  = grad_blocks_th[b];
-          for (int k = 0; k < M.block_sizes[b]; k++)
-            *(ptr_grad++) += mult * feat[k];
-          feat += M.block_sizes[b];
-        }
+      if (I != belief_I) {
+        update_gradient(M, I, grad_blocks_th, M.C);
+        update_gradient(M, belief_I, grad_blocks_th, -1.0 * M.C);
       }
     }
   }
 
   double obj_val = -INFINITY;
 
-  { // Cost and gradient of the soft-max regularization term
-    const double beta = 1000.0;
-    const double inv_beta = 1.0 / beta;
+  { // Cost and gradient of the softmax regularization term
     double **w = M.w;
 
     double hnrms2[M.num_components];
@@ -531,9 +521,9 @@ void gradientOMP(double *obj_val_out, double *grad, const int dim,
 
       double val = 0;
       for (int i = 0; i < M.component_sizes[c]; i++) {
-        int b = M.component_blocks[c][i];
-        double reg_mult = M.reg_mult[b];
-        double *wb = w[b];
+        int b            = M.component_blocks[c][i];
+        double reg_mult  = M.reg_mult[b];
+        double *wb       = w[b];
         double block_val = 0;
         for (int k = 0; k < M.block_sizes[b]; k++)
           block_val += wb[k] * wb[k] * reg_mult;
@@ -575,38 +565,6 @@ void gradientOMP(double *obj_val_out, double *grad, const int dim,
       }
     }
   }
-
-//  { // Cost and gradient of the regularization term
-//    double **w = M.w;
-//
-//    int maxc = -1;
-//    for (int c = 0; c < M.num_components; c++) {
-//      double val = 0;
-//      for (int i = 0; i < M.component_sizes[c]; i++) {
-//        int b = M.component_blocks[c][i];
-//        double reg_mult = M.reg_mult[b];
-//        double *wb = w[b];
-//        double block_val = 0;
-//        for (int k = 0; k < M.block_sizes[b]; k++)
-//          block_val += wb[k] * wb[k] * reg_mult;
-//        val += block_val;
-//      }
-//      if (val > obj_val) {
-//        obj_val = val;
-//        maxc = c;
-//      }
-//    }
-//    obj_val *= 0.5;
-//
-//    for (int i = 0; i < M.component_sizes[maxc]; i++) {
-//      int b = M.component_blocks[maxc][i];
-//      double reg_mult = M.reg_mult[b];
-//      double *wb = w[b];
-//      double *ptr_grad = grad_blocks[0][b];
-//      for (int k = 0; k < M.block_sizes[b]; k++)
-//        *(ptr_grad++) += wb[k] * reg_mult;
-//    }
-//  }
 
   for (int t = 0; t < num_threads; t++) {
     obj_val += obj_vals[t];

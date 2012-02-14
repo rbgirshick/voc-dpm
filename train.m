@@ -1,5 +1,6 @@
 function model = train(name, model, pos, neg, warp, randneg, iter, ...
-                       negiter, maxnum, keepsv, overlap, cont, phase, C, J)
+                       negiter, max_num_examples, keepsv, overlap, ...
+                       cont, phase, C, J)
 
 % model = train(name, model, pos, neg, warp, randneg, iter,
 %               negiter, maxsize, keepsv, overlap, cont, C, J)
@@ -18,7 +19,7 @@ function model = train(name, model, pos, neg, warp, randneg, iter, ...
 % C & J are the parameters for LSVM objective function
 
 if nargin < 9
-  maxnum = 24000;
+  max_num_examples = 24000;
 end
 
 if nargin < 10
@@ -38,7 +39,6 @@ if nargin < 13
 end
 
 if nargin < 14
-  % magic constant estimated from models that perform well in practice
   C = 0.001;
 end
 
@@ -46,7 +46,8 @@ if nargin < 15
   J = 1;
 end
 
-maxnum = max(length(pos)*10, maxnum+length(pos));
+numpos = length(cat(1,pos(:).dataids));
+max_num_examples = max(numpos*10, max_num_examples+numpos);
 % 3GB file limit
 bytelimit = 1.5*2^31;
 % optimize with LBFGS by default
@@ -56,7 +57,7 @@ globals;
 negpos = 0;     % last position in data mining
 
 if ~cont
-  fv_cache('init', maxnum);
+  fv_cache('init', max_num_examples*4);
 end
 
 [blocks, lb, rm, lm, cmps] = fv_model_args(model);
@@ -66,48 +67,48 @@ datamine = true;
 pos_loss = zeros(iter,2);
 for t = 1:iter
   fprintf('%s iter: %d/%d\n', procid(), t, iter);
-  % label, score, is_unqiue, dataid, x, y, scale, byte size
-  info    = fv_cache('info');
-  labels  = info(:, 1);
-  vals    = info(:, 2);
-  unique  = info(:, 3);
-  num     = length(labels);
+  fv_cache('ex_prepare');
+  info = info_to_struct(fv_cache('info'));
+  fv_cache('ex_free');
+  [num_entries, num_examples] = info_stats(info);
   
   if ~cont || t > 1
     % compute loss on positives before relabeling
     if warp == 0
-      I = find(labels == 1);
-      pos_vals = vals(I);
+      P = find((info.is_belief == 1)&(info.is_zero == 0)&(info.is_unique == 1));
+      pos_vals = info.scores(P);
       hinge = max(0, 1-pos_vals);
       pos_loss(t,1) = J*C*sum(hinge);
     end
-  
-    % remove old positives
-    I = sort(find(labels == -1));
+
+    % this rule saves non-zero, non-beliefs that are not mined
+    % this also throws out anything that has a margin >= 0.01
+    % I = find((info.is_mined == 1)|((info.is_mined == 0)&...
+    %          (info.is_belief == 0)&(info.is_zero == 0)&...
+    %          (info.margins < 0.01)&(info.is_unique == 1)));
+
+    % Remove old foreground beliefs
+    % This rule saves only those feature vectors that participate
+    % in data-mining
+    I = sort(find(info.is_mined == 1));
+    fprintf('saving %d/%d cache entries\n', length(I), num_entries);
     fv_cache('shrink', int32(I));
-    num = length(I);
+    % update entry and example counts
+    [num_entries, num_examples] = info_stats(info, I);
 
     % add new positives
+    stop_relabeling = false;
     if warp > 0
-      num_examples_added = poswarp(name, t, model, warp, pos);
+      [num_entries_added, num_examples_added] ...
+          = poswarp(name, t, model, warp, pos);
       fusage = num_examples_added;
+      component_usage = num_examples_added;
     else
       num_fp = 0;
       [num_entries_added, num_examples_added, fusage, component_usage, losses] ...
           = poslatent(name, t, iter, model, pos, overlap, num_fp);
-    end
-    num = num + num_examples_added;
 
-    % save positive filter usage statistics
-    model.fusage = fusage;
-    fprintf('\nFilter usage stats:\n');
-    for i = 1:model.numfilters
-      fprintf('  filter %d got %d/%d (%.2f%%) positives\n', ...
-              i, fusage(i), num_examples_added, 100*fusage(i)/num_examples_added);
-    end
-
-    % compute loss on positives after relabeling
-    if warp == 0
+      % compute loss on positives after relabeling
       pos_loss(t,2) = J*C*sum(losses);
       for tt = 1:t
         fprintf('positive loss before: %f, after: %f, ratio: %f\n', ...
@@ -119,8 +120,28 @@ for t = 1:iter
       end
       % stop if relabeling doesn't reduce the positive loss by much
       if (t > 1) && (pos_loss(t,2)/pos_loss(t,1) > 0.999)
-        break;
+        stop_relabeling = true;
       end
+    end
+    num_entries = num_entries + num_entries_added;
+    num_examples = num_examples + num_examples_added;
+
+    % save positive filter usage statistics
+    model.fusage = fusage;
+    fprintf('\nFilter usage stats:\n');
+    for i = 1:model.numfilters
+      fprintf('  filter %d got %d/%d (%.2f%%) examples\n', ...
+              i, fusage(i), num_examples_added, 100*fusage(i)/num_examples_added);
+    end
+    fprintf('\nComponent usage stats:\n');
+    for i = 1:length(model.rules{model.start})
+      fprintf('  component %d got %d/%d (%.2f%%) examples\n', ...
+              i, component_usage(i), num_examples_added, ...
+              100*component_usage(i)/num_examples_added);
+    end
+
+    if stop_relabeling
+      break;
     end
   end
   
@@ -134,15 +155,20 @@ for t = 1:iter
     if datamine
       % add new negatives
       if randneg > 0
-        numadded = negrandom(name, t, model, randneg, neg, maxnum-num); 
-        num = num + numadded;
+        [num_entries_added, num_examples_added] ...
+            = negrandom(name, t, model, randneg, neg, ...
+                        max_num_examples-num_examples);
+        num_entries = num_entries + num_entries_added;
+        num_examples = num_examples + num_examples_added;
+        fusage = num_examples_added;
         randneg = randneg - 1;
-        fusage = numadded;
       else
-        [numadded, negpos, fusage, scores, complete] = ...
-            neghard(name, tneg, negiter, model, neg, bytelimit, ...
-                    negpos, maxnum-num);
-        num = num + numadded;
+        [num_entries_added, num_examples_added, ...
+         negpos, fusage, scores, complete] ...
+            = neghard(name, tneg, negiter, model, neg, bytelimit, ...
+                      negpos, max_num_examples-num_examples);
+        num_entries = num_entries + num_entries_added;
+        num_examples = num_examples + num_examples_added;
         hinge = max(0, 1+scores);
         neg_loss(tneg) = C*sum(hinge);
         neg_comp(tneg) = complete;
@@ -159,7 +185,7 @@ for t = 1:iter
       fprintf('\nFilter usage stats:\n');
       for i = 1:model.numfilters
         fprintf('  filter %d got %d/%d (%.2f%%) negatives\n', ...
-                i, fusage(i), numadded, 100*fusage(i)/numadded);
+                i, fusage(i), num_examples_added, 100*fusage(i)/num_examples_added);
       end
       
       if randneg == 0 && tneg > 1 && neg_comp(tneg)
@@ -200,6 +226,7 @@ for t = 1:iter
       w = minConf_TMP(obj_func, w, lb, ub, options);
       toc(th);
       [nl, pl, rt] = fv_cache('obj_val');
+      info = info_to_struct(fv_cache('info'));
       fv_cache('ex_free');
 
       base = 1;
@@ -208,13 +235,13 @@ for t = 1:iter
         base = base + model.blocksizes(i);
       end
     else
-      % optimize with SGD
-      [nl, pl, rt, status] = fv_cache('sgd', cachedir, logtag);
-      if status ~= 0
-        fprintf('parameter learning interrupted\n');
-        keyboard;
-      end
-      blocks = fv_cache('get_model');
+%      % optimize with SGD
+%      [nl, pl, rt, status] = fv_cache('sgd', cachedir, logtag);
+%      if status ~= 0
+%        fprintf('parameter learning interrupted\n');
+%        keyboard;
+%      end
+%      blocks = fv_cache('get_model');
     end
 
     fprintf('parsing model\n');
@@ -224,63 +251,136 @@ for t = 1:iter
       fprintf('cache objective, neg: %f, pos: %f, reg: %f, total: %f\n', ...
               cache(tt,1), cache(tt,2), cache(tt,3), cache(tt,4));
     end
-
-    % label, score, is_unqiue, dataid, x, y, scale, byte size
-    info    = fv_cache('info');
-    labels  = info(:, 1);
-    vals    = info(:, 2);
-    unique  = info(:, 3);
-    
+   
     % compute threshold for high recall
-    P = find((labels == 1) .* unique);
-    pos_vals = sort(vals(P));
+    P = find((info.is_belief == 1)&(info.is_zero == 0)&(info.is_unique == 1));
+    pos_vals = sort(info.scores(P));
     model.thresh = pos_vals(ceil(length(pos_vals)*0.05));
-    pos_sv = numel(find(pos_vals < 1));
 
-    % cache model
+    % save model in progress
     save([cachedir name '_model_' phase '_' num2str(t) '_' num2str(tneg)], 'model');
 
+    % keep everything that is not data mined and is unique
+    P = find((info.is_mined == 0)&(info.is_unique == 1));
     % keep negative support vectors?
-    neg_sv = 0;
     if keepsv
-      % compute max number of elements that could fit into cache based
-      % on average element size
-      byte_size = fv_cache('byte_size');
-      % bytes per example
-      exsz = byte_size/length(labels);
-      % estimated number of examples that will fit in the cache
-      % respecting the byte limit
-      maxcachesize = min(maxnum, round(bytelimit/exsz));
-      U = find((labels == -1) .* unique);
-      V = vals(U);
-      [ignore, S] = sort(-V);
-      % keep the cache at least half full
-      sv = round((maxcachesize-length(P))/2);
-      % but make sure to include all negative support vectors
-      neg_sv = numel(find(V > -1));
-      sv = max(sv, neg_sv);
-      if length(S) > sv
-        S = S(1:sv);
+      % -------------------------------------------------------------
+      % Cache policy
+      % TODO: document
+      % -------------------------------------------------------------
+
+      % indexes of all unique, non-belief entires that are data mined
+      U = find((info.is_mined == 1)&(info.is_unique == 1)&(info.is_belief == 0));
+      % get margins for selected entries (i : example index; j : example entry)
+      %   margin_ij = belief_score_i - (non_belief_score_ij + non_belief_loss_ij)
+      %   margin_ij > 0 => easy non_belief_ij is easy
+      %   margin_ij <= 0 => non_belief_ij is a support vector
+      V = info.margins(U);
+      % compute the number of support vector entries
+      % we're conservative in classifying things as support vectors 
+      % (0.0001 instead of 0)
+      num_sv = length(find(V <= 0.0001));
+      % reorder indexes from highest score (i.e., largest margin violator) 
+      % to lowest score
+      [~, S] = sort(V);
+      U = U(S);
+      %fprintf('num support vectors: %d (entries)\n', num_sv);
+
+      % -------------------------------------------------------------
+      % Compute portion of U to keep based on the cache byte limit
+      % -------------------------------------------------------------
+
+      % number of bytes of cache occupied by entries that are not mined
+      not_mined_bytes = sum(info.byte_size(P));
+      % how much of the cache remains for mined entries
+      capacity = round((bytelimit - not_mined_bytes) / 2);
+      fprintf('cache byte limit: %d\nnot-mined size: %d\ncapacity: %d\n', ...
+              bytelimit, not_mined_bytes, capacity);
+      cumulative_bytes = cumsum(info.byte_size(U));
+      num_keep_byte_limit = find(cumulative_bytes >= capacity, 1, 'first');
+      if isempty(num_keep_byte_limit)
+        num_keep_byte_limit = length(cumulative_bytes);
       end
-      N = U(S);
+      %fprintf('bytes kept: %d\nspace left: %d\n', ...
+      %        cumulative_bytes(num_keep_byte_limit), ...
+      %        bytelimit - not_mined_bytes - cumulative_bytes(num_keep_byte_limit));
+      [~, num_keep_examples_byte_limit] = info_stats(info, U(1:num_keep_byte_limit));
+      fprintf('num keep: %d (entries) %d (examples) based on max byte limit\n', ...
+              num_keep_byte_limit, num_keep_examples_byte_limit);
+
+      % -------------------------------------------------------------
+      % Compute portion of U to keep based on the max example limit
+      % -------------------------------------------------------------
+
+      % binary search for number of entries to keep
+      [~, num_examples_not_mined] = info_stats(info, P);
+      capacity = round((max_num_examples - num_examples_not_mined) / 2);
+      num_keep_lo = 1;
+      num_keep_hi = length(U);
+      while num_keep_hi > num_keep_lo
+        mid = num_keep_lo + floor((num_keep_hi - num_keep_lo) / 2);
+        [~, num_mined_examples] = info_stats(info, U(1:mid));
+        if num_mined_examples > capacity
+          num_keep_hi = mid - 1;
+        else
+          num_keep_lo = mid + 1;
+        end
+      end
+      num_keep_count_limit = num_keep_hi;
+      [~, num_keep_examples_count_limit] = info_stats(info, U(1:num_keep_count_limit));
+      fprintf('num keep: %d (entries) %d (examples) based on max num examples\n', ...
+              num_keep_count_limit, num_keep_examples_count_limit);
+
+      % number to keep is the minimum of those two...
+      num_keep = min(num_keep_byte_limit, num_keep_count_limit);
+
+      % ...but, ensure that all support vectors stay in the cache
+      num_keep = max(num_sv, num_keep);
+      N = U(1:num_keep);
+
+      % -------------------------------------------------------------
+      % Find beliefs that belong to examples in N
+      % -------------------------------------------------------------
+
+      % N does not contain any beliefs yet, so now we need to find the zero 
+      % beliefs that match the entries in N and include them in the cache
+      ukeys = unique([info.dataid(N) info.scale(N) info.x(N) info.y(N)], 'rows');
+      ukeys = [ones(size(ukeys,1),1) ukeys];
+      bkeys = [info.is_belief info.dataid info.scale info.x info.y];
+      [~, B] = intersect(bkeys, ukeys, 'rows');
+      % sanity check
+      assert(length(unique(B)) == length(B));
+      N = [N; B];
     else
       N = [];
     end    
-    fprintf('shrinking cache\n');
     I = sort([P; N]);
     fv_cache('shrink', int32(I));
-    num = length(I);    
-    fprintf('cached %d positive and %d negative examples\n', ...
-            length(P), length(N));    
-    % # neg SVs overcounts because it's counting feature vectors
-    % not examples
-    fprintf('# neg SVs: %d\n# pos SVs: %d\n', neg_sv, pos_sv);
+    % update cache file counts
+    [num_entries, num_examples] = info_stats(info, I);
 
-    % Sanity check
-    info    = fv_cache('info');
-    labels  = info(:, 1);
-    assert(length(find(labels == +1)) == length(P));
-    assert(length(find(labels == -1)) == length(N));   
+    % print out some stats about the updated cache
+    [cached_pos_entries, cached_pos_examples] = info_stats(info, P);
+    [cached_neg_entries, cached_neg_examples] = info_stats(info, N);
+    fprintf('cached %d (%d) positive and %d (%d) negative examples (entries)\n', ...
+            cached_pos_examples, cached_pos_entries, ...
+            cached_neg_examples, cached_neg_entries);    
+
+    % count number of support vectors
+    I = find((info.is_belief == 0)&(info.is_mined == 0)& ...
+             (info.is_unique == 1)&(info.margins < 0.000001));
+    num_sv = size(unique([info.dataid(I) info.scale(I) info.x(I) info.y(I)], 'rows'), 1);
+    fprintf('%d object support vectors\n', num_sv);
+    I = find((info.is_belief == 0)&(info.is_mined == 1)& ...
+             (info.is_unique == 1)&(info.margins < 0.000001));
+    num_sv = size(unique([info.dataid(I) info.scale(I) info.x(I) info.y(I)], 'rows'), 1);
+    fprintf('%d background support vectors\n', num_sv);
+
+%    % Sanity check
+%    info    = fv_cache('info');
+%    labels  = info(:, 1);
+%    assert(length(find(labels == +1)) == length(P));
+%    assert(length(find(labels == -1)) == length(N));   
 
     % Reopen parallel pool (if applicable)
     reopen_parallel_pool(pool_size);
@@ -289,7 +389,7 @@ end
 
 % get positive examples by warping positive bounding boxes
 % we create virtual examples by flipping each image left to right
-function num = poswarp(name, t, model, ind, pos)
+function [num_entries, num_examples] = poswarp(name, t, model, ind, pos)
 % assumption: the model only has a single structure rule 
 % of the form Q -> F.
 globals;
@@ -302,7 +402,11 @@ width1 = ceil(model.filters(fi).size(2)/2);
 width2 = floor(model.filters(fi).size(2)/2);
 pixels = model.filters(fi).size * model.sbin;
 minsize = prod(pixels);
-num = 0;
+num_entries = 0;
+num_examples = 0;
+is_belief = 1;
+is_mined = 0;
+loss = 0;
 for i = 1:numpos
   fprintf('%s %s: iter %d: warped positive: %d/%d\n', procid(), name, t, i, numpos);
   bbox = [pos(i).x1 pos(i).y1 pos(i).x2 pos(i).y2];
@@ -316,8 +420,11 @@ for i = 1:numpos
   key = [1 i 0 0 0];
   bls = [obl; fbl] - 1;
   feat = [20; feat(:)];
-  fv_cache('add', int32(key), int32(bls), single(feat)); 
-  num = num+1;
+  fv_cache('add', int32(key), int32(bls), single(feat), ...
+                  int32(is_belief), int32(is_mined), loss); 
+  write_zero_fv(true, key);
+  num_entries = num_entries + 2;
+  num_examples = num_examples + 1;
 end
 
 
@@ -391,7 +498,8 @@ for i = 1:batchsize:numpos
         continue;
       end
       dataid = pos(j).dataids(b);
-      bs = gdetect_write(data(k).pyra, model, data(k).boxdata{b}.bs, data(k).boxdata{b}.trees, 1, dataid);
+      bs = gdetect_write(data(k).pyra, model, data(k).boxdata{b}.bs, ...
+                         data(k).boxdata{b}.trees, true, dataid);
       if ~isempty(bs)
         fusage = fusage + getfusage(bs(1,:));
         component = bs(1,end-1);
@@ -407,12 +515,13 @@ end
 
 
 % get hard negative examples
-function [num, j, fusage, scores, complete] ...
-  = neghard(name, t, negiter, model, neg, maxsize, negpos, maxnum)
+function [num_entries, num_examples, j, fusage, scores, complete] ...
+  = neghard(name, t, negiter, model, neg, maxsize, negpos, max_num_examples)
 model.interval = 4;
 fusage = zeros(model.numfilters, 1);
 numneg = length(neg);
-num = 0;
+num_entries = 0;
+num_examples = 0;
 scores = [];
 complete = 1;
 batchsize = max(1, try_get_matlabpool_size());
@@ -434,16 +543,24 @@ for i = 1:batchsize:numneg
   % write feature vectors sequentially 
   for k = 1:thisbatchsize
     j = inds(i+k-1);
+    dataid = neg(j).dataid;
     bs = gdetect_write(data{k}.pyra, model, data{k}.bs, data{k}.trees, ...
-                      -1, j, maxsize, maxnum-num);
+                      false, dataid, maxsize, max_num_examples-num_examples);
     if ~isempty(bs)
       fusage = fusage + getfusage(bs);
       scores = [scores; bs(:,end)];
     end
-    num = num+size(bs, 1);
+    % added 2 entries for each example
+    num_entries = num_entries + 2*size(bs, 1);
+    num_examples = num_examples + size(bs, 1);
+
     byte_size = fv_cache('byte_size');
-    if byte_size >= maxsize || num >= maxnum
-      fprintf('reached memory limit\n');
+    if byte_size >= maxsize || num_examples >= max_num_examples
+      if num_examples >= max_num_examples
+        fprintf('reached example count limit\n');
+      else
+        fprintf('reached cache file size limit\n');
+      end
       complete = 0;
       break;
     end
@@ -455,7 +572,8 @@ end
 
 
 % get random negative examples
-function num = negrandom(name, t, model, c, neg, maxnum)
+function [num_entries, num_examples] ...
+  = negrandom(name, t, model, c, neg, maxnum)
 numneg = length(neg);
 rndneg = floor(maxnum/numneg);
 fi = model.symbols(model.rules{model.start}.rhs).filter;
@@ -464,7 +582,11 @@ width1 = ceil(rsize(2)/2);
 width2 = floor(rsize(2)/2);
 fbl = model.filters(fi).blocklabel;
 obl = model.rules{model.start}.offset.blocklabel;
-num = 0;
+num_entries = 0;
+num_examples = 0;
+is_belief = 0;
+is_mined = 1;
+loss = 1;
 for i = 1:numneg
   fprintf('%s %s: iter %d: random negatives: %d/%d\n', procid(), name, t, i, numneg);
   im = imreadx(neg(i));
@@ -474,15 +596,60 @@ for i = 1:numneg
       x = random('unid', size(feat,2)-rsize(2)+1);
       y = random('unid', size(feat,1)-rsize(1)+1);
       f = feat(y:y+rsize(1)-1, x:x+rsize(2)-1,:);
-      key = [-1 (i-1)*rndneg+j 0 0 0];
+      dataid = (i-1)*rndneg+j + 100000; % assumes < 100K positives
+      key = [-1 dataid 0 0 0];
       bls = [obl; fbl] - 1;
       f = [20; f(:)];
-      fv_cache('add', int32(key), int32(bls), single(f)); 
+      fv_cache('add', int32(key), int32(bls), single(f), ...
+                      int32(is_belief), int32(is_mined), loss); 
+      % write zero belief vector
+      write_zero_fv(false, key);
     end
-    num = num+rndneg;
+    % added two entries for each example
+    num_entries = num_entries + 2*rndneg;
+    num_examples = num_examples + rndneg;
   end
 end
 
+function info = info_to_struct(inf)
+I_LABEL     = 1;
+I_SCORE     = 2;
+I_IS_UNIQUE = 3;
+I_DATAID    = 4;
+I_X         = 5;
+I_Y         = 6;
+I_SCALE     = 7;
+I_BYTE_SIZE = 8;
+I_MARGIN    = 9;
+I_IS_BELIEF = 10;
+I_IS_ZERO   = 11;
+I_IS_MINED  = 12;
+
+info.labels       = inf(:, I_LABEL);
+info.scores       = inf(:, I_SCORE);
+info.is_unique    = inf(:, I_IS_UNIQUE);
+info.dataid       = inf(:, I_DATAID);
+info.x            = inf(:, I_X);
+info.y            = inf(:, I_Y);
+info.scale        = inf(:, I_SCALE);
+info.byte_size    = inf(:, I_BYTE_SIZE);
+info.margins      = inf(:, I_MARGIN);
+info.is_belief    = inf(:, I_IS_BELIEF);
+info.is_zero      = inf(:, I_IS_ZERO);
+info.is_mined     = inf(:, I_IS_MINED);
+
+function [num_entries, num_examples] = info_stats(info, I)
+% Count the number of examples listed in an info file
+% info    info struct returned by info_to_struct
+% I       subset of rows in info to consider
+if nargin < 2
+  % use everything in info
+  I = 1:length(info.dataid);
+end
+keys = [info.dataid(I) info.scale(I) info.x(I) info.y(I)];
+unique_keys = unique(keys, 'rows');
+num_examples = size(unique_keys, 1);
+num_entries = length(I);
 
 % collect filter usage statistics
 function u = getfusage(boxes)
