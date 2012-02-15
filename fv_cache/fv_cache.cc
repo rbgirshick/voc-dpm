@@ -142,17 +142,23 @@ static void build_ex_cache() {
   { // Construct example cache index
     mexPrintf("Building example cache...");
     ex e;
+    e.hist = 0;
     e.margin_bound = -1;
     e.begin = F.begin();
-    e.max_norm = e.begin->norm;
+    e.max_nonbelief_norm = (e.begin->is_belief) ? 0 : e.begin->norm;
+    e.belief_norm = (e.begin->is_belief) ? e.begin->norm : 0;
     for (fv_iter i = e.begin+1; i != F.end(); ++i) {
       if (fv::key_cmp(*(e.begin), *i) != 0) {
         e.end = i;
         E.push_back(e);
         e.begin = i;
-        e.max_norm = i->norm;
+        e.max_nonbelief_norm = (i->is_belief) ? 0 : i->norm;
+        e.belief_norm = (i->is_belief) ? i->norm : 0;
       } else {
-        e.max_norm = max(e.max_norm, i->norm);
+        if (i->is_belief)
+          e.belief_norm = i->norm;
+        else
+          e.max_nonbelief_norm = max(e.max_nonbelief_norm, i->norm);
       }
     }
     e.end = F.end();
@@ -326,18 +332,45 @@ static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray 
   // Update the model with the current parameters
   int dim = 0;
   double delta_norm = 0;
+  const double *p_cur_w = cur_w;
   for (int i = 0; i < M.num_blocks; i++) {
     int s = M.block_sizes[i];
     double *wi = w[i];
     for (int j = 0; j < s; j++) {
-      double d = cur_w[j] - wi[j];
+      double d = p_cur_w[j] - wi[j];
       delta_norm += d * d;
     }
-    copy(cur_w, cur_w+s, wi);
-    cur_w += s;
+    copy(p_cur_w, p_cur_w+s, wi);
+    p_cur_w += s;
     dim += s;
   }
   delta_norm = sqrt(delta_norm);
+
+  // Remove oldest historical w
+  double *w_oldest = M.w_hist.back();
+  M.w_hist.pop_back();
+  if (w_oldest == NULL)
+    w_oldest = new (nothrow) double[dim];
+  check(w_oldest != NULL);
+
+  // Replace with current w, and put at back of w_hist
+  copy(cur_w, cur_w+dim, w_oldest);
+  M.w_hist.push_front(w_oldest);
+
+  // Compute ||dw|| between cur_w and all historical w's
+  M.dw_hist[0] = 0;
+  for (int i = 1; i < model::hist_size; i++) {
+    double delta_norm = 0;
+    double *w_old = M.w_hist[i];
+    if (w_old != NULL) {
+      //mexPrintf("Computing ||dw|| for %d\n", i);
+      for (int j = 0; j < dim; j++) {
+        double d = w_old[j] - cur_w[j];
+        delta_norm += d * d;
+      }
+      M.dw_hist[i] = sqrt(delta_norm);
+    }
+  }
 
   if (compute_grad) {
     mx_grad = mxCreateNumericArray(1, &dim, mxDOUBLE_CLASS, mxREAL);

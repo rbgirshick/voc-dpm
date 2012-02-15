@@ -439,8 +439,14 @@ void gradient(double *obj_val_out, double *grad, const int dim,
 //  const int num_examples = E.size();
 //  int num_to_update = 0;
 //  for (int q = 0; q < num_examples; q++) {
-//    double margin = E[q].margin_bound -= delta_norm * E[q].max_norm;
-//    if (margin < 0)
+//    int hist = E[q].hist + 1;
+//    double margin_bound;
+//    if (hist < model::hist_size) {
+//      margin_bound = E[q].margin_bound - M.dw_hist[hist] * E[q].max_norm;
+//    } else {
+//      margin_bound = -1;
+//    }
+//    if (margin_bound < 0)
 //      num_to_update++;
 //  }
 //  mexPrintf("update: %d/%d %.3f\n", num_to_update, num_examples, 
@@ -468,7 +474,17 @@ void gradient(double *obj_val_out, double *grad, const int dim,
 
     #pragma omp for schedule(static)
     for (int q = 0; q < num_examples; q++) {
-      double margin = E[q].margin_bound -= delta_norm * E[q].max_norm;
+      E[q].hist++;
+      int hist = E[q].hist;
+      double margin;
+      if (hist < model::hist_size) {
+        margin = E[q].margin_bound 
+                 - M.dw_hist[hist] 
+                   * (E[q].belief_norm + E[q].max_nonbelief_norm);
+      } else {
+        margin = -1;
+      }
+
       //double margin = E[q].margin_bound;
       if (margin >= 0)
         continue;
@@ -500,6 +516,7 @@ void gradient(double *obj_val_out, double *grad, const int dim,
 
       obj_vals[th_id] += M.C * (V - belief_score);
       E[q].margin_bound = belief_score - max_nonbelief_score;
+      E[q].hist = 0;
 
       if (I != belief_I) {
         update_gradient(M, I, grad_blocks_th, M.C);

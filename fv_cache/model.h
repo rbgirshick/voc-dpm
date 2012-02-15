@@ -2,6 +2,10 @@
 #define MODEL_H
 
 #include "fv_cache.h"
+#include <deque>
+#include <vector>
+
+using namespace std;
 
 /** -----------------------------------------------------------------
  ** This struct conflates three logically separate components
@@ -48,6 +52,10 @@ struct model {
   // Per-block learning rate gain
   float *learn_mult;
 
+  deque<double *> w_hist;
+  vector<double> dw_hist;
+  static const int hist_size = 50;
+
   /** ---------------------------------------------------------------
    ** Constructor
    **/
@@ -68,6 +76,9 @@ struct model {
 
     // Opt. algo.
     learn_mult        = NULL;
+
+    w_hist            = deque<double *>(hist_size, (double *)NULL);
+    dw_hist           = vector<double>(hist_size, INFINITY);
   }
 
   /** ---------------------------------------------------------------
@@ -113,6 +124,16 @@ struct model {
       delete [] component_blocks;
     }
     component_blocks = NULL;
+
+    for (int i = 0; i < hist_size; i++) {
+      double *p = w_hist.front();
+      if (p != NULL)
+        delete [] p;
+      w_hist.pop_front();
+    }
+
+    w_hist  = deque<double *>(hist_size, (double *)NULL);
+    dw_hist = vector<double>(hist_size, INFINITY);
 
     C = 0;
     J = 0;

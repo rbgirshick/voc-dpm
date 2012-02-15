@@ -264,7 +264,10 @@ struct ex {
 
   // Maximum L2 norm of the feature vectors for this example
   // (used in conjunction with margin_bound)
-  double max_norm;
+  double belief_norm;
+  double max_nonbelief_norm;
+
+  int hist;
 };
 
 typedef vector<ex> ex_cache;
