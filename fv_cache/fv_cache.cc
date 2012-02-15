@@ -2,6 +2,7 @@
 #include "model.h"
 #include "fv_cache.h"
 #include "obj_func.h"
+#include <omp.h>
 #include <cmath>
 #include <csignal>
 #include <iostream>
@@ -327,24 +328,21 @@ static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray 
 
   const mxArray *mx_cur_w = prhs[1];
   const double *cur_w     = (const double *)mxGetPr(mx_cur_w);
-  const int num_threads   = (int)mxGetScalar(prhs[2]);
+  int num_threads   = (int)mxGetScalar(prhs[2]);
+
+  num_threads = max(1, num_threads);
+  omp_set_num_threads(num_threads);
 
   // Update the model with the current parameters
   int dim = 0;
-  double delta_norm = 0;
   const double *p_cur_w = cur_w;
   for (int i = 0; i < M.num_blocks; i++) {
     int s = M.block_sizes[i];
     double *wi = w[i];
-    for (int j = 0; j < s; j++) {
-      double d = p_cur_w[j] - wi[j];
-      delta_norm += d * d;
-    }
     copy(p_cur_w, p_cur_w+s, wi);
     p_cur_w += s;
     dim += s;
   }
-  delta_norm = sqrt(delta_norm);
 
   // Remove oldest historical w
   double *w_oldest = M.w_hist.back();
@@ -358,17 +356,16 @@ static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray 
   M.w_hist.push_front(w_oldest);
 
   // Compute ||dw|| between cur_w and all historical w's
-  M.dw_hist[0] = 0;
+  M.dw_norm_hist[0] = 0;
   for (int i = 1; i < model::hist_size; i++) {
     double delta_norm = 0;
     double *w_old = M.w_hist[i];
     if (w_old != NULL) {
-      //mexPrintf("Computing ||dw|| for %d\n", i);
       for (int j = 0; j < dim; j++) {
         double d = w_old[j] - cur_w[j];
         delta_norm += d * d;
       }
-      M.dw_hist[i] = sqrt(delta_norm);
+      M.dw_norm_hist[i] = sqrt(delta_norm);
     }
   }
 
@@ -377,7 +374,8 @@ static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray 
     grad = mxGetPr(mx_grad);
   }
 
-  gradient(&obj_val, grad, dim, delta_norm, gctx.E, M, num_threads);
+  // FIXME: not checking is compute_grad in gradient()
+  gradient(&obj_val, grad, dim, gctx.E, M, num_threads);
   
   if (nlhs > 0)
     plhs[0] = mxCreateDoubleScalar(obj_val);

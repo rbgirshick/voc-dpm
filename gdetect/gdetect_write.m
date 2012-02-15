@@ -104,7 +104,11 @@ for d = 1:length(trees)
         end
       end
       bl = model.rules{sym}(ruleind).offset.blocklabel;
-      ex.blocks(bl).w = 20;
+      if model.learnmult(bl) > 0
+        ex.blocks(bl).w = 20;
+      else
+        ex.blocks(bl).w = 0;
+      end
     end
   end
   status = exwrite(ex, from_pos, is_belief);

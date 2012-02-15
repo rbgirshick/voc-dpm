@@ -22,8 +22,8 @@ void obj_val(double out[3], ex_cache &E, model &M);
  ** Compute the LSVM function value and gradient at M.w over the 
  ** cache
  **/ 
-void gradient(double *obj_val, double *grad, int dim, double delta_norm,
-              ex_cache &E, const model &M, int num_threads);
+void gradient(double *obj_val, double *grad, int dim, ex_cache &E, 
+              const model &M, int num_threads);
 
 
 /** -----------------------------------------------------------------

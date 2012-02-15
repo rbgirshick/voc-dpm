@@ -53,7 +53,7 @@ struct model {
   float *learn_mult;
 
   deque<double *> w_hist;
-  vector<double> dw_hist;
+  vector<double> dw_norm_hist;
   static const int hist_size = 50;
 
   /** ---------------------------------------------------------------
@@ -77,8 +77,9 @@ struct model {
     // Opt. algo.
     learn_mult        = NULL;
 
-    w_hist            = deque<double *>(hist_size, (double *)NULL);
-    dw_hist           = vector<double>(hist_size, INFINITY);
+    // Weight vector history for margin bound pruning
+    w_hist            = deque<double *>(hist_size, NULL);
+    dw_norm_hist      = vector<double>(hist_size, INFINITY);
   }
 
   /** ---------------------------------------------------------------
@@ -132,8 +133,8 @@ struct model {
       w_hist.pop_front();
     }
 
-    w_hist  = deque<double *>(hist_size, (double *)NULL);
-    dw_hist = vector<double>(hist_size, INFINITY);
+    w_hist       = deque<double *>(hist_size, NULL);
+    dw_norm_hist = vector<double>(hist_size, INFINITY);
 
     C = 0;
     J = 0;

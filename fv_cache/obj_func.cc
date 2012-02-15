@@ -418,11 +418,7 @@ static inline void update_gradient(const model &M, const fv_iter I,
 
 
 void gradient(double *obj_val_out, double *grad, const int dim, 
-              const double delta_norm, ex_cache &E, const model &M, 
-              int num_threads) {
-  num_threads = max(1, num_threads);
-  omp_set_num_threads(num_threads);
-
+              ex_cache &E, const model &M, int num_threads) {
   // Gradient per thread
   double **grad_threads = new (nothrow) double*[num_threads];
   check(grad_threads != NULL);
@@ -440,13 +436,11 @@ void gradient(double *obj_val_out, double *grad, const int dim,
 //  int num_to_update = 0;
 //  for (int q = 0; q < num_examples; q++) {
 //    int hist = E[q].hist + 1;
-//    double margin_bound;
-//    if (hist < model::hist_size) {
-//      margin_bound = E[q].margin_bound - M.dw_hist[hist] * E[q].max_norm;
-//    } else {
-//      margin_bound = -1;
-//    }
-//    if (margin_bound < 0)
+//    double skip = E[q].margin_bound
+//                  - M.dw_norm_hist[hist] 
+//                    * (E[q].belief_norm + E[q].max_nonbelief_norm);
+//
+//    if (skip < 0)
 //      num_to_update++;
 //  }
 //  mexPrintf("update: %d/%d %.3f\n", num_to_update, num_examples, 
@@ -474,20 +468,16 @@ void gradient(double *obj_val_out, double *grad, const int dim,
 
     #pragma omp for schedule(static)
     for (int q = 0; q < num_examples; q++) {
+      // Check margin-bound pruning condition
       E[q].hist++;
       int hist = E[q].hist;
-      double margin;
       if (hist < model::hist_size) {
-        margin = E[q].margin_bound 
-                 - M.dw_hist[hist] 
-                   * (E[q].belief_norm + E[q].max_nonbelief_norm);
-      } else {
-        margin = -1;
-      }
-
-      //double margin = E[q].margin_bound;
-      if (margin >= 0)
-        continue;
+        double skip = E[q].margin_bound
+                      - M.dw_norm_hist[hist] 
+                        * (E[q].belief_norm + E[q].max_nonbelief_norm);
+        if (skip >= 0)
+          continue;
+      } 
 
       ex i = E[q];
 
