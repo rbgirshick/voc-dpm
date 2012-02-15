@@ -74,40 +74,44 @@ for d = 1:length(trees)
   ex = [];
   ex.maxsize = maxsize;
   ex.key = [0; dataid; l; x; y];
-  ex.blocks(model.numblocks).w = [];
+  ex.blocks(model.numblocks).f = [];
   ex.loss = trees{d}(N_LOSS, 1);
 
   for j = 1:size(trees{d}, 2)
     sym = trees{d}(N_SYMBOL, j);
     if model.symbols(sym).type == 'T'
-      ex = addfilterfeat(model, ex,                 ...
-                         trees{d}(N_X, j),          ...
-                         trees{d}(N_Y, j),          ...
-                         pyra.padx, pyra.pady,      ...
-                         trees{d}(N_DS, j),         ...
-                         model.symbols(sym).filter, ...
-                         pyra.feat{trees{d}(N_L, j)});
+      fi = model.symbols(sym).filter;
+      bl = model.filters(fi).blocklabel;
+      if model.learnmult(bl) ~= 0
+        ex = addfilterfeat(model, ex,                 ...
+                           trees{d}(N_X, j),          ...
+                           trees{d}(N_Y, j),          ...
+                           pyra.padx, pyra.pady,      ...
+                           trees{d}(N_DS, j),         ...
+                           fi,                        ...
+                           pyra.feat{trees{d}(N_L, j)});
+      end
     else
       ruleind = trees{d}(N_RULE_INDEX, j);
       if model.rules{sym}(ruleind).type == 'D'
         bl = model.rules{sym}(ruleind).def.blocklabel;
-        dx = trees{d}(N_DX, j);
-        dy = trees{d}(N_DY, j);
-        def = [-(dx^2); -dx; -(dy^2); -dy];
-        if model.rules{sym}(ruleind).def.flip
-          def(2) = -def(2);
-        end
-        if isempty(ex.blocks(bl).w)
-          ex.blocks(bl).w = def;
-        else
-          ex.blocks(bl).w = ex.blocks(bl).w + def;
+        if model.learnmult(bl) ~= 0
+          dx = trees{d}(N_DX, j);
+          dy = trees{d}(N_DY, j);
+          def = [-(dx^2); -dx; -(dy^2); -dy];
+          if model.rules{sym}(ruleind).def.flip
+            def(2) = -def(2);
+          end
+          if isempty(ex.blocks(bl).f)
+            ex.blocks(bl).f = def;
+          else
+            ex.blocks(bl).f = ex.blocks(bl).f + def;
+          end
         end
       end
       bl = model.rules{sym}(ruleind).offset.blocklabel;
-      if model.learnmult(bl) > 0
-        ex.blocks(bl).w = 20;
-      else
-        ex.blocks(bl).w = 0;
+      if model.learnmult(bl) ~= 0
+        ex.blocks(bl).f = 10;
       end
     end
   end
@@ -148,10 +152,10 @@ end
 
 % accumulate features
 bl = model.filters(fi).blocklabel;
-if isempty(ex.blocks(bl).w)
-  ex.blocks(bl).w = f(:);
+if isempty(ex.blocks(bl).f)
+  ex.blocks(bl).f = f(:);
 else
-  ex.blocks(bl).w = ex.blocks(bl).w + f(:);
+  ex.blocks(bl).f = ex.blocks(bl).f + f(:);
 end
 
 
@@ -175,8 +179,8 @@ feat = [];
 bls = [];
 for i = 1:length(ex.blocks)
   % skip if empty or all zero
-  if ~isempty(ex.blocks(i).w) && sum(abs(ex.blocks(i).w)) ~= 0
-    feat = [feat; ex.blocks(i).w];
+  if ~isempty(ex.blocks(i).f) && sum(abs(ex.blocks(i).f)) ~= 0
+    feat = [feat; ex.blocks(i).f];
     bls = [bls; i-1;];
   end
 end

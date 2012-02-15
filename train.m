@@ -57,6 +57,8 @@ globals;
 negpos = 0;     % last position in data mining
 
 if ~cont
+  % Estimate < 4*max_num_examples feature vectors
+  % will be in cache (attempt to avoid reallocation)
   fv_cache('init', max_num_examples*4);
 end
 
@@ -370,17 +372,11 @@ for t = 1:iter
     I = find((info.is_belief == 0)&(info.is_mined == 0)& ...
              (info.is_unique == 1)&(info.margins < 0.000001));
     num_sv = size(unique([info.dataid(I) info.scale(I) info.x(I) info.y(I)], 'rows'), 1);
-    fprintf('%d object support vectors\n', num_sv);
+    fprintf('%d foreground support vectors\n', num_sv);
     I = find((info.is_belief == 0)&(info.is_mined == 1)& ...
              (info.is_unique == 1)&(info.margins < 0.000001));
     num_sv = size(unique([info.dataid(I) info.scale(I) info.x(I) info.y(I)], 'rows'), 1);
     fprintf('%d background support vectors\n', num_sv);
-
-%    % Sanity check
-%    info    = fv_cache('info');
-%    labels  = info(:, 1);
-%    assert(length(find(labels == +1)) == length(P));
-%    assert(length(find(labels == -1)) == length(N));   
 
     % Reopen parallel pool (if applicable)
     reopen_parallel_pool(pool_size);
@@ -417,9 +413,9 @@ for i = 1:numpos
   % get example
   im = warped{i};
   feat = features(im, model.sbin);
-  key = [1 i 0 0 0];
+  key = [0 i 0 0 0];
   bls = [obl; fbl] - 1;
-  feat = [20; feat(:)];
+  feat = [10; feat(:)];
   fv_cache('add', int32(key), int32(bls), single(feat), ...
                   int32(is_belief), int32(is_mined), loss); 
   write_zero_fv(true, key);
@@ -596,10 +592,10 @@ for i = 1:numneg
       x = random('unid', size(feat,2)-rsize(2)+1);
       y = random('unid', size(feat,1)-rsize(1)+1);
       f = feat(y:y+rsize(1)-1, x:x+rsize(2)-1,:);
-      dataid = (i-1)*rndneg+j + 100000; % assumes < 100K positives
-      key = [-1 dataid 0 0 0];
+      dataid = (i-1)*rndneg+j + 100000; % assumes < 100K foreground examples
+      key = [0 dataid 0 0 0];
       bls = [obl; fbl] - 1;
-      f = [20; f(:)];
+      f = [10; f(:)];
       fv_cache('add', int32(key), int32(bls), single(f), ...
                       int32(is_belief), int32(is_mined), loss); 
       % write zero belief vector

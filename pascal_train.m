@@ -57,7 +57,6 @@ try
 catch
   initrand();
   model = mergemodels(models);
-  %model = train(cls, model, impos(1:50), neg(1:20), 0, 0, 1, 5, ...
   model = train(cls, model, impos, neg(1:maxneg), 0, 0, 1, 5, ...
                 cachesize, true, 0.7, false, 'mix');
   save([cachedir cls '_mix'], 'model');
