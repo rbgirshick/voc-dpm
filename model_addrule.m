@@ -64,7 +64,7 @@ if type == 'S'
 elseif type == 'D'
   if isempty(defbl)
     [m, defbl] = model_addblock(m, numel(params), ...
-                                10, 0.1, [0.01 -100 0.01 -100]);
+                                10, 0.1, [0.001 -100 0.001 -100]);
     flip = false;
   else
     % if a blocklabel is given, this deformation rule is mirroring

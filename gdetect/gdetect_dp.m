@@ -136,7 +136,9 @@ def = r.def.w;
 score = model.symbols(r.rhs(1)).score;
 for i = 1:length(score)
   score{i} = score{i} + r.offset.w * 10;
-  [score{i}, Ix{i}, Iy{i}] = dt(score{i}, def(1), def(2), def(3), def(4));
+  %[score{i}, Ix{i}, Iy{i}] = dt(score{i}, def(1), def(2), def(3), def(4));
+  [score{i}, Ix{i}, Iy{i}] = bounded_dt(score{i}, def(1), def(2), ...
+                                        def(3), def(4), 4);
 end
 model.rules{r.lhs}(r.i).score = score;
 model.rules{r.lhs}(r.i).Ix = Ix;

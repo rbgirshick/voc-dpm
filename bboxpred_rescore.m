@@ -57,11 +57,6 @@ boxes1 = newboxes;
 parts1 = newparts;
 save([cachedir name '_boxes_' testset '_bboxpred_' year], 'boxes1', 'parts1');
 
-if str2num(year) < 2008
-  % load old ap
-  load([cachedir name '_pr_' testset '_' year]);
-  newap = pascal_eval(name, newboxes, testset, year, ['bboxpred_' method '_' year]);
-else 
-  ap = 0;
-  newap = 0;
-end
+% load old ap
+load([cachedir name '_pr_' testset '_' year]);
+newap = pascal_eval(name, newboxes, testset, year, ['bboxpred_' method '_' year]);
