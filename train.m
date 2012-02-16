@@ -1,9 +1,9 @@
-function model = train(name, model, pos, neg, warp, randneg, iter, ...
-                       negiter, max_num_examples, keepsv, overlap, ...
-                       cont, phase, C, J)
+function model = train(model, pos, neg, warp, randneg, iter, ...
+                       negiter, max_num_examples, fg_overlap, ...
+                       num_fp, cont, tag, C)
 
-% model = train(name, model, pos, neg, warp, randneg, iter,
-%               negiter, maxsize, keepsv, overlap, cont, C, J)
+% model = train(model, pos, neg, warp, randneg, iter,
+%               negiter, maxsize, keepsv, overlap, cont, C)
 % Train LSVM.
 %
 % warp=1 uses warped positives
@@ -16,35 +16,31 @@ function model = train(name, model, pos, neg, warp, randneg, iter, ...
 % keepsv=true keeps support vectors between iterations
 % overlap is the minimum overlap in latent positive search
 % cont=true we restart training from a previous run
-% C & J are the parameters for LSVM objective function
+% C are the parameters for LSVM objective function
 
-if nargin < 9
+if nargin < 8
   max_num_examples = 24000;
 end
 
-if nargin < 10
-  keepsv = false;
+if nargin < 9
+  fg_overlap = 0.7;
 end
 
 if nargin < 11
-  overlap = 0.7;
-end
-
-if nargin < 12
   cont = false;
 end
 
-if nargin < 13
-  phase = '0';
+if nargin < 12
+  tag = '0';
 end
 
-if nargin < 14
+if nargin < 13
   C = 0.001;
 end
 
-if nargin < 15
-  J = 1;
-end
+% TODO: remove J
+J = 1;
+keepsv = true;
 
 numpos = length(cat(1,pos(:).dataids));
 max_num_examples = max(numpos*10, max_num_examples+numpos);
@@ -80,7 +76,7 @@ for t = 1:iter
       P = find((info.is_belief == 1)&(info.is_zero == 0)&(info.is_unique == 1));
       pos_vals = info.scores(P);
       hinge = max(0, 1-pos_vals);
-      pos_loss(t,1) = J*C*sum(hinge);
+      pos_loss(t,1) = C*sum(hinge);
     end
 
     % this rule saves non-zero, non-beliefs that are not mined
@@ -100,18 +96,17 @@ for t = 1:iter
 
     % add new positives
     stop_relabeling = false;
-    if warp > 0
+    if warp
       [num_entries_added, num_examples_added] ...
-          = poswarp(name, t, model, warp, pos);
+          = poswarp(t, model, pos);
       fusage = num_examples_added;
       component_usage = num_examples_added;
     else
-      num_fp = 0;
       [num_entries_added, num_examples_added, fusage, component_usage, losses] ...
-          = poslatent(name, t, iter, model, pos, overlap, num_fp);
+          = poslatent(t, iter, model, pos, fg_overlap, num_fp);
 
       % compute loss on positives after relabeling
-      pos_loss(t,2) = J*C*sum(losses);
+      pos_loss(t,2) = C*sum(losses);
       for tt = 1:t
         fprintf('positive loss before: %f, after: %f, ratio: %f\n', ...
                 pos_loss(tt,1), pos_loss(tt,2), pos_loss(tt,2)/pos_loss(tt,1));
@@ -156,18 +151,16 @@ for t = 1:iter
        
     if datamine
       % add new negatives
-      if randneg > 0
+      if randneg
         [num_entries_added, num_examples_added] ...
-            = negrandom(name, t, model, randneg, neg, ...
-                        max_num_examples-num_examples);
+          = negrandom(t, model, neg, max_num_examples-num_examples);
         num_entries = num_entries + num_entries_added;
         num_examples = num_examples + num_examples_added;
         fusage = num_examples_added;
-        randneg = randneg - 1;
       else
         [num_entries_added, num_examples_added, ...
          negpos, fusage, scores, complete] ...
-            = neghard(name, tneg, negiter, model, neg, bytelimit, ...
+            = neghard(tneg, negiter, model, neg, bytelimit, ...
                       negpos, max_num_examples-num_examples);
         num_entries = num_entries + num_entries_added;
         num_examples = num_examples + num_examples_added;
@@ -190,7 +183,7 @@ for t = 1:iter
                 i, fusage(i), num_examples_added, 100*fusage(i)/num_examples_added);
       end
       
-      if randneg == 0 && tneg > 1 && neg_comp(tneg)
+      if ~randneg && tneg > 1 && neg_comp(tneg)
         cache_val = cache(tneg-1,4);
         full_val = cache(tneg-1,4)-cache(tneg-1,1) + neg_loss(tneg);
         if full_val/cache_val < 1.05
@@ -208,7 +201,7 @@ for t = 1:iter
     pool_size = close_parallel_pool();
     
     % learn model
-    logtag = [name '_' phase '_' num2str(t) '_' num2str(tneg)];
+    logtag = [model.class '_' tag '_' num2str(t) '_' num2str(tneg)];
     [blocks, lb, rm, lm, cmps] = fv_model_args(model);
     fv_cache('set_model', blocks, lb, rm, lm, cmps, C, J);
 
@@ -260,7 +253,7 @@ for t = 1:iter
     model.thresh = pos_vals(ceil(length(pos_vals)*0.05));
 
     % save model in progress
-    save([cachedir name '_model_' phase '_' num2str(t) '_' num2str(tneg)], 'model');
+    save([cachedir model.class '_model_' tag '_' num2str(t) '_' num2str(tneg)], 'model');
 
     % keep everything that is not data mined and is unique
     P = find((info.is_mined == 0)&(info.is_unique == 1));
@@ -385,7 +378,7 @@ end
 
 % get positive examples by warping positive bounding boxes
 % we create virtual examples by flipping each image left to right
-function [num_entries, num_examples] = poswarp(name, t, model, ind, pos)
+function [num_entries, num_examples] = poswarp(t, model, pos)
 % assumption: the model only has a single structure rule 
 % of the form Q -> F.
 globals;
@@ -397,6 +390,7 @@ obl = model.rules{model.start}.offset.blocklabel;
 width1 = ceil(model.filters(fi).size(2)/2);
 width2 = floor(model.filters(fi).size(2)/2);
 pixels = model.filters(fi).size * model.sbin;
+% FIXME: NIPS REL5
 minsize = prod(pixels);
 num_entries = 0;
 num_examples = 0;
@@ -404,11 +398,11 @@ is_belief = 1;
 is_mined = 0;
 loss = 0;
 for i = 1:numpos
-  fprintf('%s %s: iter %d: warped positive: %d/%d\n', procid(), name, t, i, numpos);
+  fprintf('%s %s: iter %d: warped positive: %d/%d\n', procid(), model.class, t, i, numpos);
   bbox = [pos(i).x1 pos(i).y1 pos(i).x2 pos(i).y2];
   % skip small examples
   if (bbox(3)-bbox(1)+1)*(bbox(4)-bbox(2)+1) < minsize
-    continue
+    continue;
   end    
   % get example
   im = warped{i};
@@ -427,9 +421,10 @@ end
 % get positive examples using latent detections
 % we create virtual examples by flipping each image left to right
 function [num_entries, num_examples, fusage, component_usage, losses] ...
-  = poslatent(name, t, iter, model, pos, overlap, num_fp)
+  = poslatent(t, iter, model, pos, fg_overlap, num_fp)
 numpos = length(pos);
 model.interval = 5;
+% FIXME: NIPS REL5
 %pixels = model.minsize * model.sbin/2;
 pixels = model.minsize * model.sbin;
 minsize = prod(pixels);
@@ -449,7 +444,7 @@ for i = 1:batchsize:numpos
   parfor k = 1:thisbatchsize
     j = i+k-1;
     msg = sprintf('%s %s: iter %d/%d: latent positive: %d/%d', ...
-                  procid(), name, t, iter, j, numpos);
+                  procid(), model.class, t, iter, j, numpos);
     % skip small examples
     if max(pos(j).sizes) < minsize
       data(k).boxdata = cell(length(pos(j).sizes), 1);
@@ -460,7 +455,7 @@ for i = 1:batchsize:numpos
     % do whole image operations
     im = color(imreadx(pos(j)));
     [im, boxes] = croppos(im, pos(j).boxes);
-    [data(k).pyra, model_dp] = gdetect_pos_prepare(im, model, boxes, overlap);
+    [data(k).pyra, model_dp] = gdetect_pos_prepare(im, model, boxes, fg_overlap);
 
     % process each box in the image
     num_boxes = size(boxes, 1);
@@ -475,7 +470,7 @@ for i = 1:batchsize:numpos
       bg_boxes = 1:num_boxes;
       bg_boxes(b) = [];
       [det, bs, trees] = gdetect_pos(data(k).pyra, model_dp, 1+num_fp, ...
-                                     fg_box, overlap, bg_boxes, 0.5);
+                                     fg_box, fg_overlap, bg_boxes, 0.5);
       data(k).boxdata{b}.bs = bs;
       data(k).boxdata{b}.trees = trees;
       if ~isempty(bs)
@@ -512,7 +507,7 @@ end
 
 % get hard negative examples
 function [num_entries, num_examples, j, fusage, scores, complete] ...
-  = neghard(name, t, negiter, model, neg, maxsize, negpos, max_num_examples)
+  = neghard(t, negiter, model, neg, maxsize, negpos, max_num_examples)
 model.interval = 4;
 fusage = zeros(model.numfilters, 1);
 numneg = length(neg);
@@ -528,7 +523,7 @@ for i = 1:batchsize:numneg
   data = {};
   parfor k = 1:thisbatchsize
     j = inds(i+k-1);
-    fprintf('%s %s: iter %d/%d: hard negatives: %d/%d (%d)\n', procid(), name, t, negiter, i+k-1, numneg, j);
+    fprintf('%s %s: iter %d/%d: hard negatives: %d/%d (%d)\n', procid(), model.class, t, negiter, i+k-1, numneg, j);
     im = color(imreadx(neg(j)));
     pyra = featpyramid(im, model);
     [dets, bs, trees] = gdetect(pyra, model, -1.002);
@@ -569,7 +564,7 @@ end
 
 % get random negative examples
 function [num_entries, num_examples] ...
-  = negrandom(name, t, model, c, neg, maxnum)
+  = negrandom(t, model, neg, maxnum)
 numneg = length(neg);
 rndneg = floor(maxnum/numneg);
 fi = model.symbols(model.rules{model.start}.rhs).filter;
@@ -584,7 +579,7 @@ is_belief = 0;
 is_mined = 1;
 loss = 1;
 for i = 1:numneg
-  fprintf('%s %s: iter %d: random negatives: %d/%d\n', procid(), name, t, i, numneg);
+  fprintf('%s %s: iter %d: random negatives: %d/%d\n', procid(), model.class, t, i, numneg);
   im = imreadx(neg(i));
   feat = features(double(im), model.sbin);  
   if size(feat,2) > rsize(2) && size(feat,1) > rsize(1)

@@ -42,9 +42,11 @@ if count > 1 && ~isempty(dets)
       la_boxes(dup,:) = [];
       la_trees(dup)   = [];
     end
-    dets  = cat(1, dets, la_dets);
-    boxes = cat(1, boxes, la_boxes);
-    trees = cat(1, trees, la_trees);
+    if ~isempty(la_dets)
+      dets  = cat(1, dets, la_dets);
+      boxes = cat(1, boxes, la_boxes);
+      trees = cat(1, trees, la_trees);
+    end
 
     % TODO: sanity check that all boxes don't overlap bg_boxes too much
   end

@@ -19,8 +19,10 @@ globals;
 % split data by aspect ratio into n groups
 spos = split(cls, pos, n);
 
-cachesize = 24000;
-maxneg = 200;
+max_num_examples = 24000;
+max_neg = 200;
+num_fp = 1;
+fg_overlap = 0.7;
 
 % train root filters using warped positives & random negatives
 try
@@ -31,8 +33,9 @@ catch
     % split data into two groups: left vs. right facing instances
     models{i} = initmodel(cls, spos{i}, note, 'N');
     inds = lrsplit(models{i}, spos{i}, i);
-    models{i} = train(cls, models{i}, spos{i}(inds), neg, i, 1, 1, 1, ...
-                      cachesize, true, 0.7, false, ['lrsplit1_' num2str(i)]);
+    models{i} = train(models{i}, spos{i}(inds), neg, true, true, 1, 1, ...
+                      max_num_examples, fg_overlap, 0, false, ...
+                      ['lrsplit1_' num2str(i)]);
   end
   save([cachedir cls '_lrsplit1'], 'models');
 end
@@ -45,8 +48,9 @@ catch
   initrand();
   for i = 1:n
     models{i} = lrmodel(models{i});
-    models{i} = train(cls, models{i}, spos{i}, neg(1:maxneg), 0, 0, 4, 3, ...
-                      cachesize, true, 0.7, false, ['lrsplit2_' num2str(i)]);
+    models{i} = train(models{i}, spos{i}, neg(1:max_neg), false, false, 4, 3, ...
+                      max_num_examples, fg_overlap, 0, false, ...
+                      ['lrsplit2_' num2str(i)]);
   end
   save([cachedir cls '_lrsplit2'], 'models');
 end
@@ -57,8 +61,8 @@ try
 catch
   initrand();
   model = mergemodels(models);
-  model = train(cls, model, impos, neg(1:maxneg), 0, 0, 1, 5, ...
-                cachesize, true, 0.7, false, 'mix');
+  model = train(model, impos, neg(1:max_neg), false, false, 1, 5, ...
+                max_num_examples, fg_overlap, num_fp, false, 'mix');
   save([cachedir cls '_mix'], 'model');
 end
 
@@ -70,10 +74,10 @@ catch
   for i = 1:2:2*n
     model = model_addparts(model, model.start, i, i, 8, [6 6]);
   end
-  model = train(cls, model, impos, neg(1:maxneg), 0, 0, 8, 10, ...
-                cachesize, true, 0.7, false, 'parts_1');
-  model = train(cls, model, impos, neg, 0, 0, 1, 5, ...
-                cachesize, true, 0.7, true, 'parts_2');
+  model = train(model, impos, neg(1:max_neg), false, false, 8, 10, ...
+                max_num_examples, fg_overlap, num_fp, false, 'parts_1');
+  model = train(model, impos, neg, false, false, 1, 5, ...
+                max_num_examples, fg_overlap, num_fp, true, 'parts_2');
   save([cachedir cls '_parts'], 'model');
 end
 
