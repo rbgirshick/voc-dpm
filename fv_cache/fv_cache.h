@@ -110,11 +110,10 @@ struct fv {
    ** Free feature vector data
    **/
   int free() {
-    if (feat == NULL)
-      return 0;
-
     int freed = sizeof(float)*feat_dim;
-    delete [] feat;
+    
+    if (feat != NULL)
+      delete [] feat;
 
     if (block_labels != NULL)
       delete [] block_labels;
