@@ -14,16 +14,13 @@ else
   VOCyear = '2007';
 end
 
-proj = 'fv_cache_num_fp_1';
+proj = 'fv_cache_num';
 
 % directory for caching models, intermediate data, and results
 cachedir = ['/var/tmp/rbg/' proj '/' VOCyear '/'];
 
 if exist(cachedir) == 0
   unix(['mkdir -p ' cachedir]);
-  if exist([cachedir 'learnlog/']) == 0
-    unix(['mkdir -p ' cachedir 'learnlog/']);
-  end
 end
 
 % directory with PASCAL VOC development kit and dataset

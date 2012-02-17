@@ -1,22 +1,31 @@
-function pfilters = mkpartfilters(filter, psize, num)
+function pfilters = mkpartfilters(filter, psize, num, scale)
 % Make part filters from a source filter.
 %
 % filter  source filter
 % psize   size for parts
 % num     number of parts to make
+% scale   number of octave shifts
 
-% interpolate source filter
-filter2x = imresize(filter, 2, 'bicubic');
+if nargin < 4
+  scale = 1;
+end
+
+if scale == 0
+  filterx = filter;
+else
+  % interpolate source filter
+  filterx = imresize(filter, 2^scale, 'bicubic');
+end
 template = fspecial('average', psize);
 alpha = 0.1;
 
 % Initial part placement based on greedy location selection.
-energy = sum(max(filter2x, 0).^2, 3);
+energy = sum(max(filterx, 0).^2, 3);
 for k = 1:num
   [x y] = placepart(energy, template);
-  f = mkfilter(filter2x, template, x, y, alpha);
+  f = mkfilter(filterx, template, x, y, alpha);
 
-  pfilters(k).anchor = [x-1 y-1 1];
+  pfilters(k).anchor = [x-1 y-1 scale];
   pfilters(k).w = f;
   pfilters(k).alpha = alpha;
 
@@ -40,7 +49,7 @@ for j = 1:retries
     if sum(progress) == 0
       break;
     end
-    energy = sum(max(filter2x, 0).^2, 3);
+    energy = sum(max(filterx, 0).^2, 3);
     p = ceil(num*rand(1));
     for i = 1:num
       if i ~= p
@@ -57,16 +66,16 @@ for j = 1:retries
     end
     progress(p) = 1;
 
-    f = mkfilter(filter2x, template, x, y, alpha);
+    f = mkfilter(filterx, template, x, y, alpha);
 
-    tmp(p).anchor = [x-1 y-1 1];
+    tmp(p).anchor = [x-1 y-1 scale];
     tmp(p).w = f;
     tmp(p).alpha = alpha;
   end
 
   % compute the energy covered by this part arrangement
   covered = 0;
-  energy = sum(max(filter2x, 0).^2, 3);
+  energy = sum(max(filterx, 0).^2, 3);
   for i = 1:num
     covered = covered + ...
               coveredenergy(energy, tmp(i).anchor(1)+1, ...
@@ -96,6 +105,8 @@ function f = mkfilter(w, template, x, y, alpha)
 
 f = w(y:y+size(template,1)-1, x:x+size(template,2)-1, :);
 f = max(f, 0);
+% remove image boundary truncation weights
+f(:,:,end-1) = 0;
 f = alpha*f/norm(f(:));
 
 

@@ -21,7 +21,7 @@ spos = split(cls, pos, n);
 
 max_num_examples = 24000;
 max_neg = 200;
-num_fp = 1;
+num_fp = 0;
 fg_overlap = 0.7;
 
 % train root filters using warped positives & random negatives
@@ -72,7 +72,11 @@ try
 catch
   initrand();
   for i = 1:2:2*n
-    model = model_addparts(model, model.start, i, i, 8, [6 6]);
+    ruleind = i;
+    partner = i+1;
+    filterind = i;
+    model = model_addparts(model, model.start, ruleind, ...
+                           partner, filterind, 8, [6 6], 1);
   end
   model = train(model, impos, neg(1:max_neg), false, false, 8, 10, ...
                 max_num_examples, fg_overlap, num_fp, false, 'parts_1');

@@ -38,7 +38,7 @@ if nargin < 13
   C = 0.001;
 end
 
-% TODO: remove J
+% TODO: remove J and keepsv
 J = 1;
 keepsv = true;
 
@@ -71,10 +71,10 @@ for t = 1:iter
   [num_entries, num_examples] = info_stats(info);
   
   if ~cont || t > 1
-    % compute loss on positives before relabeling
+    % compute hinge loss on foreground examples before relabeling
     if warp == 0
-      P = find((info.is_belief == 1)&(info.is_zero == 0)&(info.is_unique == 1));
-      pos_vals = info.scores(P);
+      F = find((info.is_belief == 1)&(info.is_zero == 0)&(info.is_unique == 1));
+      pos_vals = info.scores(F);
       hinge = max(0, 1-pos_vals);
       pos_loss(t,1) = C*sum(hinge);
     end
@@ -102,11 +102,12 @@ for t = 1:iter
       fusage = num_examples_added;
       component_usage = num_examples_added;
     else
-      [num_entries_added, num_examples_added, fusage, component_usage, losses] ...
+      [num_entries_added, num_examples_added, fusage, component_usage, scores] ...
           = poslatent(t, iter, model, pos, fg_overlap, num_fp);
 
-      % compute loss on positives after relabeling
-      pos_loss(t,2) = C*sum(losses);
+      % compute hinge loss on foreground examples after relabeling
+      hinge = max(0, 1-scores);
+      pos_loss(t,2) = C*sum(hinge);
       for tt = 1:t
         fprintf('positive loss before: %f, after: %f, ratio: %f\n', ...
                 pos_loss(tt,1), pos_loss(tt,2), pos_loss(tt,2)/pos_loss(tt,1));
@@ -115,8 +116,10 @@ for t = 1:iter
         fprintf('warning: pos loss went up\n');
         keyboard;
       end
-      % stop if relabeling doesn't reduce the positive loss by much
-      if (t > 1) && (pos_loss(t,2)/pos_loss(t,1) > 0.999)
+
+      % stop if relabeling doesn't reduce the hinge loss on 
+      % foreground examples by much
+      if t > 1 && pos_loss(t,2)/pos_loss(t,1) > 0.999
         stop_relabeling = true;
       end
     end
@@ -142,10 +145,9 @@ for t = 1:iter
     end
   end
   
-  % data mine negatives
+  % Data mine background examples
   cache = zeros(negiter,4);
   neg_loss = zeros(negiter,1);
-  neg_comp = zeros(negiter,1);
   for tneg = 1:negiter
     fprintf('%s iter: %d/%d, neg iter %d/%d\n', procid(), t, iter, tneg, negiter);
        
@@ -166,14 +168,21 @@ for t = 1:iter
         num_examples = num_examples + num_examples_added;
         hinge = max(0, 1+scores);
         neg_loss(tneg) = C*sum(hinge);
-        neg_comp(tneg) = complete;
         fprintf('complete: %d, negative loss of old model: %f\n', ...
-                neg_comp(tneg), neg_loss(tneg,1));
+                complete, neg_loss(tneg,1));
         for tt = 2:tneg
           cache_val = cache(tt-1,4);
           full_val = cache(tt-1,4)-cache(tt-1,1) + neg_loss(tt);
           fprintf('obj on cache: %f, obj on full: %f, ratio %f\n', ...
                   cache_val, full_val, full_val/cache_val);
+        end
+
+        if tneg > 1 && complete
+          cache_val = cache(tneg-1,4);
+          full_val = cache(tneg-1,4)-cache(tneg-1,1) + neg_loss(tneg);
+          if full_val/cache_val < 1.05
+            datamine = false;
+          end
         end
       end
 
@@ -182,15 +191,10 @@ for t = 1:iter
         fprintf('  filter %d got %d/%d (%.2f%%) negatives\n', ...
                 i, fusage(i), num_examples_added, 100*fusage(i)/num_examples_added);
       end
-      
-      if ~randneg && tneg > 1 && neg_comp(tneg)
-        cache_val = cache(tneg-1,4);
-        full_val = cache(tneg-1,4)-cache(tneg-1,1) + neg_loss(tneg);
-        if full_val/cache_val < 1.05
-          fprintf('Data mining convergence condition met.\n');
-          datamine = false;
-          break;
-        end
+
+      if ~datamine
+        fprintf('Data mining convergence condition met.\n');
+        break;
       end
     else
       fprintf('Skipping data mining iteration.\n');
@@ -247,15 +251,15 @@ for t = 1:iter
               cache(tt,1), cache(tt,2), cache(tt,3), cache(tt,4));
     end
    
-    % compute threshold for high recall
-    P = find((info.is_belief == 1)&(info.is_zero == 0)&(info.is_unique == 1));
-    pos_vals = sort(info.scores(P));
+    % Compute threshold for high recall of foreground examples
+    F = find((info.is_belief == 1)&(info.is_zero == 0)&(info.is_unique == 1));
+    pos_vals = sort(info.scores(F));
     model.thresh = pos_vals(ceil(length(pos_vals)*0.05));
 
-    % save model in progress
+    % Save model in progress
     save([cachedir model.class '_model_' tag '_' num2str(t) '_' num2str(tneg)], 'model');
 
-    % keep everything that is not data mined and is unique
+    % While data mining, keep everything that is not data mined in the cache
     P = find((info.is_mined == 0)&(info.is_unique == 1));
     % keep negative support vectors?
     if keepsv
@@ -264,7 +268,10 @@ for t = 1:iter
       % TODO: document
       % -------------------------------------------------------------
 
-      % indexes of all unique, non-belief entires that are data mined
+      % -------------------------------------------------------------
+      % U: all unique, non-belief entires that are data mined
+      % -------------------------------------------------------------
+
       U = find((info.is_mined == 1)&(info.is_unique == 1)&(info.is_belief == 0));
       % get margins for selected entries (i : example index; j : example entry)
       %   margin_ij = belief_score_i - (non_belief_score_ij + non_belief_loss_ij)
@@ -376,6 +383,7 @@ for t = 1:iter
   end
 end
 
+
 % get positive examples by warping positive bounding boxes
 % we create virtual examples by flipping each image left to right
 function [num_entries, num_examples] = poswarp(t, model, pos)
@@ -420,7 +428,7 @@ end
 
 % get positive examples using latent detections
 % we create virtual examples by flipping each image left to right
-function [num_entries, num_examples, fusage, component_usage, losses] ...
+function [num_entries, num_examples, fusage, component_usage, scores] ...
   = poslatent(t, iter, model, pos, fg_overlap, num_fp)
 numpos = length(pos);
 model.interval = 5;
@@ -430,7 +438,7 @@ pixels = model.minsize * model.sbin;
 minsize = prod(pixels);
 fusage = zeros(model.numfilters, 1);
 component_usage = zeros(length(model.rules{model.start}), 1);
-losses = [];
+scores = [];
 num_entries = 0;
 num_examples = 0;
 batchsize = max(1, try_get_matlabpool_size());
@@ -497,8 +505,9 @@ for i = 1:batchsize:numpos
         component_usage(component) = component_usage(component) + 1;
         num_entries = num_entries + size(bs, 1) + 1;
         num_examples = num_examples + 1;
-        loss = max([1; bs(:,end)]) - bs(1,end);
-        losses = [losses; loss];
+        %loss = max([1; bs(:,end)]) - bs(1,end);
+        %losses = [losses; loss];
+        scores = [scores; bs(1,end)];
       end
     end
   end
@@ -602,6 +611,7 @@ for i = 1:numneg
   end
 end
 
+
 function info = info_to_struct(inf)
 I_LABEL     = 1;
 I_SCORE     = 2;
@@ -629,6 +639,7 @@ info.is_belief    = inf(:, I_IS_BELIEF);
 info.is_zero      = inf(:, I_IS_ZERO);
 info.is_mined     = inf(:, I_IS_MINED);
 
+
 function [num_entries, num_examples] = info_stats(info, I)
 % Count the number of examples listed in an info file
 % info    info struct returned by info_to_struct
@@ -641,6 +652,7 @@ keys = [info.dataid(I) info.scale(I) info.x(I) info.y(I)];
 unique_keys = unique(keys, 'rows');
 num_examples = size(unique_keys, 1);
 num_entries = length(I);
+
 
 % collect filter usage statistics
 function u = getfusage(boxes)
@@ -656,6 +668,7 @@ for i = 1:numfilters
   u(i) = nboxes - ndel;
 end
 
+
 function s = close_parallel_pool()
 try
   s = matlabpool('size');
@@ -665,6 +678,7 @@ try
 catch
   s = 0;
 end
+
 
 function reopen_parallel_pool(s)
 if s > 0
@@ -678,6 +692,7 @@ if s > 0
     end
   end
 end
+
 
 function s = try_get_matlabpool_size()
 try

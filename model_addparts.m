@@ -1,33 +1,41 @@
-function model = model_addparts(model, lhs, ruleind, filterind, numparts, psize)
+function model = model_addparts(model, lhs, ruleind, partner, filterind, numparts, psize, scale, coef_scale)
 % Add part filters to a model.
 %
 % model      object model
 % lhs        add parts to: model.rules{lhs}(ruleind)
 % ruleind    add parts to: model.rules{lhs}(ruleind)
+% partner    partner ruleind: model.rules{lhs}(ruleind) and 
+%            model.rules{lhs}(partner) are mirror images of each other
+%            Or, if length(partner) == 2: model.rules{partner(1)}(partner(2))
 % filterind  source filter to initialize parts from
 % numparts   number of parts to add
 % psize      size of each part
+% scale      number of octaves down from lhs to place parts 
+%            (only scale = 0,1 are tested)
+% coef_scale part filter coeficients are scaled by this value
 
 % if the filter is mirrored, find its partner so mirrored
 % parts can be added to it as well
-partner = [];
 sym = 'N';
-if model.filters(filterind).symmetric == 'M'
-  bl = model.filters(filterind).blocklabel;
-  for i = 1:model.numfilters
-    if i ~= filterind && model.filters(i).blocklabel == bl
-      partner = i;
-      sym = 'M';
-      break;
-    end
+if ~isempty(partner)
+  sym = 'M';
+  if length(partner) == 2
+    partner_lhs = partner(1);
+    partner = partner(2);
+  else
+    partner_lhs = lhs;
   end
 end
 
+if nargin < 9
+  coef_scale = 1;
+end
+
 source = model.filters(filterind).w;
-pfilters = mkpartfilters(source, psize, numparts);
+pfilters = mkpartfilters(source, psize, numparts, scale);
 
 for i = 1:numparts
-  [model, symbolf, fi] = model_addfilter(model, pfilters(i).w, sym);
+  [model, symbolf, fi] = model_addfilter(model, coef_scale*pfilters(i).w, sym);
   [model, N1] = model_addnonterminal(model);
 
   % add deformation rule
@@ -52,9 +60,9 @@ for i = 1:numparts
     x = pfilters(i).anchor(1) + 1;
     y = pfilters(i).anchor(2) + 1;
     % add deformation symbols to rhs of rule
-    x2 = 2*size(source, 2)-(x+psize(2)-1)+1;
-    anchor2 = [x2-1 y-1 1];
-    model.rules{lhs}(partner).rhs = [model.rules{lhs}(partner).rhs N2];
-    model.rules{lhs}(partner).anchor = [model.rules{lhs}(partner).anchor anchor2];
+    x2 = 2^scale*size(source, 2)-(x+psize(2)-1)+1;
+    anchor2 = [x2-1 y-1 scale];
+    model.rules{partner_lhs}(partner).rhs = [model.rules{partner_lhs}(partner).rhs N2];
+    model.rules{partner_lhs}(partner).anchor = [model.rules{partner_lhs}(partner).anchor anchor2];
   end
 end
