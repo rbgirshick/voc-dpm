@@ -1,25 +1,31 @@
-function fv_compile(opt)
+function fv_compile(opt, verb)
 
 if nargin < 1
   opt = true;
 end
 
-cd('fv_cache');
-
-try
-  if opt
-    mex -v -O CXXOPTIMFLAGS="-O3 -DNDEBUG" ...
-              LDOPTIMFLAGS="-O3" ...
-              CXXFLAGS="\$CXXFLAGS -Wall -fopenmp" ...
-              LDFLAGS="\$LDFLAGS -Wall -fopenmp" ...
-              fv_cache.cc obj_func.cc
-  else
-    mex -v -g CXXFLAGS="\$CXXFLAGS -Wall -fopenmp" ...
-              LDFLAGS="\$LDFLAGS -Wall -fopenmp" ...
-              fv_cache.cc obj_func.cc
-  end
-catch e
-  warning(e.identifier, 'call fv_cache(''unlock'') first');
+if nargin < 2
+  verb = false;
 end
 
-cd('..');
+mexcmd = 'mex -outdir bin';
+
+if verb
+  mexcmd = cat(2, mexcmd, ' -v');
+end
+
+if opt
+  mexcmd = cat(2, mexcmd, ' -O');
+  mexcmd = cat(2, mexcmd, ' CXXOPTIMFLAGS="-O3 -DNDEBUG"');
+  mexcmd = cat(2, mexcmd, ' LDOPTIMFLAGS="-O3"');
+end
+
+mexcmd = cat(2, mexcmd, ' CXXFLAGS="\$CXXFLAGS -Wall -fopenmp"');
+mexcmd = cat(2, mexcmd, ' LDFLAGS="\$LDFLAGS -Wall -fopenmp"');
+mexcmd = cat(2, mexcmd, ' fv_cache/fv_cache.cc fv_cache/obj_func.cc');
+
+try
+  eval(mexcmd);
+catch e
+  warning(e.identifier, 'Maybe you need to call fv_cache(''unlock'') first?');
+end

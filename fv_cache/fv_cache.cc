@@ -385,31 +385,31 @@ static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray 
 }
 
 
-/** -----------------------------------------------------------------
- ** Optimize the model using stochastic subgradient descent.
- **/
-static void sgd_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-  check(gctx.model_is_set);
-
-  build_ex_cache();
-
-  char *log_dir = mxArrayToString(prhs[1]);
-  char *log_tag = mxArrayToString(prhs[2]);
-
-  double losses[3];
-  sgd(losses, gctx.E, gctx.M, log_dir, log_tag);
-
-  for (int i = 0; i < 3; i++)
-    if (nlhs > i)
-      plhs[i] = mxCreateDoubleScalar(losses[i]);
-
-  if (nlhs > 3)
-    plhs[3] = mxCreateDoubleScalar(INTERRUPTED);
-
-  mxFree(log_dir);
-  mxFree(log_tag);
-  gctx.E.clear();
-}
+///** -----------------------------------------------------------------
+// ** Optimize the model using stochastic subgradient descent.
+// **/
+//static void sgd_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+//  check(gctx.model_is_set);
+//
+//  build_ex_cache();
+//
+//  char *log_dir = mxArrayToString(prhs[1]);
+//  char *log_tag = mxArrayToString(prhs[2]);
+//
+//  double losses[3];
+//  sgd(losses, gctx.E, gctx.M, log_dir, log_tag);
+//
+//  for (int i = 0; i < 3; i++)
+//    if (nlhs > i)
+//      plhs[i] = mxCreateDoubleScalar(losses[i]);
+//
+//  if (nlhs > 3)
+//    plhs[3] = mxCreateDoubleScalar(INTERRUPTED);
+//
+//  mxFree(log_dir);
+//  mxFree(log_tag);
+//  gctx.E.clear();
+//}
 
 
 /** -----------------------------------------------------------------
@@ -708,7 +708,7 @@ static handler_registry handlers[] = {
   // Objective function / optimization 
   { "obj_val",      obj_val_handler    },
   { "gradient",     gradient_handler   },
-  { "sgd",          sgd_handler        },
+//  { "sgd",          sgd_handler        },
   { "set_model",    set_model_handler  },
   { "get_model",    get_model_handler  },
 

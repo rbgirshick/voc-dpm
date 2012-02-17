@@ -14,7 +14,7 @@ else
   VOCyear = '2007';
 end
 
-proj = 'fv_cache_num';
+proj = 'fv_cache';
 
 % directory for caching models, intermediate data, and results
 cachedir = ['/var/tmp/rbg/' proj '/' VOCyear '/'];

@@ -5,12 +5,12 @@
 #include "fv_cache.h"
 #include <string>
 
-/** -----------------------------------------------------------------
- ** Optimize the model parameters on the cache with stochastic 
- ** subgradient descent
- **/
-void sgd(double losses[3], ex_cache &E, model &M, 
-         string log_dir, string log_tag);
+///** -----------------------------------------------------------------
+// ** Optimize the model parameters on the cache with stochastic 
+// ** subgradient descent
+// **/
+//void sgd(double losses[3], ex_cache &E, model &M, 
+//         string log_dir, string log_tag);
 
 /** -----------------------------------------------------------------
  ** Compute the objective function value
