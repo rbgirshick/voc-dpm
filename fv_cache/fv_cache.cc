@@ -9,6 +9,10 @@
 
 using namespace std;
 
+mempool<float> fv::float_pool;
+mempool<int> fv::int_pool;
+
+
 /** -----------------------------------------------------------------
  ** Global representing if we've received SIGINT (Ctrl-C)
  **/
@@ -191,6 +195,8 @@ static void free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
     gctx.byte_size -= i->free();
 
   gctx.F.clear();
+  fv::float_pool.free();
+  fv::int_pool.free();
   gctx.M.free();
   gctx.model_is_set = false;
   free_ex_cache();
@@ -573,6 +579,10 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
   M.J = mxGetScalar(prhs[7]);
 
   gctx.model_is_set = true;
+
+  // TODO: remove
+  fv::float_pool.print();
+  fv::int_pool.print();
 }
 
 

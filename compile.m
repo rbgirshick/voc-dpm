@@ -20,6 +20,8 @@ if opt
   mexcmd = [mexcmd ' -O'];
   mexcmd = [mexcmd ' CXXOPTIMFLAGS="-O3 -DNDEBUG"'];
   mexcmd = [mexcmd ' LDOPTIMFLAGS="-O3"'];
+else
+  mexcmd = cat(2, mexcmd, ' -g');
 end
 
 mexcmd = [mexcmd ' CXXFLAGS="\$CXXFLAGS -Wall"'];

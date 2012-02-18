@@ -2,6 +2,7 @@
 #define FV_CACHE_H
 
 #include "mex.h"
+#include "mempool.h"
 #include <string>
 #include <sstream>
 #include <fstream>
@@ -60,6 +61,9 @@ struct fv {
   double  loss;
   double  margin;
 
+  static mempool<float> float_pool;
+  static mempool<int> int_pool;
+
   
   /** -----------------------------------------------------------------
    ** Constructor
@@ -90,8 +94,8 @@ struct fv {
     num_blocks    = _num_blocks;
     feat_dim      = _feat_dim;
     if (num_blocks > 0 && feat_dim > 0) {
-      feat          = new (nothrow) float[_feat_dim];
-      block_labels  = new (nothrow) int[_num_blocks];
+      feat          = float_pool.get(_feat_dim);
+      block_labels  = int_pool.get(_num_blocks);
       check(feat != NULL);
       check(block_labels != NULL);
       copy(_feat, _feat+_feat_dim, feat);
@@ -113,10 +117,10 @@ struct fv {
     int freed = sizeof(float)*feat_dim;
     
     if (feat != NULL)
-      delete [] feat;
+      float_pool.put(feat_dim, feat);
 
     if (block_labels != NULL)
-      delete [] block_labels;
+      int_pool.put(num_blocks, block_labels);
 
     block_labels  = NULL;
     feat          = NULL;

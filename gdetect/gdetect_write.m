@@ -179,7 +179,14 @@ feat = [];
 bls = [];
 for i = 1:length(ex.blocks)
   % skip if empty or all zero
-  if ~isempty(ex.blocks(i).f) && sum(abs(ex.blocks(i).f)) ~= 0
+  %  skipping all zero blocks mostly skips def blocks
+  %  leading to a very, very small run-time improvement
+  %  but makes memory fragmentation worse / harder to
+  %  avoid
+  %if ~isempty(ex.blocks(i).f) && sum(abs(ex.blocks(i).f)) ~= 0
+
+  % skip if empty
+  if ~isempty(ex.blocks(i).f)
     feat = [feat; ex.blocks(i).f];
     bls = [bls; i-1;];
   end

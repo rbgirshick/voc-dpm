@@ -18,6 +18,8 @@ if opt
   mexcmd = cat(2, mexcmd, ' -O');
   mexcmd = cat(2, mexcmd, ' CXXOPTIMFLAGS="-O3 -DNDEBUG"');
   mexcmd = cat(2, mexcmd, ' LDOPTIMFLAGS="-O3"');
+else
+  mexcmd = cat(2, mexcmd, ' -g');
 end
 
 mexcmd = cat(2, mexcmd, ' CXXFLAGS="\$CXXFLAGS -Wall -fopenmp"');
