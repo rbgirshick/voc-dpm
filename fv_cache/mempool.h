@@ -2,7 +2,7 @@
 #define MEMPOOL_H
 
 #include <iostream>
-#include <stack>
+#include <queue>
 #include <tr1/unordered_map>
 
 using namespace std;
@@ -15,13 +15,12 @@ using namespace std::tr1;
  ** sizes. This is not a good strategy in general, but here the goal
  ** is simplicity.
  */
-
 template<class T>
 struct mempool {
-  typedef unordered_map<int, stack<T *> > pool_type;
-  typedef typename pool_type::iterator pool_iter;
+  typedef unordered_map<int, queue<T *> > type;
+  typedef typename type::iterator iter;
 
-  pool_type pool;
+  type pool;
   int count;
   int reuse;
 
@@ -40,14 +39,14 @@ struct mempool {
    ** or pulling an existing free array from the pool
    */
   T *get(int dim) {
-    pool_iter i = pool.find(dim);
+    iter i = pool.find(dim);
     T *data = NULL;
 
     if (i == pool.end() || i->second.empty()) {
       data = new (nothrow) T[dim];
       count++;
     } else {
-      data = i->second.top();
+      data = i->second.front();
       i->second.pop();
       reuse++;
     }
@@ -61,10 +60,10 @@ struct mempool {
    ** reuse
    */
   void put(int dim, T *data) {
-    pool_iter i = pool.find(dim);
+    iter i = pool.find(dim);
 
     if (i == pool.end()) {
-      stack<T *> q;
+      queue<T *> q;
       q.push(data);
       pool[dim] = q;
     } else {
@@ -80,10 +79,10 @@ struct mempool {
     count = 0;
     reuse = 0;
 
-    pool_iter i, i_end;
+    iter i, i_end;
     for (i = pool.begin(), i_end = pool.end(); i != i_end; ++i) {
       while (!i->second.empty()) {
-        T *data = i->second.top();
+        T *data = i->second.front();
         i->second.pop();
         delete [] data;
       }
@@ -94,7 +93,7 @@ struct mempool {
   void print() {
     cout << "Pool has allocated " << count << " elements in " 
          << pool.size() << " buckets (reuse: " << reuse << ")" << endl;
-    pool_iter i, i_end;
+    iter i, i_end;
     for (i = pool.begin(), i_end = pool.end(); i != i_end; ++i) {
       cout << " bucket: " << i->first << " has " << i->second.size() 
            << " elements" << endl;
