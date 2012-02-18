@@ -6,8 +6,9 @@ function labels = getcontextlabels(cls, boxes, trainset)
 %
 % Most of this code is copied from VOCpr.m with minor modifications.
 
-globals;
-pascal_init;
+conf = voc_config();
+cachedir = conf.paths.model_dir;
+VOCopts  = conf.pascal.VOCopts;
 
 try
   load([cachedir cls '_context_labels_' trainset '_' VOCyear]);

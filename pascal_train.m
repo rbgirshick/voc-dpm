@@ -14,15 +14,21 @@ if nargin < 3
   note = '';
 end
 
-globals; 
-[pos, neg, impos] = pascal_data(cls, VOCyear);
+conf = voc_config();
+cachedir = conf.paths.model_dir;
+
+[pos, neg, impos] = pascal_data(cls, conf.pascal.year);
 % split data by aspect ratio into n groups
 spos = split(cls, pos, n);
 
-max_num_examples = 24000;
-max_neg = 200;
-num_fp = 0;
-fg_overlap = 0.7;
+max_num_examples = conf.training.cache_example_limit;;
+num_fp           = conf.training.wlssvm_M;
+fg_overlap       = conf.training.fg_overlap;
+
+% Small subset of negative images
+neg_small = neg(randperm(length(neg)));
+neg_small = neg_small(1:conf.training.num_negatives_small);
+
 
 % train root filters using warped positives & random negatives
 try
@@ -48,7 +54,7 @@ catch
   initrand();
   for i = 1:n
     models{i} = lrmodel(models{i});
-    models{i} = train(models{i}, spos{i}, neg(1:max_neg), false, false, 4, 3, ...
+    models{i} = train(models{i}, spos{i}, neg_small, false, false, 4, 3, ...
                       max_num_examples, fg_overlap, 0, false, ...
                       ['lrsplit2_' num2str(i)]);
   end
@@ -61,7 +67,7 @@ try
 catch
   initrand();
   model = mergemodels(models);
-  model = train(model, impos, neg(1:max_neg), false, false, 1, 5, ...
+  model = train(model, impos, neg_small, false, false, 1, 5, ...
                 max_num_examples, fg_overlap, num_fp, false, 'mix');
   save([cachedir cls '_mix'], 'model');
 end
@@ -78,7 +84,7 @@ catch
     model = model_addparts(model, model.start, ruleind, ...
                            partner, filterind, 8, [6 6], 1);
   end
-  model = train(model, impos, neg(1:max_neg), false, false, 8, 10, ...
+  model = train(model, impos, neg_small, false, false, 8, 10, ...
                 max_num_examples, fg_overlap, num_fp, false, 'parts_1');
   model = train(model, impos, neg, false, false, 1, 5, ...
                 max_num_examples, fg_overlap, num_fp, true, 'parts_2');

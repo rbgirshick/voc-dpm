@@ -3,10 +3,11 @@ function [ap, prec, recall] = pascal_eval(cls, boxes, testset, year, suffix)
 % ap = pascal_eval(cls, boxes, testset, suffix)
 % Score bounding boxes using the PASCAL development kit.
 
-setVOCyear = year;
-globals;
-pascal_init;
-VOCopts.testset = testset;
+conf = voc_config('pascal.year', year, ...
+                  'eval.test_set', testset);
+cachedir = conf.paths.model_dir;                  
+VOCopts  = conf.pascal.VOCopts;
+
 ids = textread(sprintf(VOCopts.imgsetpath, testset), '%s');
 
 % write out detections in PASCAL format and score
@@ -24,9 +25,9 @@ recall = [];
 prec = [];
 ap = 0;
 
-do_eval = (str2num(VOCyear) <= 2007) | ~strcmp(testset, 'test');
+do_eval = (str2num(year) <= 2007) | ~strcmp(testset, 'test');
 if do_eval
-  if str2num(VOCyear) == 2006
+  if str2num(year) == 2006
     [recall, prec, ap] = VOCpr(VOCopts, 'comp3', cls, true);
   else
     % Bug in VOCevaldet requires that tic has been called first

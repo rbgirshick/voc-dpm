@@ -18,12 +18,18 @@ function model = train(model, pos, neg, warp, randneg, iter, ...
 % cont=true we restart training from a previous run
 % C are the parameters for LSVM objective function
 
+conf = voc_config();
+
 if nargin < 8
-  max_num_examples = 24000;
+  max_num_examples = conf.training.cache_example_limit;
 end
 
 if nargin < 9
-  fg_overlap = 0.7;
+  fg_overlap = conf.training.fg_overlap;
+end
+
+if nargin < 10
+  num_fp = conf.training.wlssvm_M;
 end
 
 if nargin < 11
@@ -35,7 +41,7 @@ if nargin < 12
 end
 
 if nargin < 13
-  C = 0.001;
+  C = conf.training.C;
 end
 
 % TODO: remove J and keepsv
@@ -44,12 +50,10 @@ keepsv = true;
 
 numpos = length(cat(1,pos(:).dataids));
 max_num_examples = max(numpos*10, max_num_examples+numpos);
-% 3GB file limit
-bytelimit = 1.5*2^31;
+bytelimit = conf.training.cache_byte_limit;
 % optimize with LBFGS by default
 lbfgs = true;
 
-globals;
 negpos = 0;     % last position in data mining
 
 if ~cont
@@ -257,7 +261,8 @@ for t = 1:iter
     model.thresh = pos_vals(ceil(length(pos_vals)*0.05));
 
     % Save model in progress
-    save([cachedir model.class '_model_' tag '_' num2str(t) '_' num2str(tneg)], 'model');
+    save([conf.paths.model_dir model.class '_model_' tag ...
+          '_' num2str(t) '_' num2str(tneg)], 'model');
 
     % While data mining, keep everything that is not data mined in the cache
     P = find((info.is_mined == 0)&(info.is_unique == 1));
@@ -389,7 +394,6 @@ end
 function [num_entries, num_examples] = poswarp(t, model, pos)
 % assumption: the model only has a single structure rule 
 % of the form Q -> F.
-globals;
 numpos = length(pos);
 warped = warppos(model, pos);
 fi = model.symbols(model.rules{model.start}.rhs).filter;

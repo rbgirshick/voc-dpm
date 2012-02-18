@@ -4,8 +4,8 @@ function [ap1, ap2] = trainval(cls)
 
 if nargin < 1
   % pass no arguments in order to run on all classes
-  globals;
-  pascal_init;
+  conf = voc_config();
+  VOCopts = conf.pascal.VOCopts;
   for i = 1:length(VOCopts.classes)
     trainvalsingle(VOCopts.classes{i});
   end
@@ -18,8 +18,10 @@ end
 
 function [ap1, ap2] = trainvalsingle(cls)
 
-globals;
-load([cachedir cls '_final']);
+conf = voc_config();
+VOCyear = conf.pascal.year;
+
+load([conf.paths.model_dir cls '_final']);
 model.thresh = min(-1.1, model.thresh);
 boxes1 = pascal_test(cls, model, 'trainval', VOCyear, VOCyear);
 ap1 = pascal_eval(cls, boxes1, 'trainval', VOCyear, VOCyear);

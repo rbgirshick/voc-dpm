@@ -4,8 +4,6 @@ function warped = warppos(model, pos)
 % Warp positive examples to fit model dimensions.
 % Used for training root filters from positive bounding boxes.
 
-globals;
-
 fi = model.symbols(model.rules{model.start}.rhs).filter;
 fsize = model.filters(fi).size;
 pixels = fsize * model.sbin;

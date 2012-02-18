@@ -7,20 +7,21 @@ function [pos, neg, impos] = pascal_data(cls, year, flippedpos)
 % neg     Each negative image on its own
 % impos   Each positive image with a list of foreground boxes
 
-setVOCyear = year;
-globals; 
-pascal_init;
-dataset = 'trainval';
+conf = voc_config('pascal.year', year);
+dataset_fg = conf.training.train_set_fg;
+dataset_bg = conf.training.train_set_bg;
+cachedir   = conf.paths.model_dir;
+VOCopts    = conf.pascal.VOCopts;
 
 if nargin < 3
   flippedpos = true;
 end
 
 try
-  load([cachedir cls '_' dataset '_' year]);
+  load([cachedir cls '_' dataset_fg '_' year]);
 catch
   % positive examples from train+val
-  ids = textread(sprintf(VOCopts.imgsetpath, dataset), '%s');
+  ids = textread(sprintf(VOCopts.imgsetpath, dataset_fg), '%s');
   pos = [];
   impos = [];
   numpos = 0;
@@ -28,7 +29,7 @@ catch
   dataid = 0;
   for i = 1:length(ids);
     fprintf('%s: parsing positives (%s %s): %d/%d\n', ...
-            cls, dataset, year, i, length(ids));
+            cls, dataset_fg, year, i, length(ids));
     rec = PASreadrecord(sprintf(VOCopts.annopath, ids{i}));
     clsinds = strmatch(cls, {rec.objects(:).class}, 'exact');
     % skip difficult examples
@@ -113,11 +114,11 @@ catch
   end
 
   % negative examples from train (this seems enough!)
-  ids = textread(sprintf(VOCopts.imgsetpath, 'train'), '%s');
+  ids = textread(sprintf(VOCopts.imgsetpath, dataset_bg), '%s');
   neg = [];
   numneg = 0;
   for i = 1:length(ids);
-    fprintf('%s: parsing negatives (train %s): %d/%d\n', cls, year, i, length(ids));
+    fprintf('%s: parsing negatives (%s %s): %d/%d\n', cls, dataset_bg, year, i, length(ids));
     rec = PASreadrecord(sprintf(VOCopts.annopath, ids{i}));
     clsinds = strmatch(cls, {rec.objects(:).class}, 'exact');
     if length(clsinds) == 0
@@ -129,5 +130,5 @@ catch
     end
   end
   
-  save([cachedir cls '_' dataset '_' year], 'pos', 'neg', 'impos');
+  save([cachedir cls '_' dataset_fg '_' year], 'pos', 'neg', 'impos');
 end  

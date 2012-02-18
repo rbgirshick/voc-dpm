@@ -1,3 +1,5 @@
+error('woof!');
+
 % Set up global variables used throughout the code
 
 % setup svm mex for context rescoring (if it's installed)

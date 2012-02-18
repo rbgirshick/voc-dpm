@@ -6,8 +6,9 @@ function [ap1, ap2] = pascal(cls, n, note, dotrainval, testyear)
 % example: note = 'testing FRHOG (FRobnicated HOG) features'
 % testyear allows you to test on a year other than VOCyear (set in globals.m)
 
-globals;
-pascal_init;
+conf = voc_config();
+cachedir = conf.paths.model_dir;
+testset = conf.eval.test_set;
 
 if nargin < 4
   dotrainval = false;
@@ -15,7 +16,7 @@ end
 
 if nargin < 5
   % which year to test on -- a string, e.g., '2007'.
-  testyear = VOCyear;
+  testyear = conf.pascal.year;
 end
 
 % record a log of the training procedure
@@ -30,11 +31,11 @@ model = pascal_train(cls, n, note);
 toc(th);
 fv_cache('free');
 % lower threshold to get high recall
-model.thresh = min(-1.1, model.thresh);
+model.thresh = min(conf.eval.max_thresh, model.thresh);
 
-boxes1 = pascal_test(cls, model, 'test', testyear, testyear);
-ap1 = pascal_eval(cls, boxes1, 'test', testyear, testyear);
-[ap1, ap2] = bboxpred_rescore(cls, 'test', testyear);
+boxes1 = pascal_test(cls, model, testset, testyear, testyear);
+ap1 = pascal_eval(cls, boxes1, testset, testyear, testyear);
+[ap1, ap2] = bboxpred_rescore(cls, testset, testyear);
 
 % compute detections on the trainval dataset (used for context rescoring)
 if dotrainval

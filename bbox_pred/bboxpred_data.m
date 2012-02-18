@@ -3,13 +3,13 @@ function [dets, boxes, targets] = bboxpred_data(name)
 %
 % name  class name
 
-globals;
+conf = voc_config();
 
 try
-  load([cachedir name '_bboxdata']);
+  load([conf.paths.model_dir name '_bboxdata']);
 catch
   % load final model for class
-  load([cachedir name '_final']);
+  load([conf.paths.model_dir name '_final']);
   % get training data
   [pos,neg] = pascal_data(model.class, model.year);
 
@@ -60,5 +60,6 @@ catch
       targets{c} = [targets{c}; part{i}{c}];
     end
   end
-  save([cachedir name '_bboxdata'], 'dets', 'boxes', 'targets');
+  save([conf.paths.model_dir name '_bboxdata'], ...
+       'dets', 'boxes', 'targets');
 end

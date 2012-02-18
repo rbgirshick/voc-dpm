@@ -3,11 +3,12 @@ function ap = rescore_test(cls, dataset)
 % Rescore detections on the test dataset using the context
 % rescoring SVMs trained by rescore_train.m.
 
-globals;
-pascal_init;
+conf = voc_config();
+cachedir = conf.paths.model_dir;
+VOCopts  = conf.pascal.VOCopts;
 
 if nargin < 2
-  dataset = 'test';
+  dataset = conf.eval.data_set;
 end
 [boxes, parts, X] = rescore_data(dataset);
 

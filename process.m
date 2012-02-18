@@ -5,8 +5,6 @@ function [det, all] = process(image, model, thresh)
 % If the threshold is not included we use the one in the model.
 % This should lead to high-recall but low precision.
 
-globals;
-
 if nargin < 3
   thresh = model.thresh
 end

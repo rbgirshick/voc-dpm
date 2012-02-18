@@ -6,16 +6,14 @@ function [ap, newap] = bboxpred_rescore(name, testset, year, method)
 % year     dataset year
 % method   regression method
 
+conf = voc_config('pascal.year', year);
+
 if nargin < 4
   method = 'default';
 end
 
-setVOCyear = year;
-globals;
-pascal_init;
-
 try
-  load([cachedir name '_final']);
+  load([conf.paths.model_dir name '_final']);
   if ~isempty(model.bboxpred)
     bboxpred = model.bboxpred;
   end
@@ -25,7 +23,7 @@ catch
 end
 
 % load test boxes (loads vars: boxes1, parts1)
-load([cachedir name '_boxes_' testset '_' year]);
+load([conf.paths.model_dir name '_boxes_' testset '_' year]);
 
 ids = textread(sprintf(VOCopts.imgsetpath, testset), '%s');
 newboxes = cell(length(parts1),1);
@@ -55,8 +53,9 @@ end
 % save modified boxes
 boxes1 = newboxes;
 parts1 = newparts;
-save([cachedir name '_boxes_' testset '_bboxpred_' year], 'boxes1', 'parts1');
+save([conf.paths.model_dir name '_boxes_' testset '_bboxpred_' year], ...
+     'boxes1', 'parts1');
 
 % load old ap
-load([cachedir name '_pr_' testset '_' year]);
+load([conf.paths.model_dir name '_pr_' testset '_' year]);
 newap = pascal_eval(name, newboxes, testset, year, ['bboxpred_' method '_' year]);

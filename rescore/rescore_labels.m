@@ -1,7 +1,8 @@
 function labels = rescore_labels(cls, boxes, trainset)
 
-globals;
-pascal_init;
+conf = voc_config();
+cachedir = conf.paths.model_dir;
+VOCopts  = conf.pascal.VOCopts;
 
 try
   load([cachedir cls '_rescore_labels_' trainset '_' VOCyear]);

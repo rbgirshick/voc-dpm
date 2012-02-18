@@ -2,8 +2,9 @@ function rescore_train(cls)
 
 % Train context rescoring SVMs.
 
-globals;
-pascal_init;
+conf = voc_config();
+cachedir = conf.paths.model_dir;
+VOCopts  = conf.pascal.VOCopts;
 
 dataset = 'trainval';
 [boxes, parts, XX] = rescore_data(dataset);

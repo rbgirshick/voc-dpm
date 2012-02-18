@@ -4,8 +4,9 @@ function [gt, npos] = labeldata(cls, dataset)
 % resuse when running context rescoring experiments.
 % Some of this code is borrowed from the PASCAL devkit.
 
-globals;
-pascal_init;
+conf = voc_config();
+cachedir = conf.paths.model_dir;
+VOCopts  = conf.pascal.VOCopts;
 
 try
   load([cachedir cls '_labeldata_' dataset '_' VOCyear]);

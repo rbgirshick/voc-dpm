@@ -5,16 +5,14 @@ function model = bboxpred_train(name, year, method)
 % year    dataset year
 % method  regression method (default is LS regression)
 
+conf = voc_config('pascal.year', year);
+
 if nargin < 3
   method = 'default';
 end
 
-setVOCyear = year;
-globals;
-pascal_init;
-
 % load final model for class
-load([cachedir name '_final']);
+load([conf.paths.model_dir name '_final']);
 
 try
   % test to see if the bbox predictor was already trained
@@ -36,7 +34,7 @@ catch
   fprintf('done\n');
   % save bbox predictor coefficients in the model
   model.bboxpred = bboxpred;
-  save([cachedir name '_final'], 'model');
+  save([conf.paths.model_dir name '_final'], 'model');
 end
 
 

@@ -2,8 +2,9 @@ function [boxes, parts, X] = rescore_data(dataset)
 
 % Compute feature vectors for context rescoring.
 
-globals;
-pascal_init;
+conf = voc_config();
+cachedir = conf.paths.model_dir;
+VOCopts  = conf.pascal.VOCopts;
 
 ids = textread(sprintf(VOCopts.imgsetpath, dataset), '%s');
 numids = length(ids);

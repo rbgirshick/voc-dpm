@@ -8,9 +8,10 @@ function boxes1 = pascal_test(cls, model, testset, year, suffix)
 % parts1 gives the locations for the detections in boxes1
 % (these are saved in the cache file, but not returned by the function)
 
-setVOCyear = year;
-globals;
-pascal_init;
+conf = voc_config('pascal.year', year, ...
+                  'eval.test_set', testset);
+VOCopts  = conf.pascal.VOCopts;
+cachedir = conf.paths.model_dir;
 
 ids = textread(sprintf(VOCopts.imgsetpath, testset), '%s');
 

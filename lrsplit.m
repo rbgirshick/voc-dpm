@@ -6,13 +6,14 @@ function [A B] = lrsplit(model, pos, i)
 % pos    examples where i even and i-1 are flipped copies of each other
 % i      index for caching warped positives
 
-globals; 
+conf = voc_config();
+
 try
-  load([cachedir model.class '_warped_' num2str(i) '_' model.year]);
+  load([conf.paths.model_dir model.class '_warped_' num2str(i) '_' model.year]);
 catch
   warped = warppos(model, pos);
   % useful for debugging:
-  % save([cachedir model.class '_warped_' num2str(i) '_' model.year]);
+  % save([conf.paths.model_dir model.class '_warped_' num2str(i) '_' model.year]);
 end
 
 % cache features
