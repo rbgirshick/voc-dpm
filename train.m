@@ -59,7 +59,9 @@ negpos = 0;     % last position in data mining
 if ~cont
   % Estimate < 4*max_num_examples feature vectors
   % will be in cache (attempt to avoid reallocation)
-  fv_cache('init', max_num_examples*4);
+  [dim, nbls] = max_fv_dim(model);
+  max_num = floor(bytelimit / (4*dim));
+  fv_cache('init', max_num, dim, nbls, max_num_examples*4);
 end
 
 [blocks, lb, rm, lm, cmps] = fv_model_args(model);
