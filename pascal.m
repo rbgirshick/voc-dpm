@@ -27,7 +27,8 @@ if nargin < 3
   note = datestr(datevec(now()), 'HH-MM-SS');
 end
 th = tic;
-model = pascal_train(cls, n, note);
+%model = pascal_train(cls, n, note);
+model = person_train(cls, n, note);
 toc(th);
 fv_cache('free');
 % lower threshold to get high recall

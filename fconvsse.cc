@@ -31,7 +31,7 @@
 
 // N.B. If you change the number of features you will need to unroll
 // the unrolled loop in process() more.
-#define NUM_FEATURES 32
+#define NUM_FEATURES 36
 
 
 /*
@@ -112,6 +112,11 @@ void *process(void *thread_arg) {
           c = _mm_mul_ps(a, b);
           v = _mm_add_ps(v, c);
 
+          a = _mm_load_ps(A_off+32);
+          b = _mm_load_ps(B_off+32);
+          c = _mm_mul_ps(a, b);
+          v = _mm_add_ps(v, c);
+
           // N.B. Unroll me more/less if you change NUM_FEATURES
 
           A_off += NUM_FEATURES;
@@ -132,18 +137,20 @@ void *process(void *thread_arg) {
 }
 
 float *prepare(double *in, const int *dims) {
-  float *F = (float *)malloc_aligned(16, dims[0]*dims[1]*dims[2]*sizeof(float));
+  float *F = (float *)malloc_aligned(16, dims[0]*dims[1]*NUM_FEATURES*sizeof(float));
   // Sanity check that memory is aligned
   if (!IS_ALIGNED(F))
     mexErrMsgTxt("Memory not aligned");
 
   float *p = F;
-  for (int x = 0; x < dims[1]; x++)
-    for (int y = 0; y < dims[0]; y++)
+  for (int x = 0; x < dims[1]; x++) {
+    for (int y = 0; y < dims[0]; y++) {
       for (int f = 0; f < dims[2]; f++)
         *(p++) = in[y + f*dims[0]*dims[1] + x*dims[0]];
       for (int f = dims[2]; f < NUM_FEATURES; f++)
         *(p++) = 0;
+    }
+  }
   return F;
 }
 

@@ -548,32 +548,33 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
       printf("%6d, %6.4f, %6.4f\n", M.block_sizes[i], M.reg_mult[i], M.learn_mult[i]);
   }
 
-  const mxArray *mx_comps = prhs[5];
-  M.num_components = mxGetDimensions(mx_comps)[0];
-  M.component_sizes = new (nothrow) int[M.num_components];
-  M.component_blocks = new (nothrow) int*[M.num_components];
-  check(M.component_sizes != NULL);
-  check(M.component_blocks != NULL);
-  for (int i = 0; i < M.num_components; i++) {
-    const mxArray *mx_comp = mxGetCell(mx_comps, i);
-    if (mx_comp == NULL) {
-      M.component_sizes[i]  = 0;
-      M.component_blocks[i] = NULL;
-      continue;
-    }
-    const int *comp = (const int *)mxGetPr(mx_comp);
-    M.component_sizes[i] = mxGetDimensions(mx_comp)[0];
-    M.component_blocks[i] = new (nothrow) int[M.component_sizes[i]];
-    check(M.component_blocks[i] != NULL);
-    copy(comp, comp+M.component_sizes[i], M.component_blocks[i]);
-    if (!quiet) {
-      // Display some useful information
-      mexPrintf("Component %d has %d blocks\n  ", i, M.component_sizes[i]);
-      for (int j = 0; j < M.component_sizes[i]; j++)
-        mexPrintf("%d ", M.component_blocks[i][j]);
-      mexPrintf("\n");
-    }
-  }
+// FIXME
+//  const mxArray *mx_comps = prhs[5];
+//  M.num_components = mxGetDimensions(mx_comps)[0];
+//  M.component_sizes = new (nothrow) int[M.num_components];
+//  M.component_blocks = new (nothrow) int*[M.num_components];
+//  check(M.component_sizes != NULL);
+//  check(M.component_blocks != NULL);
+//  for (int i = 0; i < M.num_components; i++) {
+//    const mxArray *mx_comp = mxGetCell(mx_comps, i);
+//    if (mx_comp == NULL) {
+//      M.component_sizes[i]  = 0;
+//      M.component_blocks[i] = NULL;
+//      continue;
+//    }
+//    const int *comp = (const int *)mxGetPr(mx_comp);
+//    M.component_sizes[i] = mxGetDimensions(mx_comp)[0];
+//    M.component_blocks[i] = new (nothrow) int[M.component_sizes[i]];
+//    check(M.component_blocks[i] != NULL);
+//    copy(comp, comp+M.component_sizes[i], M.component_blocks[i]);
+//    if (!quiet) {
+//      // Display some useful information
+//      mexPrintf("Component %d has %d blocks\n  ", i, M.component_sizes[i]);
+//      for (int j = 0; j < M.component_sizes[i]; j++)
+//        mexPrintf("%d ", M.component_blocks[i][j]);
+//      mexPrintf("\n");
+//    }
+//  }
 
   M.C = mxGetScalar(prhs[6]);
   M.J = mxGetScalar(prhs[7]);

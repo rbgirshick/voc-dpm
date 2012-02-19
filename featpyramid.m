@@ -13,6 +13,11 @@ if nargin < 3
   [padx, pady] = getpadding(model);
 end
 
+
+% TODO: fixme
+pyra = featpyramidbig(im, model, padx, pady);
+return;
+
 sbin = model.sbin;
 interval = model.interval;
 sc = 2^(1/interval);

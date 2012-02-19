@@ -32,50 +32,52 @@ void obj_val(double out[3], ex_cache &E, model &M) {
   out[1] = 0.0; // foreground examples (from pos)
   out[2] = 0.0; // regularization
 
-//  // compute ||w||^2
-//  for (int j = 0; j < M.numblocks; j++) {
-//    for (int k = 0; k < M.blocksizes[j]; k++) {
-//      out[2] += w[j][k] * w[j][k] * M.regmult[j];
-//    }
-//  }
-
-  { // Compute softmax regularization cost
-    double hnrms2[M.num_components];
-    double max_hnrm2 = -INFINITY;
-    for (int c = 0; c < M.num_components; c++) {
-      if (M.component_sizes[c] == 0)
-        continue;
-
-      double val = 0;
-      for (int i = 0; i < M.component_sizes[c]; i++) {
-        int b            = M.component_blocks[c][i];
-        double reg_mult  = M.reg_mult[b];
-        double *wb       = w[b];
-        double block_val = 0;
-        for (int k = 0; k < M.block_sizes[b]; k++)
-          block_val += wb[k] * wb[k] * reg_mult;
-        val += block_val;
-      }
-      // val = 1/2 ||w_c||^2
-      val = 0.5 * val;
-      hnrms2[c] = val;
-      if (val > max_hnrm2)
-        max_hnrm2 = val;
-    }
-    
-    double pc[M.num_components];
-    double Z = 0;
-    for (int c = 0; c < M.num_components; c++) {
-      if (M.component_sizes[c] == 0)
-        continue;
-
-      double a = exp(beta * (hnrms2[c] - max_hnrm2));
-      pc[c] = a;
-      Z += a;
-    }
-
-    out[2] = max_hnrm2 + inv_beta * log(Z);
+  // compute ||w||^2
+  for (int b = 0; b < M.num_blocks; b++) {
+    const double *wb = w[b];
+    double reg_mult  = M.reg_mult[b];
+    for (int k = 0; k < M.block_sizes[b]; k++)
+      out[2] += wb[k] * wb[k] * reg_mult;
   }
+  out[2] *= 0.5;
+
+//  { // Compute softmax regularization cost
+//    double hnrms2[M.num_components];
+//    double max_hnrm2 = -INFINITY;
+//    for (int c = 0; c < M.num_components; c++) {
+//      if (M.component_sizes[c] == 0)
+//        continue;
+//
+//      double val = 0;
+//      for (int i = 0; i < M.component_sizes[c]; i++) {
+//        int b            = M.component_blocks[c][i];
+//        double reg_mult  = M.reg_mult[b];
+//        double *wb       = w[b];
+//        double block_val = 0;
+//        for (int k = 0; k < M.block_sizes[b]; k++)
+//          block_val += wb[k] * wb[k] * reg_mult;
+//        val += block_val;
+//      }
+//      // val = 1/2 ||w_c||^2
+//      val = 0.5 * val;
+//      hnrms2[c] = val;
+//      if (val > max_hnrm2)
+//        max_hnrm2 = val;
+//    }
+//    
+//    double pc[M.num_components];
+//    double Z = 0;
+//    for (int c = 0; c < M.num_components; c++) {
+//      if (M.component_sizes[c] == 0)
+//        continue;
+//
+//      double a = exp(beta * (hnrms2[c] - max_hnrm2));
+//      pc[c] = a;
+//      Z += a;
+//    }
+//
+//    out[2] = max_hnrm2 + inv_beta * log(Z);
+//  }
 
   for (ex_iter i = E.begin(), i_end = E.end(); i != i_end; ++i) {
     fv_iter I = i->begin;
@@ -248,61 +250,76 @@ void gradient(double *obj_val_out, double *grad, const int dim,
 
   double obj_val = -INFINITY;
 
-  { // Cost and gradient of the softmax regularization term
+  { // Cost and gradient of the L2 regularization term
+    obj_val = 0;
     double **w = M.w;
-
-    double hnrms2[M.num_components];
-    double max_hnrm2 = -INFINITY;
-    for (int c = 0; c < M.num_components; c++) {
-      if (M.component_sizes[c] == 0)
-        continue;
-
-      double val = 0;
-      for (int i = 0; i < M.component_sizes[c]; i++) {
-        int b            = M.component_blocks[c][i];
-        double reg_mult  = M.reg_mult[b];
-        double *wb       = w[b];
-        double block_val = 0;
-        for (int k = 0; k < M.block_sizes[b]; k++)
-          block_val += wb[k] * wb[k] * reg_mult;
-        val += block_val;
-      }
-      // val = 1/2 ||w_c||^2
-      val = 0.5 * val;
-      hnrms2[c] = val;
-      if (val > max_hnrm2)
-        max_hnrm2 = val;
-    }
-    
-    double pc[M.num_components];
-    double Z = 0;
-    for (int c = 0; c < M.num_components; c++) {
-      if (M.component_sizes[c] == 0)
-        continue;
-
-      double a = exp(beta * (hnrms2[c] - max_hnrm2));
-      pc[c] = a;
-      Z += a;
-    }
-    double inv_Z = 1.0 / Z;
-
-    obj_val = max_hnrm2 + inv_beta * log(Z);
-
-    for (int c = 0; c < M.num_components; c++) {
-      if (M.component_sizes[c] == 0)
-        continue;
-
-      double cmult = pc[c] * inv_Z;
-      for (int i = 0; i < M.component_sizes[c]; i++) {
-        int b = M.component_blocks[c][i];
-        double reg_mult = M.reg_mult[b];
-        double *wb = w[b];
-        double *ptr_grad = grad_blocks[0][b];
-        for (int k = 0; k < M.block_sizes[b]; k++)
-          *(ptr_grad++) += wb[k] * reg_mult * cmult;
+    for (int b = 0; b < M.num_blocks; b++) {
+      const double *wb = w[b];
+      double reg_mult  = M.reg_mult[b];
+      double *ptr_grad = grad_blocks[0][b];
+      for (int k = 0; k < M.block_sizes[b]; k++) {
+        *(ptr_grad++) += wb[k] * reg_mult;
+        obj_val += wb[k] * wb[k] * reg_mult;
       }
     }
+    obj_val *= 0.5;
   }
+
+//  { // Cost and gradient of the softmax regularization term
+//    double **w = M.w;
+//
+//    double hnrms2[M.num_components];
+//    double max_hnrm2 = -INFINITY;
+//    for (int c = 0; c < M.num_components; c++) {
+//      if (M.component_sizes[c] == 0)
+//        continue;
+//
+//      double val = 0;
+//      for (int i = 0; i < M.component_sizes[c]; i++) {
+//        int b            = M.component_blocks[c][i];
+//        double reg_mult  = M.reg_mult[b];
+//        double *wb       = w[b];
+//        double block_val = 0;
+//        for (int k = 0; k < M.block_sizes[b]; k++)
+//          block_val += wb[k] * wb[k] * reg_mult;
+//        val += block_val;
+//      }
+//      // val = 1/2 ||w_c||^2
+//      val = 0.5 * val;
+//      hnrms2[c] = val;
+//      if (val > max_hnrm2)
+//        max_hnrm2 = val;
+//    }
+//    
+//    double pc[M.num_components];
+//    double Z = 0;
+//    for (int c = 0; c < M.num_components; c++) {
+//      if (M.component_sizes[c] == 0)
+//        continue;
+//
+//      double a = exp(beta * (hnrms2[c] - max_hnrm2));
+//      pc[c] = a;
+//      Z += a;
+//    }
+//    double inv_Z = 1.0 / Z;
+//
+//    obj_val = max_hnrm2 + inv_beta * log(Z);
+//
+//    for (int c = 0; c < M.num_components; c++) {
+//      if (M.component_sizes[c] == 0)
+//        continue;
+//
+//      double cmult = pc[c] * inv_Z;
+//      for (int i = 0; i < M.component_sizes[c]; i++) {
+//        int b = M.component_blocks[c][i];
+//        double reg_mult = M.reg_mult[b];
+//        double *wb = w[b];
+//        double *ptr_grad = grad_blocks[0][b];
+//        for (int k = 0; k < M.block_sizes[b]; k++)
+//          *(ptr_grad++) += wb[k] * reg_mult * cmult;
+//      }
+//    }
+//  }
 
   for (int t = 0; t < num_threads; t++) {
     obj_val += obj_vals[t];

@@ -54,7 +54,7 @@ mxArray *process(const mxArray *mximage, const mxArray *mxsbin) {
   int out[3];
   out[0] = max(blocks[0]-2, 0);
   out[1] = max(blocks[1]-2, 0);
-  out[2] = 27+4+1;
+  out[2] = 27+4+1+1;
   mxArray *mxfeat = mxCreateNumericArray(3, out, mxDOUBLE_CLASS, mxREAL);
   double *feat = (double *)mxGetPr(mxfeat);
   
@@ -213,6 +213,10 @@ mxArray *process(const mxArray *mximage, const mxArray *mxsbin) {
       *dst = 0.2357 * t4;
 
       // truncation feature
+      dst += out[0]*out[1];
+      *dst = 0;
+
+      // small feature
       dst += out[0]*out[1];
       *dst = 0;
     }

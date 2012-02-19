@@ -13,7 +13,8 @@ blocks        = get_blocks(model);
 lower_bounds  = get_lb(model);
 reg_mult      = get_rm(model);
 learn_mult    = get_lm(model);
-comps         = get_comps(model);
+comps         = {};
+%comps         = get_comps(model);
 
 
 function lb = get_lb(model)
@@ -67,6 +68,8 @@ end
 
 
 function comp = get_comps(model)
+
+% TODO: fix me
 
 n = length(model.rules{model.start});
 comp = cell(n, 1);

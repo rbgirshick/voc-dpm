@@ -21,7 +21,7 @@ conf_val = parse_overrides(varargin);
 conf.version = conf_val('version', 'voc-release5');
 
 % Project name (used in the paths)
-conf.project = conf_val('project', 'fv_cache');
+conf.project = conf_val('project', 'fv_cache_nips11');
 
 % Parent directory that everything is under
 conf.paths.base_dir = conf_val('paths.base_dir', '/var/tmp/rbg/');
@@ -61,9 +61,9 @@ exists_or_mkdir(conf.paths.model_dir);
 % -------------------------------------------------------------------
 conf.training.train_set_fg = conf_val('training.train_set', 'trainval');
 conf.training.train_set_bg = conf_val('training.train_set', 'train');
-conf.training.C = conf_val('training.C', 0.001);
-% 3GB file size limit for the feature vector cache
-conf.training.cache_byte_limit = 1.5*2^31;
+conf.training.C = conf_val('training.C', 0.003);
+% 7GB file size limit for the feature vector cache
+conf.training.cache_byte_limit = 3.5*2^31;
 % Location of training log (matlab diary)
 conf.training.log = @(x) sprintf([conf.paths.model_dir '%s.log'], x);
 % Remove existing log before starting a new one
@@ -73,7 +73,7 @@ conf.training.clobber_log = true;
 conf.training.cache_example_limit = 24000;
 conf.training.num_negatives_small = 200;
 conf.training.num_negatives_large = inf;
-conf.training.wlssvm_M = 0;
+conf.training.wlssvm_M = 1;
 conf.training.fg_overlap = 0.7;
 
 
@@ -81,7 +81,7 @@ conf.training.fg_overlap = 0.7;
 % Evaluation configuration 
 % -------------------------------------------------------------------
 conf.eval.test_set = 'test';
-conf.eval.max_thresh = -1.1;
+conf.eval.max_thresh = -1.4;
 conf.pascal.VOCopts.testset = conf.eval.test_set;
 
 

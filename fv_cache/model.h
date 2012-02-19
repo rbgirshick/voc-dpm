@@ -41,10 +41,10 @@ struct model {
   double J;
   // Per-block regularization cost
   float *reg_mult;
-  // Component block-composition for max-regularization
-  int num_components;
-  int *component_sizes;
-  int **component_blocks;
+//  // Component block-composition for max-regularization
+//  int num_components;
+//  int *component_sizes;
+//  int **component_blocks;
 
   /** ---------------------------------------------------------------
    ** Optimization algorithm parameters
@@ -70,9 +70,9 @@ struct model {
     C                 = 0;
     J                 = 0;
     reg_mult          = NULL;
-    num_components    = 0;
-    component_sizes   = NULL;
-    component_blocks  = NULL;
+    //num_components    = 0;
+    //component_sizes   = NULL;
+    //component_blocks  = NULL;
 
     // Opt. algo.
     learn_mult        = NULL;
@@ -114,17 +114,17 @@ struct model {
       delete [] learn_mult;
     learn_mult = NULL;
 
-    if (component_sizes != NULL)
-      delete [] component_sizes;
-    component_sizes = NULL;
-
-    if (component_blocks != NULL) {
-      for (int i = 0; i < num_components; i++)
-        if (component_blocks[i] != NULL)
-          delete [] component_blocks[i];
-      delete [] component_blocks;
-    }
-    component_blocks = NULL;
+//    if (component_sizes != NULL)
+//      delete [] component_sizes;
+//    component_sizes = NULL;
+//
+//    if (component_blocks != NULL) {
+//      for (int i = 0; i < num_components; i++)
+//        if (component_blocks[i] != NULL)
+//          delete [] component_blocks[i];
+//      delete [] component_blocks;
+//    }
+//    component_blocks = NULL;
 
     for (int i = 0; i < hist_size; i++) {
       double *p = w_hist.front();
@@ -138,8 +138,8 @@ struct model {
 
     C = 0;
     J = 0;
-    num_blocks = 0;
-    num_components = 0;
+//    num_blocks = 0;
+//    num_components = 0;
   }
 
 

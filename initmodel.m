@@ -47,10 +47,10 @@ end
 
 % get an empty model
 model = model_create(cls, note);
-model.interval = 10;
+model.interval = 8;
 
 % add root filter
-[model, symbol, filter] = model_addfilter(model, zeros([sz 32]), symmetry);
+[model, symbol, filter] = model_addfilter(model, zeros([sz 33]), symmetry);
 
 % start non-terminal
 [model, Q] = model_addnonterminal(model);

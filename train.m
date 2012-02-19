@@ -401,8 +401,7 @@ fbl = model.filters(fi).blocklabel;
 obl = model.rules{model.start}.offset.blocklabel;
 width1 = ceil(model.filters(fi).size(2)/2);
 width2 = floor(model.filters(fi).size(2)/2);
-pixels = model.filters(fi).size * model.sbin;
-% FIXME: NIPS REL5
+pixels = model.filters(fi).size * model.sbin/2;
 minsize = prod(pixels);
 num_entries = 0;
 num_examples = 0;
@@ -435,10 +434,8 @@ end
 function [num_entries, num_examples, fusage, component_usage, scores] ...
   = poslatent(t, iter, model, pos, fg_overlap, num_fp)
 numpos = length(pos);
-model.interval = 5;
-% FIXME: NIPS REL5
-%pixels = model.minsize * model.sbin/2;
-pixels = model.minsize * model.sbin;
+model.interval = 4;
+pixels = model.minsize * model.sbin/2;
 minsize = prod(pixels);
 fusage = zeros(model.numfilters, 1);
 component_usage = zeros(length(model.rules{model.start}), 1);

@@ -94,9 +94,7 @@ for j = 1:length(r.rhs)
   s = model.symbols(r.rhs(j)).score;
   % starting level
   startlevel = model.interval*ds + 1;
-  % FIXME: REL5 NIPS
-  %for i = 1:length(s)
-  for i = startlevel:length(s)
+  for i = 1:length(s)
     level = i - model.interval*ds;
     if level >= 1
       % ending points

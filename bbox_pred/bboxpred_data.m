@@ -15,7 +15,7 @@ catch
 
   numpos = length(pos);
   model.interval = 5;
-  pixels = model.minsize * model.sbin;
+  pixels = model.minsize * model.sbin/2;
   minsize = prod(pixels);
   nrules = length(model.rules{model.start});
   parb = cell(1,numpos);

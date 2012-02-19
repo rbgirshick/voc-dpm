@@ -8,9 +8,7 @@ Y = zeros(0, 'int32');
 I = zeros(0, 'int32');
 L = zeros(0, 'int32');
 S = [];
-% FIXME: REL5 NIPS
-%for level = 1:length(pyra.scales)
-for level = model.interval+1:length(pyra.scales)
+for level = 1:length(pyra.scales)
   score = model.symbols(model.start).score{level};
   tmpI = find(score > thresh);
   [tmpY, tmpX] = ind2sub(size(score), tmpI);

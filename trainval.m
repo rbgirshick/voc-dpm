@@ -22,7 +22,7 @@ conf = voc_config();
 VOCyear = conf.pascal.year;
 
 load([conf.paths.model_dir cls '_final']);
-model.thresh = min(-1.1, model.thresh);
+model.thresh = min(conf.eval.max_thresh, model.thresh);
 boxes1 = pascal_test(cls, model, 'trainval', VOCyear, VOCyear);
 ap1 = pascal_eval(cls, boxes1, 'trainval', VOCyear, VOCyear);
 [ign, ap2] = bboxpred_rescore(cls, 'trainval', VOCyear);
