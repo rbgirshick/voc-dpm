@@ -61,8 +61,8 @@ struct fv {
   double  loss;
   double  margin;
 
-  static mempool<float> float_pool;
-  static mempool<int> int_pool;
+  static mempool<float> feat_pool;
+  static mempool<int> block_label_pool;
 
   
   /** -----------------------------------------------------------------
@@ -87,15 +87,15 @@ struct fv {
   /** -----------------------------------------------------------------
    ** Load data into a feature vector
    **/
-  void set(const int *_key, const int _num_blocks, const int *_bls,
-           const int _feat_dim, const float *_feat, const bool _is_belief,
-           const bool _is_mined, const double _loss) {
+  int set(const int *_key, const int _num_blocks, const int *_bls,
+          const int _feat_dim, const float *_feat, const bool _is_belief,
+          const bool _is_mined, const double _loss) {
     is_unique     = true;
     num_blocks    = _num_blocks;
     feat_dim      = _feat_dim;
     if (num_blocks > 0 && feat_dim > 0) {
-      feat          = float_pool.get(_feat_dim);
-      block_labels  = int_pool.get(_num_blocks);
+      feat          = feat_pool.get();
+      block_labels  = block_label_pool.get();
       check(feat != NULL);
       check(block_labels != NULL);
       copy(_feat, _feat+_feat_dim, feat);
@@ -108,19 +108,24 @@ struct fv {
     is_belief = _is_belief;
     is_mined  = _is_mined;
     loss      = _loss;
+
+    return (is_zero)
+           ? 0
+           : sizeof(float)*feat_pool.chunk_size;
   }
 
   /** -----------------------------------------------------------------
    ** Free feature vector data
    **/
   int free() {
-    int freed = sizeof(float)*feat_dim;
+    int freed = (is_zero)
+                ? 0 : sizeof(float)*feat_pool.chunk_size;
     
     if (feat != NULL)
-      float_pool.put(feat_dim, feat);
+      feat_pool.put(feat);
 
     if (block_labels != NULL)
-      int_pool.put(num_blocks, block_labels);
+      block_label_pool.put(block_labels);
 
     block_labels  = NULL;
     feat          = NULL;

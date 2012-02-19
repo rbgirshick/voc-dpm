@@ -7,6 +7,7 @@ function [ap, newap] = bboxpred_rescore(name, testset, year, method)
 % method   regression method
 
 conf = voc_config('pascal.year', year);
+VOCopts = conf.pascal.VOCopts;
 
 if nargin < 4
   method = 'default';

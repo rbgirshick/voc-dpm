@@ -9,8 +9,8 @@
 
 using namespace std;
 
-mempool<float> fv::float_pool;
-mempool<int> fv::int_pool;
+mempool<float> fv::feat_pool;
+mempool<int> fv::block_label_pool;
 
 
 /** -----------------------------------------------------------------
@@ -195,8 +195,8 @@ static void free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
     gctx.byte_size -= i->free();
 
   gctx.F.clear();
-  fv::float_pool.free();
-  fv::int_pool.free();
+  fv::feat_pool.free();
+  fv::block_label_pool.free();
   gctx.M.free();
   gctx.model_is_set = false;
   free_ex_cache();
@@ -211,15 +211,24 @@ static void free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
  **/
 static void init_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // matlab inputs
-  // prhs[1]    expected capacity
+  // prhs[1]    max number of feature vectors
+  // prhs[2]    max feature vector length
+  // prhs[3]    max number of blocks
+  // prhs[4]    expected capacity
 
   // Free existing cache
   free_handler(nlhs, plhs, nrhs, prhs);
 
+  const int max_num_fv = (int)mxGetScalar(prhs[1]);
+  const int max_fv_dim = (int)mxGetScalar(prhs[2]);
+  const int max_num_bl = (int)mxGetScalar(prhs[3]);
+  fv::feat_pool.init(max_num_fv, max_fv_dim);
+  fv::block_label_pool.init(max_num_fv, max_num_bl);
+
   // Optionally reserve a specified capacity to reduce
   // vector resizing operations
-  if (nrhs > 1) {
-    const int capacity = (int)mxGetScalar(prhs[1]);
+  if (nrhs > 3) {
+    const int capacity = (int)mxGetScalar(prhs[4]);
     gctx.F.reserve(capacity);
     gctx.E.reserve(capacity);
   }
@@ -254,10 +263,10 @@ static void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs
   const double loss       = mxGetScalar(prhs[6]);
 
   fv f;
-  f.set(key, num_blocks, bls, feat_dim, feat, is_belief, is_mined, loss);
+  gctx.byte_size += f.set(key, num_blocks, bls, feat_dim, 
+                          feat, is_belief, is_mined, loss);
   gctx.F.push_back(f);
 
-  gctx.byte_size += sizeof(float)*feat_dim;
   if (nlhs > 0)
     plhs[0] = mxCreateDoubleScalar(gctx.byte_size);
 }
@@ -582,8 +591,8 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
   gctx.model_is_set = true;
 
   // TODO: remove
-  fv::float_pool.print();
-  fv::int_pool.print();
+  fv::feat_pool.print();
+  fv::block_label_pool.print();
 }
 
 

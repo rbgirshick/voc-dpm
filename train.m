@@ -59,7 +59,9 @@ negpos = 0;     % last position in data mining
 if ~cont
   % Estimate < 4*max_num_examples feature vectors
   % will be in cache (attempt to avoid reallocation)
-  fv_cache('init', max_num_examples*4);
+  [dim, nbls] = max_fv_dim(model);
+  max_num = floor(bytelimit / (4*dim));
+  fv_cache('init', max_num, dim, nbls, max_num_examples*4);
 end
 
 [blocks, lb, rm, lm, cmps] = fv_model_args(model);
@@ -442,7 +444,7 @@ component_usage = zeros(length(model.rules{model.start}), 1);
 scores = [];
 num_entries = 0;
 num_examples = 0;
-batchsize = max(1, try_get_matlabpool_size());
+batchsize = max(1, 2*try_get_matlabpool_size());
 % collect positive examples in parallel batches
 for i = 1:batchsize:numpos
   % do batches of detections in parallel
