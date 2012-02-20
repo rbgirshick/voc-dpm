@@ -29,6 +29,12 @@ conf.paths.base_dir = conf_val('paths.base_dir', '/var/tmp/rbg/');
 % Path to this file
 conf.paths.self = fullfile(pwd(), [mfilename() '.m']);
 
+% byte size of a single (should always be 4-bytes!)
+%tmp = single(0);
+%tmp = whos('tmp');
+%conf.single_byte_size = tmp.bytes;
+conf.single_byte_size = 4;
+
 % -------------------------------------------------------------------
 % PASCAL VOC configuration 
 % -------------------------------------------------------------------
@@ -62,8 +68,8 @@ exists_or_mkdir(conf.paths.model_dir);
 conf.training.train_set_fg = conf_val('training.train_set', 'trainval');
 conf.training.train_set_bg = conf_val('training.train_set', 'train');
 conf.training.C = conf_val('training.C', 0.001);
-% 3GB file size limit for the feature vector cache
-conf.training.cache_byte_limit = 1.5*2^31;
+% File size limit for the feature vector cache (2^30 bytes = 1GB)
+conf.training.cache_byte_limit = 3*2^30;
 % Location of training log (matlab diary)
 conf.training.log = @(x) sprintf([conf.paths.model_dir '%s.log'], x);
 % Remove existing log before starting a new one

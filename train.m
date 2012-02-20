@@ -57,11 +57,12 @@ lbfgs = true;
 negpos = 0;     % last position in data mining
 
 if ~cont
-  % Estimate < 4*max_num_examples feature vectors
-  % will be in cache (attempt to avoid reallocation)
-  [dim, nbls] = max_fv_dim(model);
-  max_num = floor(bytelimit / (4*dim));
-  fv_cache('init', max_num, dim, nbls, max_num_examples*4);
+  % The feature vector cache will use a memory pool
+  % that can hold max_num feature vectors, each with
+  % a maximum byte size of single_byte_size*max_dim
+  [max_dim, max_nbls] = max_fv_dim(model);
+  max_num = ceil(bytelimit / (conf.single_byte_size*max_dim));
+  fv_cache('init', max_num, max_dim, max_nbls);
 end
 
 [blocks, lb, rm, lm, cmps] = fv_model_args(model);
@@ -365,7 +366,7 @@ for t = 1:iter
     end    
     I = sort([P; N]);
     fv_cache('shrink', int32(I));
-    % update cache file counts
+    % update cache counts
     [num_entries, num_examples] = info_stats(info, I);
 
     % print out some stats about the updated cache
@@ -538,7 +539,8 @@ for i = 1:batchsize:numneg
   data = {};
   parfor k = 1:thisbatchsize
     j = inds(i+k-1);
-    fprintf('%s %s: iter %d/%d: hard negatives: %d/%d (%d)\n', procid(), model.class, t, negiter, i+k-1, numneg, j);
+    fprintf('%s %s: iter %d/%d: hard negatives: %d/%d (%d)\n', ...
+            procid(), model.class, t, negiter, i+k-1, numneg, j);
     im = color(imreadx(neg(j)));
     pyra = featpyramid(im, model);
     [dets, bs, trees] = gdetect(pyra, model, -1.002);
@@ -565,7 +567,7 @@ for i = 1:batchsize:numneg
       if num_examples >= max_num_examples
         fprintf('reached example count limit\n');
       else
-        fprintf('reached cache file size limit\n');
+        fprintf('reached cache byte size limit\n');
       end
       complete = 0;
       break;
