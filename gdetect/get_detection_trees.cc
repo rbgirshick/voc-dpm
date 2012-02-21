@@ -263,6 +263,7 @@ static void backtrack(int det_index, int start_x, int start_y, int start_l,
         const double *loss = mxGetPr(mx_loss);
         const mwSize *sz = mxGetDimensions(mx_loss);
         n.loss = loss[n.x*sz[0] + n.y];
+        mexPrintf("loss: %f\n", n.loss);
       }
     }
 
@@ -337,6 +338,7 @@ static void backtrack(int det_index, int start_x, int start_y, int start_l,
     *(tree_mat + node::N_DX)          = i->dx;
     *(tree_mat + node::N_DY)          = i->dy;
     *(tree_mat + node::N_SCORE)       = i->score;
+    *(tree_mat + node::N_LOSS)        = i->loss;
     tree_mat += node::N_SZ;
   }
 }
