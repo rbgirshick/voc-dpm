@@ -6,13 +6,33 @@ function conf = voc_config(varargin)
 % conf.pascal     PASCAL VOC dataset
 % conf.training   model training parameters
 % conf.eval       model evaluation parameters
+%
+% To set a configuration override file, declare
+% the global variable VOC_CONFIG_OVERRIDE 
+% and then set it as a function handle to the
+% config override function. E.g.,
+%  > global VOC_CONFIG_OVERRIDE;
+%  > VOC_CONFIG_OVERRIDE = @my_voc_config;
+% In this example, we assume that you have an M-file 
+% named my_voc_config.m, which you can create by
+% copying and modifying this file.
+%
+% Variables that you'll likely want/need to change
+% are maked with the comment "** EDIT **". The others
+% are sensible defaults that will probably work for you.
 
-% Check for an override configuration file
-global CONF_FILE_OVERRIDE;
-if ~isempty(CONF_FILE_OVERRIDE)
-  conf = CONF_FILE_OVERRIDE(varargin);
+
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% Check for an override configuration file (but only if this is 
+% voc_config.m)
+i_am_voc_config_m = strcmp('voc_config', mfilename());
+global VOC_CONFIG_OVERRIDE;
+if i_am_voc_config_m && ~isempty(VOC_CONFIG_OVERRIDE)
+  conf = VOC_CONFIG_OVERRIDE(varargin);
   return;
 end
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 % Parse individual variable overrides
 conf_val = parse_overrides(varargin);
@@ -21,9 +41,11 @@ conf_val = parse_overrides(varargin);
 conf.version = conf_val('version', 'voc-release5');
 
 % Project name (used in the paths)
+% ** EDIT **
 conf.project = conf_val('project', 'fv_cache');
 
-% Parent directory that everything is under
+% Parent directory that everything (model cache, VOCdevkit) is under
+% ** EDIT **
 conf.paths.base_dir = conf_val('paths.base_dir', '/var/tmp/rbg/');
 
 % Path to this file
@@ -40,13 +62,12 @@ conf.single_byte_size = 4;
 % -------------------------------------------------------------------
 
 % Configure the PASCAL VOC dataset year
+% ** EDIT **
 conf.pascal.year = conf_val('pascal.year', '2007');
 
 % Directory with PASCAL VOC development kit and dataset
 conf.pascal.dev_kit = [conf.paths.base_dir 'VOC' conf.pascal.year ...
                        '/VOCdevkit/'];
-
-addpath([conf.pascal.dev_kit '/VOCcode']);
 
 % VOCinit brings VOCopts into scope                  
 conf.pascal.VOCopts = get_voc_opts(conf);
@@ -101,17 +122,22 @@ end
 
 
 function VOCopts = get_voc_opts(conf)
+% cache VOCopts from VOCinit
 persistent voc_opts;
 
-if isempty(voc_opts)
+key = conf.pascal.year;
+if isempty(voc_opts) || ~voc_opts.isKey(key)
+  if isempty(voc_opts)
+    voc_opts = containers.Map();
+  end
   tmp = pwd;
   cd(conf.pascal.dev_kit);
   addpath([cd '/VOCcode']);
   VOCinit;
   cd(tmp);
-  voc_opts = VOCopts;
+  voc_opts(key) = VOCopts;
 end
-VOCopts = voc_opts;
+VOCopts = voc_opts(key);
 
 
 function func = parse_overrides(in)
