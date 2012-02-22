@@ -515,7 +515,7 @@ static void get_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
 /** -----------------------------------------------------------------
  ** Set the current model (parameters, their lower bounds, 
  ** regularization multipliers, learning rate multipliers,
- ** component block composition, C, and J).
+ ** component block composition, and C).
  **/
 static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // matlab inputs
@@ -525,10 +525,9 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
   // prhs[4]    learnmult as 1d vector
   // prhs[5]    componentblocks as cell array of vectors
   // prhs[6]    C
-  // prhs[7]    J
   // prhs[8]    any value => quiet mode
 
-  checkM(nrhs >= 8, "Expected >= 7 inputs");
+  checkM(nrhs >= 7, "Expected >= 6 inputs");
   checkM(nlhs == 0, "Expected 0 ouputs");
 
   model &M = gctx.M;
@@ -536,7 +535,7 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
   // Free memory is a model already exists
   M.free();
 
-  bool quiet = (nrhs >= 9);
+  bool quiet = (nrhs >= 8);
 
   const mxArray *mx_w = prhs[1];
   const mxArray *mx_lb = prhs[2];
@@ -607,7 +606,6 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
   }
 
   M.C = mxGetScalar(prhs[6]);
-  M.J = mxGetScalar(prhs[7]);
 
   gctx.model_is_set = true;
 }

@@ -93,9 +93,6 @@ conf.training.C = conf_val('training.C', 0.001);
 conf.training.cache_byte_limit = 3*2^30;
 % Location of training log (matlab diary)
 conf.training.log = @(x) sprintf([conf.paths.model_dir '%s.log'], x);
-% Remove existing log before starting a new one
-conf.training.clobber_log = true;
-% Clean the temporary file directory after training?
 
 conf.training.cache_example_limit = 24000;
 conf.training.num_negatives_small = 200;
