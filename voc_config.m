@@ -100,14 +100,27 @@ conf.training.num_negatives_large = inf;
 conf.training.wlssvm_M = 0;
 conf.training.fg_overlap = 0.7;
 
+conf.training.interval_fg = 5;
+conf.training.interval_bg = 4;
+
 
 % -------------------------------------------------------------------
 % Evaluation configuration 
 % -------------------------------------------------------------------
+conf.eval.interval = 10;
 conf.eval.test_set = 'test';
 conf.eval.max_thresh = -1.1;
 conf.pascal.VOCopts.testset = conf.eval.test_set;
 
+
+% -------------------------------------------------------------------
+% Feature configuration 
+% -------------------------------------------------------------------
+conf.features.sbin = 8;
+conf.features.dim = 33;
+conf.features.truncation_dim = 32;
+conf.features.extra_octave_dim = 33;
+conf.features.extra_octave = false;
 
 
 function made = exists_or_mkdir(path)

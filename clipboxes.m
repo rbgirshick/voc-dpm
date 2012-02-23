@@ -1,4 +1,4 @@
-function [dets, parts] = clipboxes(im, dets, parts)
+function [dets, parts, I] = clipboxes(im, dets, parts)
 
 % [dets parts] = clipboxes(im, dets, parts)
 % Clips detection windows to image boundary.

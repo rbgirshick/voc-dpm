@@ -41,6 +41,7 @@ fv_cache('free');
 
 % lower threshold to get high recall
 model.thresh = min(conf.eval.max_thresh, model.thresh);
+model.interval = conf.eval.interval;
 
 boxes1 = pascal_test(cls, model, testset, testyear, testyear);
 ap1 = pascal_eval(cls, boxes1, testset, testyear, testyear);

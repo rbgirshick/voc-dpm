@@ -245,7 +245,6 @@ for t = 1:iter
 %      blocks = fv_cache('get_model');
     end
 
-    fprintf('parsing model\n');
     model = parsemodel(model, blocks);
     cache(tneg,:) = [nl pl rt nl+pl+rt];
     for tt = 1:tneg
@@ -259,8 +258,10 @@ for t = 1:iter
     model.thresh = pos_vals(ceil(length(pos_vals)*0.05));
 
     % Save model in progress
-    save([conf.paths.model_dir model.class '_model_' tag ...
-          '_' num2str(t) '_' num2str(tneg)], 'model');
+    model_name = [model.class '_model_' tag '_' ...
+                  num2str(t) '_' num2str(tneg)];
+    save([conf.paths.model_dir model_name], 'model');
+    fprintf('Finished training %s (C = %.4f)\n', model_name, C);
 
     % While data mining, keep everything that is not data mined in the cache
     P = find((info.is_mined == 0)&(info.is_unique == 1));
@@ -389,15 +390,17 @@ end
 function [num_entries, num_examples] = poswarp(t, model, pos)
 % assumption: the model only has a single structure rule 
 % of the form Q -> F.
+conf = voc_config();
 numpos = length(pos);
 warped = warppos(model, pos);
 fi = model.symbols(model.rules{model.start}.rhs).filter;
 fbl = model.filters(fi).blocklabel;
 obl = model.rules{model.start}.offset.blocklabel;
-width1 = ceil(model.filters(fi).size(2)/2);
-width2 = floor(model.filters(fi).size(2)/2);
-pixels = model.filters(fi).size * model.sbin;
-% FIXME: NIPS REL5
+div = 1;
+if conf.features.extra_octave
+  div = 2;
+end
+pixels = model.filters(fi).size * model.sbin / div;
 minsize = prod(pixels);
 num_entries = 0;
 num_examples = 0;
@@ -429,18 +432,21 @@ end
 % we create virtual examples by flipping each image left to right
 function [num_entries, num_examples, fusage, component_usage, scores] ...
   = poslatent(t, iter, model, pos, fg_overlap, num_fp)
+conf = voc_config();
+model.interval = conf.training.interval_fg;
 numpos = length(pos);
-model.interval = 5;
-% FIXME: NIPS REL5
-%pixels = model.minsize * model.sbin/2;
-pixels = model.minsize * model.sbin;
+div = 1;
+if conf.features.extra_octave
+  div = 2;
+end
+pixels = model.minsize * model.sbin / div;
 minsize = prod(pixels);
 fusage = zeros(model.numfilters, 1);
 component_usage = zeros(length(model.rules{model.start}), 1);
 scores = [];
 num_entries = 0;
 num_examples = 0;
-batchsize = max(1, try_get_matlabpool_size());
+batchsize = max(1, 2*try_get_matlabpool_size());
 % collect positive examples in parallel batches
 for i = 1:batchsize:numpos
   % do batches of detections in parallel
@@ -516,7 +522,8 @@ end
 % get hard negative examples
 function [num_entries, num_examples, j, fusage, scores, complete] ...
   = neghard(t, negiter, model, neg, maxsize, negpos, max_num_examples)
-model.interval = 4;
+conf = voc_config();
+model.interval = conf.training.interval_bg;
 fusage = zeros(model.numfilters, 1);
 numneg = length(neg);
 num_entries = 0;
@@ -578,8 +585,6 @@ numneg = length(neg);
 rndneg = floor(maxnum/numneg);
 fi = model.symbols(model.rules{model.start}.rhs).filter;
 rsize = model.filters(fi).size;
-width1 = ceil(rsize(2)/2);
-width2 = floor(rsize(2)/2);
 fbl = model.filters(fi).blocklabel;
 obl = model.rules{model.start}.offset.blocklabel;
 num_entries = 0;
