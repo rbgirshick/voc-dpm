@@ -14,7 +14,7 @@ catch
   [pos,neg] = pascal_data(model.class, model.year);
 
   numpos = length(pos);
-  model.interval = conf.training.interval;
+  model.interval = conf.training.interval_fg;
   div = 1;
   if conf.features.extra_octave
     div = 2;

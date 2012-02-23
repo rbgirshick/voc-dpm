@@ -23,7 +23,7 @@ end
 % Take the code, zip it into an archive named by date
 % print the name of the code archive to the log file
 % add the code name to the training note
-timestamp = datestr(datevec(now()), 'dd.mm.yyyy:HH.MM.SS');
+timestamp = datestr(datevec(now()), 'dd.mmm.yyyy:HH.MM.SS');
 
 % set the note to the training time if none is given
 if nargin < 3
