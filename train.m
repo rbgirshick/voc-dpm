@@ -452,6 +452,7 @@ for i = 1:batchsize:numpos
   % do batches of detections in parallel
   thisbatchsize = batchsize - max(0, (i+batchsize-1) - numpos);
   % data for batch
+  clear('data');
   data(thisbatchsize).boxdata = [];
   data(thisbatchsize).pyra = [];
   parfor k = 1:thisbatchsize
@@ -492,6 +493,7 @@ for i = 1:batchsize:numpos
         fprintf('%s (%d: no overlap)\n', msg, b);
       end
     end
+    model_dp = [];
   end
   % write feature vectors sequentially 
   for k = 1:thisbatchsize
@@ -535,7 +537,7 @@ inds = circshift(1:numneg, [0 -negpos]);
 for i = 1:batchsize:numneg
   % do batches of detections in parallel
   thisbatchsize = batchsize - max(0, (i+batchsize-1) - numneg);
-  data = {};
+  data = cell(k, 1);
   parfor k = 1:thisbatchsize
     j = inds(i+k-1);
     fprintf('%s %s: iter %d/%d: hard negatives: %d/%d (%d)\n', ...
