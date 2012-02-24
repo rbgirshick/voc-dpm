@@ -337,6 +337,7 @@ static void backtrack(int det_index, int start_x, int start_y, int start_l,
     *(tree_mat + node::N_DX)          = i->dx;
     *(tree_mat + node::N_DY)          = i->dy;
     *(tree_mat + node::N_SCORE)       = i->score;
+    *(tree_mat + node::N_LOSS)        = i->loss;
     tree_mat += node::N_SZ;
   }
 }

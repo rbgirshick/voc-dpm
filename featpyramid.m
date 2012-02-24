@@ -13,8 +13,6 @@ if nargin < 3
   [padx, pady] = getpadding(model);
 end
 
-
-% TODO: fixme
 pyra = featpyramidbig(im, model, padx, pady);
 return;
 

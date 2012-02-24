@@ -30,8 +30,13 @@ neg_small = neg(randperm(length(neg)));
 neg_small = neg_small(1:conf.training.num_negatives_small);
 
 % TODO: replace with actual function call from one_offs 
-load([cachedir 'person_simple_grammar_occ_def']);
-model.note = note;
+try
+  load([cachedir 'person_simple_grammar_occ_def']);
+  model.note = note;
+catch
+  one_offs();
+  load([cachedir 'person_simple_grammar_occ_def']);
+end
 
 try 
   load([cachedir cls '_star']);
@@ -72,10 +77,10 @@ catch
 %  osym = model.rules{model.start}(1).rhs(2);
 %  model = add_slab_parts(model, osym, 2, [8 8], [4 4]);         % O
 
-  model = train(model, impos, neg_small, false, false, 10, 20, ...
+  model = train(model, impos, neg_small, false, false, 8, 20, ...
                 max_num_examples, fg_overlap, num_fp, false, 'parts_1');
   model = train(model, impos, neg, false, false, 1, 5, ...
-                cachesize, fg_overlap, num_fp, true, 'parts_2');
+                max_num_examples, fg_overlap, num_fp, true, 'parts_2');
   save([cachedir cls '_parts'], 'model');
 end
 

@@ -60,7 +60,7 @@ if ~cont
   % Estimate < 4*max_num_examples feature vectors
   % will be in cache (attempt to avoid reallocation)
   [dim, nbls] = max_fv_dim(model);
-  max_num = floor(bytelimit / (4*dim));
+  max_num = ceil(bytelimit / (4*dim))+1;
   fv_cache('init', max_num, dim, nbls, max_num_examples*4);
 end
 
@@ -213,13 +213,14 @@ for t = 1:iter
     % learn model
     logtag = [model.class '_' tag '_' num2str(t) '_' num2str(tneg)];
     [blocks, lb, rm, lm, cmps] = fv_model_args(model);
+    fprintf('C = %f\n', C);
     fv_cache('set_model', blocks, lb, rm, lm, cmps, C, J);
 
     if lbfgs
       % optimize with LBFGS
       options.verbose = 2;
       options.maxIter = 1000;
-      %options.optTol = 0.000001*0.1;
+      options.optTol = 0.0001;
 
       w = cat(1, blocks{:});
       lb = cat(1, lb{:});
@@ -450,6 +451,7 @@ for i = 1:batchsize:numpos
   % do batches of detections in parallel
   thisbatchsize = batchsize - max(0, (i+batchsize-1) - numpos);
   % data for batch
+  clear('data');
   data(thisbatchsize).boxdata = [];
   data(thisbatchsize).pyra = [];
   parfor k = 1:thisbatchsize
@@ -490,6 +492,7 @@ for i = 1:batchsize:numpos
         fprintf('%s (%d: no overlap)\n', msg, b);
       end
     end
+    model_dp = [];
   end
   % write feature vectors sequentially 
   for k = 1:thisbatchsize
@@ -532,13 +535,15 @@ inds = circshift(1:numneg, [0 -negpos]);
 for i = 1:batchsize:numneg
   % do batches of detections in parallel
   thisbatchsize = batchsize - max(0, (i+batchsize-1) - numneg);
+  det_limit = ceil((max_num_examples - num_examples) / thisbatchsize);
   data = {};
   parfor k = 1:thisbatchsize
     j = inds(i+k-1);
-    fprintf('%s %s: iter %d/%d: hard negatives: %d/%d (%d)\n', procid(), model.class, t, negiter, i+k-1, numneg, j);
+    fprintf('%s %s: iter %d/%d: hard negatives: %d/%d (%d)\n', ...
+            procid(), model.class, t, negiter, i+k-1, numneg, j);
     im = color(imreadx(neg(j)));
     pyra = featpyramid(im, model);
-    [dets, bs, trees] = gdetect(pyra, model, -1.002);
+    [dets, bs, trees] = gdetect(pyra, model, -1.002, det_limit);
     data{k}.bs = bs;
     data{k}.pyra = pyra;
     data{k}.trees = trees;

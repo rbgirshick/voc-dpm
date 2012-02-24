@@ -21,7 +21,7 @@ conf_val = parse_overrides(varargin);
 conf.version = conf_val('version', 'voc-release5');
 
 % Project name (used in the paths)
-conf.project = conf_val('project', 'fv_cache_nips11');
+conf.project = conf_val('project', 'fv_cache_nips11/featbig');
 
 % Parent directory that everything is under
 conf.paths.base_dir = conf_val('paths.base_dir', '/var/tmp/rbg/');
@@ -40,7 +40,9 @@ conf.pascal.year = conf_val('pascal.year', '2007');
 conf.pascal.dev_kit = [conf.paths.base_dir 'VOC' conf.pascal.year ...
                        '/VOCdevkit/'];
 
-addpath([conf.pascal.dev_kit '/VOCcode']);
+if isempty(strfind(matlabpath, [conf.pascal.dev_kit 'VOCcode:']))
+  addpath([conf.pascal.dev_kit 'VOCcode']);
+end
 
 % VOCinit brings VOCopts into scope                  
 conf.pascal.VOCopts = get_voc_opts(conf);
@@ -61,7 +63,7 @@ exists_or_mkdir(conf.paths.model_dir);
 % -------------------------------------------------------------------
 conf.training.train_set_fg = conf_val('training.train_set', 'trainval');
 conf.training.train_set_bg = conf_val('training.train_set', 'train');
-conf.training.C = conf_val('training.C', 0.003);
+conf.training.C = conf_val('training.C', 0.006);
 % 7GB file size limit for the feature vector cache
 conf.training.cache_byte_limit = 3.5*2^31;
 % Location of training log (matlab diary)

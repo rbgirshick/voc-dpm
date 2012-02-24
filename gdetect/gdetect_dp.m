@@ -152,7 +152,7 @@ function model = filter_responses(model, pyra)
 % gather filters for computing match quality responses
 filters = cell(model.numfilters, 1);
 for i = 1:model.numfilters
-  filters{i} = model.filters(i).w;
+  filters{i} = single(model.filters(i).w);
 end
 
 for level = 1:length(pyra.feat)

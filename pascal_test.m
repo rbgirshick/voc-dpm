@@ -35,11 +35,24 @@ catch
     end
     [dets, boxes] = imgdetect(im, model, model.thresh);
     if ~isempty(boxes)
-      boxes = reduceboxes(model, boxes);
-      [dets boxes] = clipboxes(im, dets, boxes);
+      unclipped_dets = dets(:,1:4);
+      [dets, ~, rm] = clipboxes(im, dets);
+      unclipped_dets(rm) = [];
+      % NMS
       I = nms(dets, 0.5);
-      boxes1{i} = dets(I,[1:4 end]);
-      parts1{i} = boxes(I,:);
+      dets = dets(I,:);
+      unclipped_dets = unclipped_dets(I,:);
+      boxes = boxes(I,:);
+
+      boxes1{i} = dets(:,[1:4 end]);
+      % unclipped detection window and all filter boxes
+      parts1{i} = cat(2, unclipped_dets, boxes);
+
+%      boxes = reduceboxes(model, boxes);
+%      [dets boxes] = clipboxes(im, dets, boxes);
+%      I = nms(dets, 0.5);
+%      boxes1{i} = dets(I,[1:4 end]);
+%      parts1{i} = boxes(I,:);
     else
       boxes1{i} = [];
       parts1{i} = [];
