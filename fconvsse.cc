@@ -136,7 +136,7 @@ void *process(void *thread_arg) {
   pthread_exit(NULL);
 }
 
-float *prepare(double *in, const int *dims) {
+float *prepare(float *in, const int *dims) {
   float *F = (float *)malloc_aligned(16, dims[0]*dims[1]*NUM_FEATURES*sizeof(float));
   // Sanity check that memory is aligned
   if (!IS_ALIGNED(F))
@@ -165,7 +165,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // get A
   const mxArray *mxA = prhs[0];
   if (mxGetNumberOfDimensions(mxA) != 3 || 
-      mxGetClassID(mxA) != mxDOUBLE_CLASS)
+      mxGetClassID(mxA) != mxSINGLE_CLASS)
     mexErrMsgTxt("Invalid input: A");
 
   // get B and start/end
@@ -181,15 +181,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   thread_data *td = (thread_data *)mxCalloc(len, sizeof(thread_data));
   pthread_t *ts = (pthread_t *)mxCalloc(len, sizeof(pthread_t));
   const mwSize *A_dims = mxGetDimensions(mxA);
-  float *A = prepare(mxGetPr(mxA), A_dims);
+  float *A = prepare((float *)mxGetPr(mxA), A_dims);
   for (int i = 0; i < len; i++) {
     const mxArray *mxB = mxGetCell(cellB, i+start);
     td[i].A_dims = A_dims;
     td[i].A = A;
     td[i].B_dims = mxGetDimensions(mxB);
-    td[i].B = prepare(mxGetPr(mxB), td[i].B_dims);
+    td[i].B = prepare((float *)mxGetPr(mxB), td[i].B_dims);
     if (mxGetNumberOfDimensions(mxB) != 3 ||
-        mxGetClassID(mxB) != mxDOUBLE_CLASS ||
+        mxGetClassID(mxB) != mxSINGLE_CLASS ||
         td[i].A_dims[2] != td[i].B_dims[2])
       mexErrMsgTxt("Invalid input: B");
 
