@@ -29,3 +29,4 @@ m.thresh      = 0;                  % detection threshold
 m.regmult     = [];                 % per block regularization multiplier
 m.learnmult   = [];                 % per block learning rate multiplier
 m.lowerbounds = {};                 % per parameter lower bound
+m.bias_feature = conf.training.bias_feature;  % feature value for bias/offset parameters

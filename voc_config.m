@@ -89,6 +89,7 @@ exists_or_mkdir(conf.paths.model_dir);
 conf.training.train_set_fg = conf_val('training.train_set', 'trainval');
 conf.training.train_set_bg = conf_val('training.train_set', 'train');
 conf.training.C = conf_val('training.C', 0.001);
+conf.training.bias_feature = 10;
 % File size limit for the feature vector cache (2^30 bytes = 1GB)
 conf.training.cache_byte_limit = 3*2^30;
 % Location of training log (matlab diary)

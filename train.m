@@ -215,7 +215,7 @@ for t = 1:iter
       % optimize with LBFGS
       options.verbose = 2;
       options.maxIter = 1000;
-      %options.optTol = 0.000001*0.1;
+      %options.optTol = 0.000001*10;
 
       w = cat(1, blocks{:});
       lb = cat(1, lb{:});
@@ -419,7 +419,7 @@ for i = 1:numpos
   feat = features(im, model.sbin);
   key = [0 i 0 0 0];
   bls = [obl; fbl] - 1;
-  feat = [10; feat(:)];
+  feat = [model.bias_feature; feat(:)];
   fv_cache('add', int32(key), int32(bls), single(feat), ...
                   int32(is_belief), int32(is_mined), loss); 
   write_zero_fv(true, key);
@@ -606,7 +606,7 @@ for i = 1:numneg
       dataid = (i-1)*rndneg+j + 100000; % assumes < 100K foreground examples
       key = [0 dataid 0 0 0];
       bls = [obl; fbl] - 1;
-      f = [10; f(:)];
+      f = [model.bias_feature; f(:)];
       fv_cache('add', int32(key), int32(bls), single(f), ...
                       int32(is_belief), int32(is_mined), loss); 
       % write zero belief vector
@@ -619,7 +619,7 @@ for i = 1:numneg
 end
 
 
-function info = info_to_struct(inf)
+function info = info_to_struct(in)
 I_LABEL     = 1;
 I_SCORE     = 2;
 I_IS_UNIQUE = 3;
@@ -633,18 +633,18 @@ I_IS_BELIEF = 10;
 I_IS_ZERO   = 11;
 I_IS_MINED  = 12;
 
-info.labels       = inf(:, I_LABEL);
-info.scores       = inf(:, I_SCORE);
-info.is_unique    = inf(:, I_IS_UNIQUE);
-info.dataid       = inf(:, I_DATAID);
-info.x            = inf(:, I_X);
-info.y            = inf(:, I_Y);
-info.scale        = inf(:, I_SCALE);
-info.byte_size    = inf(:, I_BYTE_SIZE);
-info.margins      = inf(:, I_MARGIN);
-info.is_belief    = inf(:, I_IS_BELIEF);
-info.is_zero      = inf(:, I_IS_ZERO);
-info.is_mined     = inf(:, I_IS_MINED);
+info.labels       = in(:, I_LABEL);
+info.scores       = in(:, I_SCORE);
+info.is_unique    = in(:, I_IS_UNIQUE);
+info.dataid       = in(:, I_DATAID);
+info.x            = in(:, I_X);
+info.y            = in(:, I_Y);
+info.scale        = in(:, I_SCALE);
+info.byte_size    = in(:, I_BYTE_SIZE);
+info.margins      = in(:, I_MARGIN);
+info.is_belief    = in(:, I_IS_BELIEF);
+info.is_zero      = in(:, I_IS_ZERO);
+info.is_mined     = in(:, I_IS_MINED);
 
 
 function [num_entries, num_examples] = info_stats(info, I)

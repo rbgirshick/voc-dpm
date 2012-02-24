@@ -74,7 +74,7 @@ function model = apply_structural_rule(model, r, pady, padx)
 % prepare score for this rule
 score = model.scoretpt;
 for i = 1:length(score)
-  score{i}(:) = r.offset.w * 10;
+  score{i}(:) = r.offset.w * model.bias_feature;
 end
 
 % sum scores from rhs (with appropriate shift and down sample)
@@ -133,7 +133,7 @@ function model = apply_deformation_rule(model, r)
 def = r.def.w;
 score = model.symbols(r.rhs(1)).score;
 for i = 1:length(score)
-  score{i} = score{i} + r.offset.w * 10;
+  score{i} = score{i} + r.offset.w * model.bias_feature;
   %[score{i}, Ix{i}, Iy{i}] = dt(score{i}, def(1), def(2), def(3), def(4));
   [score{i}, Ix{i}, Iy{i}] = bounded_dt(score{i}, def(1), def(2), ...
                                         def(3), def(4), 4);
