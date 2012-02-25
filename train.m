@@ -537,14 +537,15 @@ inds = circshift(1:numneg, [0 -negpos]);
 for i = 1:batchsize:numneg
   % do batches of detections in parallel
   thisbatchsize = batchsize - max(0, (i+batchsize-1) - numneg);
-  data = cell(k, 1);
+  det_limit = ceil((max_num_examples - num_examples) / thisbatchsize);
+  data = cell(thisbatchsize, 1);
   parfor k = 1:thisbatchsize
     j = inds(i+k-1);
     fprintf('%s %s: iter %d/%d: hard negatives: %d/%d (%d)\n', ...
             procid(), model.class, t, negiter, i+k-1, numneg, j);
     im = color(imreadx(neg(j)));
     pyra = featpyramid(im, model);
-    [dets, bs, trees] = gdetect(pyra, model, -1.002);
+    [dets, bs, trees] = gdetect(pyra, model, -1.002, det_limit);
     data{k}.bs = bs;
     data{k}.pyra = pyra;
     data{k}.trees = trees;

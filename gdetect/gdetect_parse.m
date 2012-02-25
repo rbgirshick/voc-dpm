@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-function [dets, boxes, trees] = gdetect_parse(model, pyra, thresh, count)
+function [dets, boxes, trees] = gdetect_parse(model, pyra, thresh, max_num)
 
 % find scores above threshold
 X = zeros(0, 'int32');
@@ -21,7 +21,7 @@ end
 
 [ign, ord] = sort(S, 'descend');
 if ~isempty(ord)
-  ord = ord(1:min(length(ord), count));
+  ord = ord(1:min(length(ord), max_num));
 end
 X = X(ord);
 Y = Y(ord);

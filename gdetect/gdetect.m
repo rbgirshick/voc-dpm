@@ -1,4 +1,4 @@
-function [dets, boxes, trees] = gdetect(pyra, model, thresh)
+function [dets, boxes, trees] = gdetect(pyra, model, thresh, max_num)
 
 % Detect objects in a feature pyramid using a model and a score threshold.
 % Higher threshold leads to fewer detections.
@@ -22,6 +22,10 @@ function [dets, boxes, trees] = gdetect(pyra, model, thresh)
 % model      object model
 % threshold  score threshold
 
+if nargin < 4
+  max_num = inf;
+end
+
 % mark which pyramid levels to process (all)
 model = gdetect_dp(pyra, model);
-[dets, boxes, trees] = gdetect_parse(model, pyra, thresh, inf);
+[dets, boxes, trees] = gdetect_parse(model, pyra, thresh, max_num);
