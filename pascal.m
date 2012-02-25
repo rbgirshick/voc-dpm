@@ -19,20 +19,30 @@ if nargin < 5
   testyear = conf.pascal.year;
 end
 
-% record a log of the training procedure
-diary([cachedir cls '.log']);
+% TODO: should save entire code used for this run
+% Take the code, zip it into an archive named by date
+% print the name of the code archive to the log file
+% add the code name to the training note
+timestamp = datestr(datevec(now()), 'dd.mmm.yyyy:HH.MM.SS');
 
 % set the note to the training time if none is given
 if nargin < 3
-  note = datestr(datevec(now()), 'HH-MM-SS');
+  note = timestamp;
 end
+
+% record a log of the training and test procedure
+diary(conf.training.log([cls '-' timestamp]));
+
 th = tic;
 %model = pascal_train(cls, n, note);
 model = person_train(cls, n, note);
 toc(th);
+% Free feature vector cache memory
 fv_cache('free');
+
 % lower threshold to get high recall
 model.thresh = min(conf.eval.max_thresh, model.thresh);
+model.interval = conf.eval.interval;
 
 boxes1 = pascal_test(cls, model, testset, testyear, testyear);
 ap1 = pascal_eval(cls, boxes1, testset, testyear, testyear);

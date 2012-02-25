@@ -72,7 +72,6 @@ for d = 1:length(trees)
   y = trees{d}(N_Y, 1);
   l = trees{d}(N_L, 1);
   ex = [];
-  ex.maxsize = maxsize;
   ex.key = [0; dataid; l; x; y];
   ex.blocks(model.numblocks).f = [];
   ex.loss = trees{d}(N_LOSS, 1);
@@ -115,7 +114,7 @@ for d = 1:length(trees)
       end
     end
   end
-  status = exwrite(ex, from_pos, is_belief);
+  status = exwrite(ex, from_pos, is_belief, maxsize);
   count = count + 1;
   if from_pos
     % by convention, only the first feature vector is the belief
@@ -161,7 +160,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % write ex to fv cache
-function status = exwrite(ex, from_pos, is_belief)
+function status = exwrite(ex, from_pos, is_belief, maxsize)
 % ex  example to write
 
 if from_pos
@@ -202,4 +201,4 @@ byte_size = fv_cache('add', int32(ex.key), int32(bls), single(feat), ...
                             int32(is_belief), int32(is_mined), loss); 
 
 % still under the limit?
-status = (byte_size < ex.maxsize);
+status = (byte_size ~= -1) & (byte_size < maxsize);

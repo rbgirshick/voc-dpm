@@ -6,6 +6,8 @@ function model = initmodel(cls, pos, note, symmetry, sbin, sz)
 % If not supplied the dimensions of the model template are computed
 % from statistics in the postive examples.
 
+conf = voc_config();
+
 if nargin < 3
   note = '';
 end
@@ -16,7 +18,7 @@ end
 
 % size of HOG features
 if nargin < 5
-  model.sbin = 8;
+  model.sbin = conf.features.sbin;
 else
   model.sbin = sbin;
 end
@@ -47,10 +49,10 @@ end
 
 % get an empty model
 model = model_create(cls, note);
-model.interval = 8;
+model.interval = conf.eval.interval;
 
 % add root filter
-[model, symbol, filter] = model_addfilter(model, zeros([sz 33]), symmetry);
+[model, symbol, filter] = model_addfilter(model, zeros([sz conf.features.dim]), symmetry);
 
 % start non-terminal
 [model, Q] = model_addnonterminal(model);

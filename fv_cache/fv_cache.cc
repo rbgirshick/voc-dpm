@@ -191,6 +191,9 @@ static void build_ex_cache() {
  ** example cache, and model.
  **/
 static void free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  //checkM(nrhs == 1, "Expected 0 inputs");
+  //checkM(nlhs == 0, "Expected 0 ouputs");
+
   for (fv_iter i = gctx.F.begin(), i_end = gctx.F.end(); i != i_end; ++i)
     gctx.byte_size -= i->free();
 
@@ -214,7 +217,9 @@ static void init_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
   // prhs[1]    max number of feature vectors
   // prhs[2]    max feature vector length
   // prhs[3]    max number of blocks
-  // prhs[4]    expected capacity
+
+  checkM(nrhs == 4, "Expected 3 inputs");
+  checkM(nlhs == 0, "Expected 0 ouputs");
 
   // Free existing cache
   free_handler(nlhs, plhs, nrhs, prhs);
@@ -225,13 +230,13 @@ static void init_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
   fv::feat_pool.init(max_num_fv, max_fv_dim);
   fv::block_label_pool.init(max_num_fv, max_num_bl);
 
-  // Optionally reserve a specified capacity to reduce
   // vector resizing operations
-  if (nrhs > 3) {
-    const int capacity = (int)mxGetScalar(prhs[4]);
-    gctx.F.reserve(capacity);
-    gctx.E.reserve(capacity);
-  }
+  gctx.F.reserve(max_num_fv);
+  gctx.E.reserve(max_num_fv);
+
+  mexPrintf("Created a feature vector cache to hold <= %d elements "
+            "in <= %.1fMB\n", max_num_fv, 
+            (max_num_fv*sizeof(float)*max_fv_dim)/(1024.0*1024.0));
 }
 
 
@@ -249,7 +254,10 @@ static void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs
   //  prhs[6]   loss for the output that generated this fv
   //
   // matlab outputs
-  //  plhs[0]   current fv cache size in bytes
+  //  plhs[0]   current fv cache size in bytes or -1 if no memory left
+  
+  checkM(nrhs == 7, "Expected 6 inputs");
+  checkM(nlhs >= 0, "Expected >= 0 ouputs");
 
   const int *key          = (int *)mxGetPr(prhs[1]);
   const mxArray *mx_bls   = prhs[2];
@@ -263,12 +271,16 @@ static void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs
   const double loss       = mxGetScalar(prhs[6]);
 
   fv f;
-  gctx.byte_size += f.set(key, num_blocks, bls, feat_dim, 
-                          feat, is_belief, is_mined, loss);
-  gctx.F.push_back(f);
+  int status = f.set(key, num_blocks, bls, feat_dim, 
+                     feat, is_belief, is_mined, loss);
 
-  if (nlhs > 0)
+  if (status >= 0) {
+    gctx.byte_size += status;
+    gctx.F.push_back(f);
     plhs[0] = mxCreateDoubleScalar(gctx.byte_size);
+  } else {
+    plhs[0] = mxCreateDoubleScalar(-1);
+  }
 }
 
 
@@ -276,6 +288,9 @@ static void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs
  ** Handle requests to print the entire cache.
  **/
 static void print_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  checkM(nrhs == 1, "Expected 0 inputs");
+  checkM(nlhs == 0, "Expected 0 ouputs");
+
   print_fv_cache();
 }
 
@@ -288,11 +303,14 @@ static void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *p
   // matlab inputs
   // prhs[1]    list of entry indicies to save (must be sort small to large)
 
+  checkM(nrhs == 2, "Expected 1 inputs");
+  checkM(nlhs == 0, "Expected 0 ouputs");
+
   fv_cache &F = gctx.F;
 
   mexPrintf("Shrinking cache...\n");
-  mexPrintf("Cache holds %d feature vectors (%dMB) prior to shrinking\n", 
-            F.size(), gctx.byte_size/(1024*1024));
+  mexPrintf("Cache holds %d feature vectors (%.1fMB) prior to shrinking\n", 
+            F.size(), gctx.byte_size/(1024.0*1024.0));
 
   const mxArray *mx_inds = prhs[1];
   const int *inds_dims = mxGetDimensions(prhs[1]);
@@ -314,8 +332,8 @@ static void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *p
   }
   F.erase(new_end, F.end());
 
-  mexPrintf("Cache holds %d feature vectors (%dMB) after shrinking\n", 
-            F.size(), gctx.byte_size/(1024*1024));
+  mexPrintf("Cache holds %d feature vectors (%.1fMB) after shrinking\n", 
+            F.size(), gctx.byte_size/(1024.0*1024.0));
 }
 
 
@@ -328,10 +346,11 @@ static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray 
   //  prhs[1]   current model parameters
   //  prhs[2]   number of threads
 
+  checkM(nrhs == 3, "Expected 2 inputs");
+
   // Check preconditions
   check(gctx.cache_is_built);
   check(gctx.model_is_set);
-  checkM(nrhs == 3, "Expected three arguments");
 
   bool compute_grad = (nlhs > 1);
   
@@ -432,11 +451,11 @@ static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray 
  ** cache.
  **/
 static void info_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  checkM(nrhs == 1, "Expected 0 inputs");
+  checkM(nlhs == 1, "Expected 1 ouputs");
+
   check(gctx.model_is_set);
   check(gctx.cache_is_built);
-
-  if (nlhs != 1)
-    return;
 
   // Info fields
   enum { LABEL = 0, SCORE, UNIQUE, DATA_ID, X, Y, SCALE, BYTE_SIZE, 
@@ -474,10 +493,10 @@ static void info_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
  ** blocks.
  **/
 static void get_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-  check(gctx.model_is_set);
+  checkM(nrhs == 1, "Expected 0 inputs");
+  checkM(nlhs == 1, "Expected 1 ouputs");
 
-  if (nlhs != 1)
-    return;
+  check(gctx.model_is_set);
 
   const model &M = gctx.M;
 
@@ -496,7 +515,7 @@ static void get_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
 /** -----------------------------------------------------------------
  ** Set the current model (parameters, their lower bounds, 
  ** regularization multipliers, learning rate multipliers,
- ** component block composition, C, and J).
+ ** component block composition, and C).
  **/
 static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // matlab inputs
@@ -506,15 +525,17 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
   // prhs[4]    learnmult as 1d vector
   // prhs[5]    componentblocks as cell array of vectors
   // prhs[6]    C
-  // prhs[7]    J
   // prhs[8]    any value => quiet mode
+
+  checkM(nrhs >= 7, "Expected >= 6 inputs");
+  checkM(nlhs == 0, "Expected 0 ouputs");
 
   model &M = gctx.M;
   
   // Free memory is a model already exists
   M.free();
 
-  bool quiet = (nrhs >= 9);
+  bool quiet = (nrhs >= 8);
 
   const mxArray *mx_w = prhs[1];
   const mxArray *mx_lb = prhs[2];
@@ -586,13 +607,8 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
 //  }
 
   M.C = mxGetScalar(prhs[6]);
-  M.J = mxGetScalar(prhs[7]);
 
   gctx.model_is_set = true;
-
-  // TODO: remove
-  fv::feat_pool.print();
-  fv::block_label_pool.print();
 }
 
 
@@ -603,8 +619,11 @@ static void byte_size_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
   // matlab inputs
   // matlab outputs
   //  plhs[0]   current fv cache size in bytes
-  if (nlhs > 0)
-    plhs[0] = mxCreateDoubleScalar(gctx.byte_size);
+
+  checkM(nrhs == 1, "Expected 0 inputs");
+  checkM(nlhs == 1, "Expected 1 ouputs");
+
+  plhs[0] = mxCreateDoubleScalar(gctx.byte_size);
 }
 
 
@@ -612,6 +631,8 @@ static void byte_size_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
  ** 
  **/
 static void obj_val_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  checkM(nrhs == 1, "Expected 0 inputs");
+
   check(gctx.model_is_set);
 
   double terms[3];
@@ -627,6 +648,9 @@ static void obj_val_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *
  ** Build the example cache (e.g., to prepare for gradient requests)
  **/
 static void ex_prepare_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  checkM(nrhs == 1, "Expected 0 inputs");
+  checkM(nlhs == 0, "Expected 0 ouputs");
+
   build_ex_cache();
 }
 
@@ -635,6 +659,9 @@ static void ex_prepare_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArra
  ** Free example change (e.g., when done making gradient requests)
  **/
 static void ex_free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  checkM(nrhs == 1, "Expected 0 inputs");
+  checkM(nlhs == 0, "Expected 0 ouputs");
+
   free_ex_cache();
 }
 
@@ -644,6 +671,9 @@ static void ex_free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *
  ** (Disables safegaurd for debugging)
  **/
 static void unlock_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  checkM(nrhs == 1, "Expected 0 inputs");
+  checkM(nlhs == 0, "Expected 0 ouputs");
+
   if (mexIsLocked() == 1)
     mexUnlock();
 }
@@ -653,6 +683,9 @@ static void unlock_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *p
  ** Save the fv cache to a file
  **/
 static void save_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  checkM(nrhs == 2, "Expected 1 inputs");
+  checkM(nlhs == 0, "Expected 0 ouputs");
+
   char *filename = mxArrayToString(prhs[1]);
   ofstream out(filename, ios::binary | ios::trunc);
 
@@ -672,6 +705,9 @@ static void save_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
  ** Load the fv cache from a file
  **/
 static void load_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  checkM(nrhs == 2, "Expected 1 inputs");
+  checkM(nlhs == 0, "Expected 0 ouputs");
+
   char *filename = mxArrayToString(prhs[1]);
   ifstream in(filename, ios::binary);
 

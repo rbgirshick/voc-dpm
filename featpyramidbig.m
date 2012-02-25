@@ -9,13 +9,15 @@ function pyra = featpyramidbig(im, model, padx, pady)
 % first 2 octaves halucinate higher resolution data.
 % padx,pady optionally pads each level of the feature pyramid
 
+conf = voc_config();
+
 if nargin < 3
   [padx, pady] = getpadding(model);
 end
 
 sbin = model.sbin;
 interval = model.interval;
-sc = 2 ^(1/interval);
+sc = 2^(1/interval);
 imsize = [size(im, 1) size(im, 2)];
 max_scale = 1 + floor(log(min(imsize)/(5*sbin))/log(sc));
 pyra.feat = cell(max_scale + 2*interval, 1);
@@ -43,21 +45,23 @@ for i = 1:interval
   end
 end
 
+eod = conf.features.extra_octave_dim;
 for i = 1:interval
-  pyra.feat{i}(:,:,end) = 1;
+  pyra.feat{i}(:,:,eod) = 1;
 end
 
 pyra.num_levels = length(pyra.feat);
 
+td = conf.features.truncation_dim;
 for i = 1:pyra.num_levels
   % add 1 to padding because feature generation deletes a 1-cell
   % wide border around the feature map
   pyra.feat{i} = padarray(pyra.feat{i}, [pady+1 padx+1 0], 0);
   % write boundary occlusion feature
-  pyra.feat{i}(1:pady+1, :, end-1) = 1;
-  pyra.feat{i}(end-pady:end, :, end-1) = 1;
-  pyra.feat{i}(:, 1:padx+1, end-1) = 1;
-  pyra.feat{i}(:, end-padx:end, end-1) = 1;
+  pyra.feat{i}(1:pady+1, :, td) = 1;
+  pyra.feat{i}(end-pady:end, :, td) = 1;
+  pyra.feat{i}(:, 1:padx+1, td) = 1;
+  pyra.feat{i}(:, end-padx:end, td) = 1;
 end
 pyra.valid_levels = true(pyra.num_levels, 1);
 pyra.padx = padx;

@@ -86,6 +86,9 @@ struct fv {
 
   /** -----------------------------------------------------------------
    ** Load data into a feature vector
+   **
+   ** Returns the byte size of memory allocated for this feature vector
+   ** or -1 if no more memory was available
    **/
   int set(const int *_key, const int _num_blocks, const int *_bls,
           const int _feat_dim, const float *_feat, const bool _is_belief,
@@ -94,10 +97,14 @@ struct fv {
     num_blocks    = _num_blocks;
     feat_dim      = _feat_dim;
     if (num_blocks > 0 && feat_dim > 0) {
-      feat          = feat_pool.get();
-      block_labels  = block_label_pool.get();
-      check(feat != NULL);
-      check(block_labels != NULL);
+      feat = feat_pool.get();
+      if (feat == NULL)
+        return -1;
+      block_labels = block_label_pool.get();
+      if (block_labels == NULL) {
+        feat_pool.put(feat);
+        return -1;
+      }
       copy(_feat, _feat+_feat_dim, feat);
       copy(_bls, _bls+_num_blocks, block_labels);
       norm = sqrt(inner_product(feat, feat+feat_dim, feat, 0.0));

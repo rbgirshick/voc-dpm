@@ -11,7 +11,7 @@ pyra.valid_levels = validate_levels(model, pyra, boxes, fg_overlap);
 model_dp = gdetect_dp(pyra, model);
 
 % compute overlap info for each component, box, and valid pyramid level
-% (TODO: We end up computing overlap twice -- once here and once in 
+% (We end up computing overlap twice -- once here and once in 
 %  validate_levels. At the expense of making the code yet more complex
 %  we could this computation only once. The reason this isn't straight-
 %  forward is that the overlaps need to have exactly the same dimensions

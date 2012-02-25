@@ -3,7 +3,7 @@ function model = train(model, pos, neg, warp, randneg, iter, ...
                        num_fp, cont, tag, C)
 
 % model = train(model, pos, neg, warp, randneg, iter,
-%               negiter, maxsize, keepsv, overlap, cont, C)
+%               negiter, maxsize, overlap, cont, C)
 % Train LSVM.
 %
 % warp=1 uses warped positives
@@ -13,7 +13,6 @@ function model = train(model, pos, neg, warp, randneg, iter, ...
 % iter is the number of training iterations
 % negiter is the number of data-mining steps within each training iteration
 % maxnum is the maximum number of negative examples to put in the training data file
-% keepsv=true keeps support vectors between iterations
 % overlap is the minimum overlap in latent positive search
 % cont=true we restart training from a previous run
 % C are the parameters for LSVM objective function
@@ -44,10 +43,6 @@ if nargin < 13
   C = conf.training.C;
 end
 
-% TODO: remove J and keepsv
-J = 1;
-keepsv = true;
-
 numpos = length(cat(1,pos(:).dataids));
 max_num_examples = max(numpos*10, max_num_examples+numpos);
 bytelimit = conf.training.cache_byte_limit;
@@ -57,15 +52,16 @@ lbfgs = true;
 negpos = 0;     % last position in data mining
 
 if ~cont
-  % Estimate < 4*max_num_examples feature vectors
-  % will be in cache (attempt to avoid reallocation)
-  [dim, nbls] = max_fv_dim(model);
-  max_num = ceil(bytelimit / (4*dim))+1;
-  fv_cache('init', max_num, dim, nbls, max_num_examples*4);
+  % The feature vector cache will use a memory pool
+  % that can hold max_num feature vectors, each with
+  % a maximum byte size of single_byte_size*max_dim
+  [max_dim, max_nbls] = max_fv_dim(model);
+  max_num = ceil(bytelimit / (conf.single_byte_size*max_dim));
+  fv_cache('init', max_num, max_dim, max_nbls);
 end
 
 [blocks, lb, rm, lm, cmps] = fv_model_args(model);
-fv_cache('set_model', blocks, lb, rm, lm, cmps, C, J, true);
+fv_cache('set_model', blocks, lb, rm, lm, cmps, C, true);
 
 datamine = true;
 pos_loss = zeros(iter,2);
@@ -213,8 +209,7 @@ for t = 1:iter
     % learn model
     logtag = [model.class '_' tag '_' num2str(t) '_' num2str(tneg)];
     [blocks, lb, rm, lm, cmps] = fv_model_args(model);
-    fprintf('C = %f\n', C);
-    fv_cache('set_model', blocks, lb, rm, lm, cmps, C, J);
+    fv_cache('set_model', blocks, lb, rm, lm, cmps, C);
 
     if lbfgs
       % optimize with LBFGS
@@ -250,7 +245,6 @@ for t = 1:iter
 %      blocks = fv_cache('get_model');
     end
 
-    fprintf('parsing model\n');
     model = parsemodel(model, blocks);
     cache(tneg,:) = [nl pl rt nl+pl+rt];
     for tt = 1:tneg
@@ -264,109 +258,108 @@ for t = 1:iter
     model.thresh = pos_vals(ceil(length(pos_vals)*0.05));
 
     % Save model in progress
-    save([conf.paths.model_dir model.class '_model_' tag ...
-          '_' num2str(t) '_' num2str(tneg)], 'model');
+    model_name = [model.class '_model_' tag '_' ...
+                  num2str(t) '_' num2str(tneg)];
+    save([conf.paths.model_dir model_name], 'model');
+    fprintf('Finished training %s (C = %.4f)\n', model_name, C);
 
     % While data mining, keep everything that is not data mined in the cache
     P = find((info.is_mined == 0)&(info.is_unique == 1));
-    % keep negative support vectors?
-    if keepsv
-      % -------------------------------------------------------------
-      % Cache policy
-      % TODO: document
-      % -------------------------------------------------------------
 
-      % -------------------------------------------------------------
-      % U: all unique, non-belief entires that are data mined
-      % -------------------------------------------------------------
+    % -------------------------------------------------------------
+    % Cache policy
+    % TODO: document
+    % -------------------------------------------------------------
 
-      U = find((info.is_mined == 1)&(info.is_unique == 1)&(info.is_belief == 0));
-      % get margins for selected entries (i : example index; j : example entry)
-      %   margin_ij = belief_score_i - (non_belief_score_ij + non_belief_loss_ij)
-      %   margin_ij > 0 => easy non_belief_ij is easy
-      %   margin_ij <= 0 => non_belief_ij is a support vector
-      V = info.margins(U);
-      % compute the number of support vector entries
-      % we're conservative in classifying things as support vectors 
-      % (0.0001 instead of 0)
-      num_sv = length(find(V <= 0.0001));
-      % reorder indexes from highest score (i.e., largest margin violator) 
-      % to lowest score
-      [~, S] = sort(V);
-      U = U(S);
-      %fprintf('num support vectors: %d (entries)\n', num_sv);
+    % -------------------------------------------------------------
+    % U: all unique, non-belief entires that are data mined
+    % -------------------------------------------------------------
 
-      % -------------------------------------------------------------
-      % Compute portion of U to keep based on the cache byte limit
-      % -------------------------------------------------------------
+    U = find((info.is_mined == 1)&(info.is_unique == 1)&(info.is_belief == 0));
+    % get margins for selected entries (i : example index; j : example entry)
+    %   margin_ij = belief_score_i - (non_belief_score_ij + non_belief_loss_ij)
+    %   margin_ij > 0 => easy non_belief_ij is easy
+    %   margin_ij <= 0 => non_belief_ij is a support vector
+    V = info.margins(U);
+    % compute the number of support vector entries
+    % we're conservative in classifying things as support vectors 
+    % (0.0001 instead of 0)
+    num_sv = length(find(V <= 0.0001));
+    % reorder indexes from highest score (i.e., largest margin violator) 
+    % to lowest score
+    [~, S] = sort(V);
+    U = U(S);
+    %fprintf('num support vectors: %d (entries)\n', num_sv);
 
-      % number of bytes of cache occupied by entries that are not mined
-      not_mined_bytes = sum(info.byte_size(P));
-      % how much of the cache remains for mined entries
-      capacity = round((bytelimit - not_mined_bytes) / 2);
-      fprintf('cache byte limit: %d\nnot-mined size: %d\ncapacity: %d\n', ...
-              bytelimit, not_mined_bytes, capacity);
-      cumulative_bytes = cumsum(info.byte_size(U));
-      num_keep_byte_limit = find(cumulative_bytes >= capacity, 1, 'first');
-      if isempty(num_keep_byte_limit)
-        num_keep_byte_limit = length(cumulative_bytes);
+    % -------------------------------------------------------------
+    % Compute portion of U to keep based on the cache byte limit
+    % -------------------------------------------------------------
+
+    % number of bytes of cache occupied by entries that are not mined
+    not_mined_bytes = sum(info.byte_size(P));
+    % how much of the cache remains for mined entries
+    capacity = round((bytelimit - not_mined_bytes) / 2);
+    fprintf('cache byte limit: %d\nnot-mined size: %d\ncapacity: %d\n', ...
+            bytelimit, not_mined_bytes, capacity);
+    cumulative_bytes = cumsum(info.byte_size(U));
+    num_keep_byte_limit = find(cumulative_bytes >= capacity, 1, 'first');
+    if isempty(num_keep_byte_limit)
+      num_keep_byte_limit = length(cumulative_bytes);
+    end
+    %fprintf('bytes kept: %d\nspace left: %d\n', ...
+    %        cumulative_bytes(num_keep_byte_limit), ...
+    %        bytelimit - not_mined_bytes - cumulative_bytes(num_keep_byte_limit));
+    [~, num_keep_examples_byte_limit] = info_stats(info, U(1:num_keep_byte_limit));
+    fprintf('num keep: %d (entries) %d (examples) based on max byte limit\n', ...
+            num_keep_byte_limit, num_keep_examples_byte_limit);
+
+    % -------------------------------------------------------------
+    % Compute portion of U to keep based on the max example limit
+    % -------------------------------------------------------------
+
+    % binary search for number of entries to keep
+    [~, num_examples_not_mined] = info_stats(info, P);
+    capacity = round((max_num_examples - num_examples_not_mined) / 2);
+    num_keep_lo = 1;
+    num_keep_hi = length(U);
+    while num_keep_hi > num_keep_lo
+      mid = num_keep_lo + floor((num_keep_hi - num_keep_lo) / 2);
+      [~, num_mined_examples] = info_stats(info, U(1:mid));
+      if num_mined_examples > capacity
+        num_keep_hi = mid - 1;
+      else
+        num_keep_lo = mid + 1;
       end
-      %fprintf('bytes kept: %d\nspace left: %d\n', ...
-      %        cumulative_bytes(num_keep_byte_limit), ...
-      %        bytelimit - not_mined_bytes - cumulative_bytes(num_keep_byte_limit));
-      [~, num_keep_examples_byte_limit] = info_stats(info, U(1:num_keep_byte_limit));
-      fprintf('num keep: %d (entries) %d (examples) based on max byte limit\n', ...
-              num_keep_byte_limit, num_keep_examples_byte_limit);
+    end
+    num_keep_count_limit = num_keep_hi;
+    [~, num_keep_examples_count_limit] = info_stats(info, U(1:num_keep_count_limit));
+    fprintf('num keep: %d (entries) %d (examples) based on max num examples\n', ...
+            num_keep_count_limit, num_keep_examples_count_limit);
 
-      % -------------------------------------------------------------
-      % Compute portion of U to keep based on the max example limit
-      % -------------------------------------------------------------
+    % number to keep is the minimum of those two...
+    num_keep = min(num_keep_byte_limit, num_keep_count_limit);
 
-      % binary search for number of entries to keep
-      [~, num_examples_not_mined] = info_stats(info, P);
-      capacity = round((max_num_examples - num_examples_not_mined) / 2);
-      num_keep_lo = 1;
-      num_keep_hi = length(U);
-      while num_keep_hi > num_keep_lo
-        mid = num_keep_lo + floor((num_keep_hi - num_keep_lo) / 2);
-        [~, num_mined_examples] = info_stats(info, U(1:mid));
-        if num_mined_examples > capacity
-          num_keep_hi = mid - 1;
-        else
-          num_keep_lo = mid + 1;
-        end
-      end
-      num_keep_count_limit = num_keep_hi;
-      [~, num_keep_examples_count_limit] = info_stats(info, U(1:num_keep_count_limit));
-      fprintf('num keep: %d (entries) %d (examples) based on max num examples\n', ...
-              num_keep_count_limit, num_keep_examples_count_limit);
+    % ...but, ensure that all support vectors stay in the cache
+    num_keep = max(num_sv, num_keep);
+    N = U(1:num_keep);
 
-      % number to keep is the minimum of those two...
-      num_keep = min(num_keep_byte_limit, num_keep_count_limit);
+    % -------------------------------------------------------------
+    % Find beliefs that belong to examples in N
+    % -------------------------------------------------------------
 
-      % ...but, ensure that all support vectors stay in the cache
-      num_keep = max(num_sv, num_keep);
-      N = U(1:num_keep);
+    % N does not contain any beliefs yet, so now we need to find the zero 
+    % beliefs that match the entries in N and include them in the cache
+    ukeys = unique([info.dataid(N) info.scale(N) info.x(N) info.y(N)], 'rows');
+    ukeys = [ones(size(ukeys,1),1) ukeys];
+    bkeys = [info.is_belief info.dataid info.scale info.x info.y];
+    [~, B] = intersect(bkeys, ukeys, 'rows');
+    % sanity check
+    assert(length(unique(B)) == length(B));
+    N = [N; B];
 
-      % -------------------------------------------------------------
-      % Find beliefs that belong to examples in N
-      % -------------------------------------------------------------
-
-      % N does not contain any beliefs yet, so now we need to find the zero 
-      % beliefs that match the entries in N and include them in the cache
-      ukeys = unique([info.dataid(N) info.scale(N) info.x(N) info.y(N)], 'rows');
-      ukeys = [ones(size(ukeys,1),1) ukeys];
-      bkeys = [info.is_belief info.dataid info.scale info.x info.y];
-      [~, B] = intersect(bkeys, ukeys, 'rows');
-      % sanity check
-      assert(length(unique(B)) == length(B));
-      N = [N; B];
-    else
-      N = [];
-    end    
     I = sort([P; N]);
     fv_cache('shrink', int32(I));
-    % update cache file counts
+    % update cache counts
     [num_entries, num_examples] = info_stats(info, I);
 
     % print out some stats about the updated cache
@@ -397,14 +390,17 @@ end
 function [num_entries, num_examples] = poswarp(t, model, pos)
 % assumption: the model only has a single structure rule 
 % of the form Q -> F.
+conf = voc_config();
 numpos = length(pos);
 warped = warppos(model, pos);
 fi = model.symbols(model.rules{model.start}.rhs).filter;
 fbl = model.filters(fi).blocklabel;
 obl = model.rules{model.start}.offset.blocklabel;
-width1 = ceil(model.filters(fi).size(2)/2);
-width2 = floor(model.filters(fi).size(2)/2);
-pixels = model.filters(fi).size * model.sbin/2;
+div = 1;
+if conf.features.extra_octave
+  div = 2;
+end
+pixels = model.filters(fi).size * model.sbin / div;
 minsize = prod(pixels);
 num_entries = 0;
 num_examples = 0;
@@ -423,7 +419,7 @@ for i = 1:numpos
   feat = features(im, model.sbin);
   key = [0 i 0 0 0];
   bls = [obl; fbl] - 1;
-  feat = [10; feat(:)];
+  feat = [model.bias_feature; feat(:)];
   fv_cache('add', int32(key), int32(bls), single(feat), ...
                   int32(is_belief), int32(is_mined), loss); 
   write_zero_fv(true, key);
@@ -436,9 +432,14 @@ end
 % we create virtual examples by flipping each image left to right
 function [num_entries, num_examples, fusage, component_usage, scores] ...
   = poslatent(t, iter, model, pos, fg_overlap, num_fp)
+conf = voc_config();
+model.interval = conf.training.interval_fg;
 numpos = length(pos);
-model.interval = 4;
-pixels = model.minsize * model.sbin/2;
+div = 1;
+if conf.features.extra_octave
+  div = 2;
+end
+pixels = model.minsize * model.sbin / div;
 minsize = prod(pixels);
 fusage = zeros(model.numfilters, 1);
 component_usage = zeros(length(model.rules{model.start}), 1);
@@ -523,7 +524,8 @@ end
 % get hard negative examples
 function [num_entries, num_examples, j, fusage, scores, complete] ...
   = neghard(t, negiter, model, neg, maxsize, negpos, max_num_examples)
-model.interval = 4;
+conf = voc_config();
+model.interval = conf.training.interval_bg;
 fusage = zeros(model.numfilters, 1);
 numneg = length(neg);
 num_entries = 0;
@@ -536,7 +538,7 @@ for i = 1:batchsize:numneg
   % do batches of detections in parallel
   thisbatchsize = batchsize - max(0, (i+batchsize-1) - numneg);
   det_limit = ceil((max_num_examples - num_examples) / thisbatchsize);
-  data = {};
+  data = cell(k, 1);
   parfor k = 1:thisbatchsize
     j = inds(i+k-1);
     fprintf('%s %s: iter %d/%d: hard negatives: %d/%d (%d)\n', ...
@@ -567,7 +569,7 @@ for i = 1:batchsize:numneg
       if num_examples >= max_num_examples
         fprintf('reached example count limit\n');
       else
-        fprintf('reached cache file size limit\n');
+        fprintf('reached cache byte size limit\n');
       end
       complete = 0;
       break;
@@ -586,8 +588,6 @@ numneg = length(neg);
 rndneg = floor(maxnum/numneg);
 fi = model.symbols(model.rules{model.start}.rhs).filter;
 rsize = model.filters(fi).size;
-width1 = ceil(rsize(2)/2);
-width2 = floor(rsize(2)/2);
 fbl = model.filters(fi).blocklabel;
 obl = model.rules{model.start}.offset.blocklabel;
 num_entries = 0;
@@ -607,7 +607,7 @@ for i = 1:numneg
       dataid = (i-1)*rndneg+j + 100000; % assumes < 100K foreground examples
       key = [0 dataid 0 0 0];
       bls = [obl; fbl] - 1;
-      f = [10; f(:)];
+      f = [model.bias_feature; f(:)];
       fv_cache('add', int32(key), int32(bls), single(f), ...
                       int32(is_belief), int32(is_mined), loss); 
       % write zero belief vector
@@ -620,7 +620,7 @@ for i = 1:numneg
 end
 
 
-function info = info_to_struct(inf)
+function info = info_to_struct(in)
 I_LABEL     = 1;
 I_SCORE     = 2;
 I_IS_UNIQUE = 3;
@@ -634,18 +634,18 @@ I_IS_BELIEF = 10;
 I_IS_ZERO   = 11;
 I_IS_MINED  = 12;
 
-info.labels       = inf(:, I_LABEL);
-info.scores       = inf(:, I_SCORE);
-info.is_unique    = inf(:, I_IS_UNIQUE);
-info.dataid       = inf(:, I_DATAID);
-info.x            = inf(:, I_X);
-info.y            = inf(:, I_Y);
-info.scale        = inf(:, I_SCALE);
-info.byte_size    = inf(:, I_BYTE_SIZE);
-info.margins      = inf(:, I_MARGIN);
-info.is_belief    = inf(:, I_IS_BELIEF);
-info.is_zero      = inf(:, I_IS_ZERO);
-info.is_mined     = inf(:, I_IS_MINED);
+info.labels       = in(:, I_LABEL);
+info.scores       = in(:, I_SCORE);
+info.is_unique    = in(:, I_IS_UNIQUE);
+info.dataid       = in(:, I_DATAID);
+info.x            = in(:, I_X);
+info.y            = in(:, I_Y);
+info.scale        = in(:, I_SCALE);
+info.byte_size    = in(:, I_BYTE_SIZE);
+info.margins      = in(:, I_MARGIN);
+info.is_belief    = in(:, I_IS_BELIEF);
+info.is_zero      = in(:, I_IS_ZERO);
+info.is_mined     = in(:, I_IS_MINED);
 
 
 function [num_entries, num_examples] = info_stats(info, I)

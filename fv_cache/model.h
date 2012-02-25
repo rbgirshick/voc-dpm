@@ -37,8 +37,6 @@ struct model {
   double **lb;
   // Regularization tradeoff
   double C;
-  // Positive vs. negative example loss balance
-  double J;
   // Per-block regularization cost
   float *reg_mult;
 //  // Component block-composition for max-regularization
@@ -68,7 +66,6 @@ struct model {
 
     // Obj. function
     C                 = 0;
-    J                 = 0;
     reg_mult          = NULL;
     //num_components    = 0;
     //component_sizes   = NULL;
@@ -137,7 +134,6 @@ struct model {
     dw_norm_hist = vector<double>(hist_size, INFINITY);
 
     C = 0;
-    J = 0;
 //    num_blocks = 0;
 //    num_components = 0;
   }
