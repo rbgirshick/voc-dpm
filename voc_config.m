@@ -42,7 +42,7 @@ conf.version = conf_val('version', 'voc-release5');
 
 % Project name (used in the paths)
 % ** EDIT **
-conf.project = conf_val('project', 'fv_cache_nips11/featbig');
+conf.project = conf_val('project', 'fv_cache_nips11/merge_test');
 
 % Parent directory that everything (model cache, VOCdevkit) is under
 % ** EDIT **
@@ -121,7 +121,7 @@ conf.features.sbin = 8;
 conf.features.dim = 33;
 conf.features.truncation_dim = 32;
 conf.features.extra_octave_dim = 33;
-conf.features.extra_octave = ~false;
+conf.features.extra_octave = false;
 
 
 function made = exists_or_mkdir(path)
