@@ -396,11 +396,7 @@ warped = warppos(model, pos);
 fi = model.symbols(model.rules{model.start}.rhs).filter;
 fbl = model.filters(fi).blocklabel;
 obl = model.rules{model.start}.offset.blocklabel;
-div = 1;
-if conf.features.extra_octave
-  div = 2;
-end
-pixels = model.filters(fi).size * model.sbin / div;
+pixels = model.filters(fi).size * model.sbin / 2;
 minsize = prod(pixels);
 num_entries = 0;
 num_examples = 0;
@@ -435,11 +431,7 @@ function [num_entries, num_examples, fusage, component_usage, scores] ...
 conf = voc_config();
 model.interval = conf.training.interval_fg;
 numpos = length(pos);
-div = 1;
-if conf.features.extra_octave
-  div = 2;
-end
-pixels = model.minsize * model.sbin / div;
+pixels = model.minsize * model.sbin / 2;
 minsize = prod(pixels);
 fusage = zeros(model.numfilters, 1);
 component_usage = zeros(length(model.rules{model.start}), 1);
