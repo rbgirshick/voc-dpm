@@ -15,11 +15,7 @@ catch
 
   numpos = length(pos);
   model.interval = conf.training.interval_fg;
-  div = 1;
-  if conf.features.extra_octave
-    div = 2;
-  end
-  pixels = model.minsize * model.sbin / div;
+  pixels = model.minsize * model.sbin / 2;
   minsize = prod(pixels);
   nrules = length(model.rules{model.start});
   parb = cell(1,numpos);
