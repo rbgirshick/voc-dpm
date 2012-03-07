@@ -91,7 +91,7 @@ conf.training.train_set_bg = conf_val('training.train_set', 'train');
 conf.training.C = conf_val('training.C', 0.006);
 conf.training.bias_feature = 10;
 % 7GB file size limit for the feature vector cache
-conf.training.cache_byte_limit = 3.5*2^31;
+conf.training.cache_byte_limit = 7*2^30;
 % Location of training log (matlab diary)
 conf.training.log = @(x) sprintf([conf.paths.model_dir '%s.log'], x);
 
@@ -121,7 +121,7 @@ conf.features.sbin = 8;
 conf.features.dim = 33;
 conf.features.truncation_dim = 32;
 conf.features.extra_octave_dim = 33;
-conf.features.extra_octave = false;
+conf.features.extra_octave = ~true;
 
 
 function made = exists_or_mkdir(path)
