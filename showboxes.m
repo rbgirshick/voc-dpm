@@ -54,12 +54,12 @@ if ~isempty(boxes)
         w = wwidth;
       end
 
-      if i ==  13+1 || i == 14+1
-        c = 'k';
-        w = cwidth + 0.5;
-      else
+%      if i ==  13+1 || i == 14+1
+%        c = 'k';
+%        w = cwidth + 0.5;
+%      else
         c = 'w';
-      end
+%      end
 
       line([x1 x1 x2 x2 x1]', [y1 y2 y2 y1 y1]', 'color', c, 'linewidth', w);
     end
@@ -79,9 +79,9 @@ if ~isempty(boxes)
     if i == 1
       c = 'r'; %[160/255 0 0];
       s = '-';
-    elseif i ==  13+1 || i == 14+1
-      c = 'c';
-      s = '--';
+%    elseif i ==  13+1 || i == 14+1
+%      c = 'c';
+%      s = '--';
     else
       c = 'b';
       s = '-';

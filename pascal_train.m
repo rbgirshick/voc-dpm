@@ -30,6 +30,7 @@ neg_small = neg(randperm(length(neg)));
 neg_small = neg_small(1:conf.training.num_negatives_small);
 
 
+sz = {[8 21] [8 14] [8 9]};
 % train root filters using warped positives & random negatives
 try
   load([cachedir cls '_lrsplit1']);
@@ -37,7 +38,7 @@ catch
   initrand();
   for i = 1:n
     % split data into two groups: left vs. right facing instances
-    models{i} = initmodel(cls, spos{i}, note, 'N');
+    models{i} = initmodel(cls, spos{i}, note, 'N', 8, sz{i});
     inds = lrsplit(models{i}, spos{i}, i);
     models{i} = train(models{i}, spos{i}(inds), neg, true, true, 1, 1, ...
                       max_num_examples, fg_overlap, 0, false, ...
@@ -67,28 +68,30 @@ try
 catch
   initrand();
   model = mergemodels(models);
-  model = train(model, impos, neg_small, false, false, 1, 5, ...
+  model = train(model, impos, neg_small, false, false, 8, 20, ...
                 max_num_examples, fg_overlap, num_fp, false, 'mix');
+  model = train(model, impos, neg, false, false, 1, 5, ...
+                max_num_examples, fg_overlap, num_fp, true, 'mix_2');
   save([cachedir cls '_mix'], 'model');
 end
 
-% add parts and update models using latent detections & hard negatives.
-try 
-  load([cachedir cls '_parts']);
-catch
-  initrand();
-  for i = 1:2:2*n
-    ruleind = i;
-    partner = i+1;
-    filterind = i;
-    model = model_addparts(model, model.start, ruleind, ...
-                           partner, filterind, 8, [6 6], 1);
-  end
-  model = train(model, impos, neg_small, false, false, 8, 10, ...
-                max_num_examples, fg_overlap, num_fp, false, 'parts_1');
-  model = train(model, impos, neg, false, false, 1, 5, ...
-                max_num_examples, fg_overlap, num_fp, true, 'parts_2');
-  save([cachedir cls '_parts'], 'model');
-end
+%% add parts and update models using latent detections & hard negatives.
+%try 
+%  load([cachedir cls '_parts']);
+%catch
+%  initrand();
+%  for i = 1:2:2*n
+%    ruleind = i;
+%    partner = i+1;
+%    filterind = i;
+%    model = model_addparts(model, model.start, ruleind, ...
+%                           partner, filterind, 8, [6 6], 1);
+%  end
+%  model = train(model, impos, neg_small, false, false, 8, 10, ...
+%                max_num_examples, fg_overlap, num_fp, false, 'parts_1');
+%  model = train(model, impos, neg, false, false, 1, 5, ...
+%                max_num_examples, fg_overlap, num_fp, true, 'parts_2');
+%  save([cachedir cls '_parts'], 'model');
+%end
 
 save([cachedir cls '_final'], 'model');

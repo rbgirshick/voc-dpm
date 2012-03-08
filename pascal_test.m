@@ -37,7 +37,7 @@ catch
     if ~isempty(boxes)
       unclipped_dets = dets(:,1:4);
       [dets, ~, rm] = clipboxes(im, dets);
-      unclipped_dets(rm) = [];
+      unclipped_dets(rm,:) = [];
       % NMS
       I = nms(dets, 0.5);
       dets = dets(I,:);

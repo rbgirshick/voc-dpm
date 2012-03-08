@@ -42,7 +42,7 @@ conf.version = conf_val('version', 'voc-release5');
 
 % Project name (used in the paths)
 % ** EDIT **
-conf.project = conf_val('project', 'fv_cache_nips11/merge_test');
+conf.project = conf_val('project', 'car-grammar');
 
 % Parent directory that everything (model cache, VOCdevkit) is under
 % ** EDIT **
@@ -90,25 +90,25 @@ conf.training.train_set_fg = conf_val('training.train_set', 'trainval');
 conf.training.train_set_bg = conf_val('training.train_set', 'train');
 conf.training.C = conf_val('training.C', 0.006);
 conf.training.bias_feature = 10;
-% 7GB file size limit for the feature vector cache
-conf.training.cache_byte_limit = 7*2^30;
+% 3GB file size limit for the feature vector cache
+conf.training.cache_byte_limit = 3*2^30;
 % Location of training log (matlab diary)
 conf.training.log = @(x) sprintf([conf.paths.model_dir '%s.log'], x);
 
 conf.training.cache_example_limit = 24000;
 conf.training.num_negatives_small = 200;
 conf.training.num_negatives_large = inf;
-conf.training.wlssvm_M = 1;
+conf.training.wlssvm_M = 0;
 conf.training.fg_overlap = 0.7;
 
-conf.training.interval_fg = 4;
+conf.training.interval_fg = 5;
 conf.training.interval_bg = 4;
 
 
 % -------------------------------------------------------------------
 % Evaluation configuration 
 % -------------------------------------------------------------------
-conf.eval.interval = 8;
+conf.eval.interval = 10;
 conf.eval.test_set = 'test';
 conf.eval.max_thresh = -1.4;
 conf.pascal.VOCopts.testset = conf.eval.test_set;

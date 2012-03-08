@@ -35,7 +35,7 @@ diary(conf.training.log([cls '-' timestamp]));
 
 th = tic;
 %model = pascal_train(cls, n, note);
-model = person_train(cls, n, note);
+model = car_train(cls, n, note);
 toc(th);
 % Free feature vector cache memory
 fv_cache('free');
