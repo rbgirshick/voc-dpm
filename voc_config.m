@@ -42,7 +42,7 @@ conf.version = conf_val('version', 'voc-release5');
 
 % Project name (used in the paths)
 % ** EDIT **
-conf.project = conf_val('project', 'car-grammar');
+conf.project = conf_val('project', 'car-grammar/03-08-12-subtypes-3');
 
 % Parent directory that everything (model cache, VOCdevkit) is under
 % ** EDIT **

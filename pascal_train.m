@@ -30,7 +30,7 @@ neg_small = neg(randperm(length(neg)));
 neg_small = neg_small(1:conf.training.num_negatives_small);
 
 
-sz = {[8 21] [8 14] [8 9]};
+sz = {[8 21] [8 16] [8 12]};
 % train root filters using warped positives & random negatives
 try
   load([cachedir cls '_lrsplit1']);

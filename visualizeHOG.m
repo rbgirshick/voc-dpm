@@ -19,7 +19,7 @@ if min(w(:)) < 0
 else
   im = uint8(pos);
 end
-clf;
+%clf;
 imagesc(im); 
 colormap gray;
 axis equal;
