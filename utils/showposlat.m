@@ -91,12 +91,19 @@ for i = start:numpos
         boxesc = cat(1, boxesc, padarray(det(1,1:4), [0 1], 0, 'post'));
       end
       %showboxes(im, bs(1,:));
+      tree = trees{1};
     else
       fprintf('  %d: no overlap\n', b);
+      tree = [];
     end
 
+    subplot(1,2,1);
     showboxesc(im, boxesc);
     title('green = fg box;  blue = bg boxes;  red = loss adjusted boxes;  cyan = label completed detection');
+    subplot(1,2,2);
+    if ~isempty(tree)
+      vis_derived_filter(model, tree);
+    end
 
     pause;
   end

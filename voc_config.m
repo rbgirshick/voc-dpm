@@ -42,7 +42,7 @@ conf.version = conf_val('version', 'voc-release5');
 
 % Project name (used in the paths)
 % ** EDIT **
-conf.project = conf_val('project', 'car-grammar/03-08-12-subtypes-3');
+conf.project = conf_val('project', 'car-grammar/03-09-12-subtypes-wlssvm-biases');
 
 % Parent directory that everything (model cache, VOCdevkit) is under
 % ** EDIT **
@@ -98,7 +98,7 @@ conf.training.log = @(x) sprintf([conf.paths.model_dir '%s.log'], x);
 conf.training.cache_example_limit = 24000;
 conf.training.num_negatives_small = 200;
 conf.training.num_negatives_large = inf;
-conf.training.wlssvm_M = 0;
+conf.training.wlssvm_M = 1;
 conf.training.fg_overlap = 0.7;
 
 conf.training.interval_fg = 5;

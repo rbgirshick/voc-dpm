@@ -199,16 +199,21 @@ for i = 1:num_LSPF
                                 defoffset, defparams, 'M');
   [M, obl, dbl] = model_addrule(M, 'D', RSP(ri), RSPF(ri), ...
                                 defoffset, defparams, 'M', obl, dbl);
+  M.learnmult(obl) = 1;
+
 %  % angled subtype
 %  [M, obl, dbl] = model_addrule(M, 'D', LSP(li), LAPF(li), ...
 %                                defoffset, defparams, 'M');
 %  [M, obl, dbl] = model_addrule(M, 'D', RSP(ri), RAPF(ri), ...
 %                                defoffset, defparams, 'M', obl, dbl);
+%  M.learnmult(obl) = 1;
+
   % front/back subtype
   [M, obl, dbl] = model_addrule(M, 'D', LSP(li), FPF(li), ...
                                 defoffset, defparams, 'M');
   [M, obl, dbl] = model_addrule(M, 'D', RSP(ri), FPF(ri), ...
                                 defoffset, defparams, 'M', obl, dbl);
+  M.learnmult(obl) = 1;
 end
 
 LS = zeros(1, length(0:3));

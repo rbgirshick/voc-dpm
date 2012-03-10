@@ -10,9 +10,6 @@ if nargin < 5
   saveim = true;
 end
 
-%setVOCyear = year;
-%globals;
-%pascal_init;
 conf = voc_config('pascal.year', year, ...
                   'eval.test_set', testset);
 VOCopts  = conf.pascal.VOCopts;
@@ -25,7 +22,7 @@ fid = fopen(sprintf(VOCopts.detrespath, 'comp3', cls), 'w');
 for i = 1:length(ids);
   bbox = boxes{i};
   for j = 1:size(bbox,1)
-    fprintf(fid, '%s %f %d %d %d %d\n', ids{i}, bbox(j,end), bbox(j,1:4));
+    fprintf(fid, '%s %.14f %d %d %d %d\n', ids{i}, bbox(j,end), bbox(j,1:4));
   end
 end
 fclose(fid);
@@ -91,7 +88,7 @@ fp = zeros(nd,1);
 md = zeros(nd,1);
 od = zeros(nd,1);
 tic;
-for d = 1:nd
+for d = 1:2000%nd
   % display progress
   if toc > 1
     fprintf('%s: pr: compute: %d/%d\n',cls,d,nd);
@@ -168,7 +165,7 @@ fprintf('total recalled = %d / %d\n', sum(tp), npos);
 if 1
 
 if saveim
-  htmlfid = fopen('~/html/grammar/fp.html', 'w');
+  htmlfid = fopen('~/html/car-grammar/fp.html', 'w');
   fprintf(htmlfid, '<html><body>');
 end
 
@@ -181,18 +178,26 @@ while rec(d) <= 0.4
     i = xVOChash_lookup(hash, ids{d});
     im = imread([VOCopts.datadir recs(i).imgname]);
 
-    %[dets, boxes] = imgdetect(im, model, model.thresh);
-    %if ~isempty(boxes)
-    %  dets = clipboxes(im, dets);
-    %  I = nms(dets, 0.5);
-    %  num = min(5, length(I));
-    %  dets = cat(2, dets(I(1:num), 1:4), 2*ones(length(I(1:num)), 1));
-    %else
-      dets = zeros(0, 5);
-    %end
+    score = -sc(d);
+    [det, bs, trees] = imgdetect(im, model, model.thresh);
+    I = find(abs(det(:,end) - score) < 1e-6);
+    bs = bs(I,:);
+    det = det(I,:);
+    tree = trees{I};
 
-    bb = BB(:,d)';
-    showboxesc(im, [dets; bb 1]);
+    subplot(1,3,1);
+    imagesc(im);
+    axis image;
+    axis off;
+
+    subplot(1,3,2);
+    %bb = BB(:,d)';
+    %showboxesc(im, [det; bb 1]);
+    boxesc = [];
+    boxesc = cat(1, boxesc, padarray(bs(1,:), [0 1], 0, 'post'));
+    boxesc = cat(1, boxesc, padarray(det(1,1:4), [0 model.numfilters*4-4+2+1], 4, 'post'));
+    showboxesc(im, boxesc);
+
     str = sprintf('det# %d/%d: @prec: %0.3f  @rec: %0.3f  score: %0.3f  GT overlap: %0.3f', d, nd, prec(d), rec(d), -sc(d), od(d));
     if md(d)
       str = sprintf('%s mult det', str);
@@ -201,16 +206,19 @@ while rec(d) <= 0.4
     fprintf('%s', str);
     title(str);
 
+    subplot(1,3,3);
+    vis_derived_filter(model, tree);
+
     fprintf('\n');
 
     if saveim
-      cmd = sprintf('export_fig ~/html/grammar/%s-%d-fp.jpg -jpg -q85', cls, d);
+      cmd = sprintf('export_fig ~/html/car-grammar/%s-%d-fp.jpg -jpg -q85', cls, d);
       eval(cmd);
       fprintf(htmlfid, sprintf('<img src="%s-%d-fp.jpg" />\n', cls, d));
       fprintf(htmlfid, '<br /><br />\n');
     else
       pause;
-    end;
+    end
   end
   d = d + 1;
 end
@@ -227,9 +235,11 @@ end
 fprintf('displaying false negatives\n');
 
 if saveim
-  htmlfid = fopen('~/html/grammar/fn.html', 'w');
+  htmlfid = fopen('~/html/car-grammar/fn.html', 'w');
   fprintf(htmlfid, '<html><body>');
 end
+
+clf;
 
 count = 0;
 for i = 1:length(gt)
@@ -263,7 +273,7 @@ for i = 1:length(gt)
     %title(['overlap: ' num2str(ov)]);
 
     if saveim
-      cmd = sprintf('export_fig ~/html/grammar/%s-%d-fn.jpg -jpg -q85', cls, count);
+      cmd = sprintf('export_fig ~/html/car-grammar/%s-%d-fn.jpg -jpg -q85', cls, count);
       eval(cmd);
       fprintf(htmlfid, sprintf('<img src="%s-%d-fn.jpg" />\n', cls, count));
       fprintf(htmlfid, '<br /><br />\n');
