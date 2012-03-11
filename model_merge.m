@@ -1,4 +1,4 @@
-function model = mergemodels(models)
+function model = model_merge(models)
 
 % model = mergemodels(models)
 % Merge a set of models into a single mixture model.

@@ -66,7 +66,7 @@ try
   load([cachedir cls '_mix']);
 catch
   initrand();
-  model = mergemodels(models);
+  model = model_merge(models);
   model = train(model, impos, neg_small, false, false, 1, 5, ...
                 max_num_examples, fg_overlap, num_fp, false, 'mix');
   save([cachedir cls '_mix'], 'model');
