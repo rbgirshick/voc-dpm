@@ -1,25 +1,6 @@
 function conf = voc_config(varargin)
 % Set up configuration variables
 
-%
-% ~~~~~~~~~~~~~~~~~~~~~~ BASIC SETUP ~~~~~~~~~~~~~~~~~~~~~~
-%
-
-% Parent directory that everything (model cache, VOCdevkit) is under
-BASE_DIR    = '/var/tmp/rbg';
-
-% PASCAL dataset year
-PASCAL_YEAR = '2007';
-
-% Models are automatically stored in BASE_DIR/PROJECT/PASCAL_YEAR/
-PROJECT     = 'rel5-rc';
-
-%
-% You probably don't need to change configuration settings below this line.
-%
-
-% ~~~~~~~~~~~~~~~~~~~~~~ ADVANCED SETUP ~~~~~~~~~~~~~~~~~~~~~~
-% 
 % conf            top-level variables
 % conf.paths      filesystem paths
 % conf.pascal     PASCAL VOC dataset
@@ -35,6 +16,10 @@ PROJECT     = 'rel5-rc';
 % In this example, we assume that you have an M-file 
 % named my_voc_config.m, which you can create by
 % copying and modifying this file.
+%
+% Variables that you'll likely want/need to change
+% are maked with the comment "** EDIT **". The others
+% are sensible defaults that will probably work for you.
 
 
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -56,10 +41,12 @@ conf_val = parse_overrides(varargin);
 conf.version = conf_val('version', 'voc-release5');
 
 % Project name (used in the paths)
-conf.project = conf_val('project', PROJECT);
+% ** EDIT **
+conf.project = conf_val('project', 'car-grammar/03-09-12-subtypes-wlssvm-biases');
 
 % Parent directory that everything (model cache, VOCdevkit) is under
-conf.paths.base_dir = conf_val('paths.base_dir', BASE_DIR);
+% ** EDIT **
+conf.paths.base_dir = conf_val('paths.base_dir', '/var/tmp/rbg/');
 
 % Path to this file
 conf.paths.self = fullfile(pwd(), [mfilename() '.m']);
@@ -70,21 +57,20 @@ conf.paths.self = fullfile(pwd(), [mfilename() '.m']);
 %conf.single_byte_size = tmp.bytes;
 conf.single_byte_size = 4;
 
-
 % -------------------------------------------------------------------
 % PASCAL VOC configuration 
 % -------------------------------------------------------------------
 
 % Configure the PASCAL VOC dataset year
-conf.pascal.year = conf_val('pascal.year', PASCAL_YEAR);
+% ** EDIT **
+conf.pascal.year = conf_val('pascal.year', '2007');
 
 % Directory with PASCAL VOC development kit and dataset
-conf.pascal.dev_kit = [conf.paths.base_dir '/VOC' conf.pascal.year ...
+conf.pascal.dev_kit = [conf.paths.base_dir 'VOC' conf.pascal.year ...
                        '/VOCdevkit/'];
 
 % VOCinit brings VOCopts into scope                  
 conf.pascal.VOCopts = get_voc_opts(conf);
-
 
 % -------------------------------------------------------------------
 % Path configuration 
@@ -92,20 +78,19 @@ conf.pascal.VOCopts = get_voc_opts(conf);
 
 % Directory for caching models, intermediate data, and results
 % [was called 'cachedir' in previous releases]
-conf.paths.model_dir = [conf.paths.base_dir '/' ...
+conf.paths.model_dir = [conf.paths.base_dir ...
                         conf.project '/' conf.pascal.year '/'];
 
 exists_or_mkdir(conf.paths.model_dir);
-
 
 % -------------------------------------------------------------------
 % Training configuration 
 % -------------------------------------------------------------------
 conf.training.train_set_fg = conf_val('training.train_set', 'trainval');
 conf.training.train_set_bg = conf_val('training.train_set', 'train');
-conf.training.C = conf_val('training.C', 0.001);
+conf.training.C = conf_val('training.C', 0.006);
 conf.training.bias_feature = 10;
-% File size limit for the feature vector cache (2^30 bytes = 1GB)
+% 3GB file size limit for the feature vector cache
 conf.training.cache_byte_limit = 3*2^30;
 % Location of training log (matlab diary)
 conf.training.log = @(x) sprintf([conf.paths.model_dir '%s.log'], x);
@@ -113,7 +98,7 @@ conf.training.log = @(x) sprintf([conf.paths.model_dir '%s.log'], x);
 conf.training.cache_example_limit = 24000;
 conf.training.num_negatives_small = 200;
 conf.training.num_negatives_large = inf;
-conf.training.wlssvm_M = 0;
+conf.training.wlssvm_M = 1;
 conf.training.fg_overlap = 0.7;
 
 conf.training.interval_fg = 5;
@@ -125,7 +110,7 @@ conf.training.interval_bg = 4;
 % -------------------------------------------------------------------
 conf.eval.interval = 10;
 conf.eval.test_set = 'test';
-conf.eval.max_thresh = -1.1;
+conf.eval.max_thresh = -1.4;
 conf.pascal.VOCopts.testset = conf.eval.test_set;
 
 
@@ -136,12 +121,9 @@ conf.features.sbin = 8;
 conf.features.dim = 33;
 conf.features.truncation_dim = 32;
 conf.features.extra_octave_dim = 33;
-conf.features.extra_octave = false;
+conf.features.extra_octave = ~true;
 
 
-% -------------------------------------------------------------------
-% Helper functions
-% -------------------------------------------------------------------
 function made = exists_or_mkdir(path)
 made = false;
 if exist(path) == 0
