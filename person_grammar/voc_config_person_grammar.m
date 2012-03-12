@@ -35,7 +35,7 @@ end
 
 
 % Parse individual variable overrides
-conf_val = parse_overrides(varargin);
+conf_val = parse_overrides(varargin{1});
 
 % System version
 conf.version = conf_val('version', 'voc-release5');

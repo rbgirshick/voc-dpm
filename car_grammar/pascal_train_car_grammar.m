@@ -1,25 +1,21 @@
-function model = car_train(cls, n, note)
-
-% model = pascal_train(cls, n, note)
-% Train a model with 2*n components using the PASCAL dataset.
-% note allows you to save a note with the trained model
-% example: note = 'testing FRHOG (FRobnicated HOG)
+function model = pascal_train_car_grammar(note)
 
 % At every "checkpoint" in the training process we reset the 
 % RNG's seed to a fixed value so that experimental results are 
 % reproducible.
 initrand();
 
-if nargin < 3
+if nargin < 2
   note = '';
 end
 
+cls = 'car';
 conf = voc_config();
 cachedir = conf.paths.model_dir;
 
 [pos, neg, impos] = pascal_data(cls, conf.pascal.year);
 
-max_num_examples = conf.training.cache_example_limit;;
+max_num_examples = conf.training.cache_example_limit;
 num_fp           = conf.training.wlssvm_M;
 fg_overlap       = conf.training.fg_overlap;
 

@@ -1,6 +1,25 @@
-function conf = voc_config(varargin)
+function conf = voc_config_car_grammar(varargin)
 % Set up configuration variables
 
+%
+% ~~~~~~~~~~~~~~~~~~~~~~ BASIC SETUP ~~~~~~~~~~~~~~~~~~~~~~
+%
+
+% Parent directory that everything (model cache, VOCdevkit) is under
+BASE_DIR    = '/var/tmp/rbg';
+
+% PASCAL dataset year
+PASCAL_YEAR = '2007';
+
+% Models are automatically stored in BASE_DIR/PROJECT/PASCAL_YEAR/
+PROJECT     = 'car-grammar/mergetest';
+
+%
+% You probably don't need to change configuration settings below this line.
+%
+
+% ~~~~~~~~~~~~~~~~~~~~~~ ADVANCED SETUP ~~~~~~~~~~~~~~~~~~~~~~
+% 
 % conf            top-level variables
 % conf.paths      filesystem paths
 % conf.pascal     PASCAL VOC dataset
@@ -16,10 +35,6 @@ function conf = voc_config(varargin)
 % In this example, we assume that you have an M-file 
 % named my_voc_config.m, which you can create by
 % copying and modifying this file.
-%
-% Variables that you'll likely want/need to change
-% are maked with the comment "** EDIT **". The others
-% are sensible defaults that will probably work for you.
 
 
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -35,18 +50,16 @@ end
 
 
 % Parse individual variable overrides
-conf_val = parse_overrides(varargin);
+conf_val = parse_overrides(varargin{1});
 
 % System version
 conf.version = conf_val('version', 'voc-release5');
 
 % Project name (used in the paths)
-% ** EDIT **
-conf.project = conf_val('project', 'car-grammar/03-09-12-subtypes-wlssvm-biases');
+conf.project = conf_val('project', PROJECT);
 
 % Parent directory that everything (model cache, VOCdevkit) is under
-% ** EDIT **
-conf.paths.base_dir = conf_val('paths.base_dir', '/var/tmp/rbg/');
+conf.paths.base_dir = conf_val('paths.base_dir', BASE_DIR);
 
 % Path to this file
 conf.paths.self = fullfile(pwd(), [mfilename() '.m']);
@@ -57,20 +70,21 @@ conf.paths.self = fullfile(pwd(), [mfilename() '.m']);
 %conf.single_byte_size = tmp.bytes;
 conf.single_byte_size = 4;
 
+
 % -------------------------------------------------------------------
 % PASCAL VOC configuration 
 % -------------------------------------------------------------------
 
 % Configure the PASCAL VOC dataset year
-% ** EDIT **
-conf.pascal.year = conf_val('pascal.year', '2007');
+conf.pascal.year = conf_val('pascal.year', PASCAL_YEAR);
 
 % Directory with PASCAL VOC development kit and dataset
-conf.pascal.dev_kit = [conf.paths.base_dir 'VOC' conf.pascal.year ...
+conf.pascal.dev_kit = [conf.paths.base_dir '/VOC' conf.pascal.year ...
                        '/VOCdevkit/'];
 
 % VOCinit brings VOCopts into scope                  
 conf.pascal.VOCopts = get_voc_opts(conf);
+
 
 % -------------------------------------------------------------------
 % Path configuration 
@@ -78,10 +92,11 @@ conf.pascal.VOCopts = get_voc_opts(conf);
 
 % Directory for caching models, intermediate data, and results
 % [was called 'cachedir' in previous releases]
-conf.paths.model_dir = [conf.paths.base_dir ...
+conf.paths.model_dir = [conf.paths.base_dir '/' ...
                         conf.project '/' conf.pascal.year '/'];
 
 exists_or_mkdir(conf.paths.model_dir);
+
 
 % -------------------------------------------------------------------
 % Training configuration 
@@ -90,7 +105,7 @@ conf.training.train_set_fg = conf_val('training.train_set', 'trainval');
 conf.training.train_set_bg = conf_val('training.train_set', 'train');
 conf.training.C = conf_val('training.C', 0.006);
 conf.training.bias_feature = 10;
-% 3GB file size limit for the feature vector cache
+% File size limit for the feature vector cache (2^30 bytes = 1GB)
 conf.training.cache_byte_limit = 3*2^30;
 % Location of training log (matlab diary)
 conf.training.log = @(x) sprintf([conf.paths.model_dir '%s.log'], x);
@@ -121,9 +136,12 @@ conf.features.sbin = 8;
 conf.features.dim = 33;
 conf.features.truncation_dim = 32;
 conf.features.extra_octave_dim = 33;
-conf.features.extra_octave = ~true;
+conf.features.extra_octave = false;
 
 
+% -------------------------------------------------------------------
+% Helper functions
+% -------------------------------------------------------------------
 function made = exists_or_mkdir(path)
 made = false;
 if exist(path) == 0
