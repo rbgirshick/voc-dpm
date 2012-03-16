@@ -1,4 +1,4 @@
-function [ap1, ap2] = pascal(cls, n, note, dotrainval, testyear)
+function pascal(cls, n, note, dotrainval, testyear)
 
 % ap = pascal(cls, n, note)
 % Train and score a model with 2*n components.
@@ -46,6 +46,9 @@ model.interval = conf.eval.interval;
 boxes1 = pascal_test(cls, model, testset, testyear, testyear);
 ap1 = pascal_eval(cls, boxes1, testset, testyear, testyear);
 [ap1, ap2] = bboxpred_rescore(cls, testset, testyear);
+
+fprintf('AP = %.4f (without bounding box prediction)\n', ap1)
+fprintf('AP = %.4f (with bounding box prediction)\n', ap2)
 
 % compute detections on the trainval dataset (used for context rescoring)
 if dotrainval
