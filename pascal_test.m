@@ -47,12 +47,6 @@ catch
       boxes1{i} = dets(:,[1:4 end]);
       % unclipped detection window and all filter boxes
       parts1{i} = cat(2, unclipped_dets, boxes);
-
-%      boxes = reduceboxes(model, boxes);
-%      [dets boxes] = clipboxes(im, dets, boxes);
-%      I = nms(dets, 0.5);
-%      boxes1{i} = dets(I,[1:4 end]);
-%      parts1{i} = boxes(I,:);
     else
       boxes1{i} = [];
       parts1{i} = [];
