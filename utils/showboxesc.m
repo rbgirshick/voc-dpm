@@ -27,9 +27,6 @@ if ~isempty(boxes)
       s = '-';
       if boxes(j,end) == 0
         c = 'c';
-        %if i > 14
-        %  c = 'm';
-        %end
       elseif boxes(j,end) == 1
         c = 'r';
       elseif boxes(j,end) == 2

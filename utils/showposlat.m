@@ -1,13 +1,15 @@
 function showposlat(model, start, pos, fp_count, overlap)
 
+conf = voc_config();
+
 % get training data
 if nargin < 3
   pos = pascal_data(model.class, true, model.year);
 end
 
 numpos = length(pos);
-model.interval = 5;
-pixels = model.minsize * model.sbin;
+model.interval = conf.training.interval;
+pixels = model.minsize * model.sbin / 2;
 minsize = prod(pixels);
 if nargin < 2
   start = 1;

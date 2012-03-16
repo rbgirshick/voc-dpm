@@ -390,7 +390,6 @@ end
 function [num_entries, num_examples] = poswarp(t, model, pos)
 % assumption: the model only has a single structure rule 
 % of the form Q -> F.
-conf = voc_config();
 numpos = length(pos);
 warped = warppos(model, pos);
 fi = model.symbols(model.rules{model.start}.rhs).filter;

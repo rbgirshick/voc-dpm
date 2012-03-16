@@ -81,7 +81,8 @@ for d = 1:length(trees)
     if model.symbols(sym).type == 'T'
       fi = model.symbols(sym).filter;
       bl = model.filters(fi).blocklabel;
-      if model.learnmult(bl) ~= 0
+      w = model.filters(fi).w;
+      if model.learnmult(bl) ~= 0 || sum(abs(w(:))) ~= 0
         ex = addfilterfeat(model, ex,                 ...
                            trees{d}(N_X, j),          ...
                            trees{d}(N_Y, j),          ...
@@ -94,7 +95,8 @@ for d = 1:length(trees)
       ruleind = trees{d}(N_RULE_INDEX, j);
       if model.rules{sym}(ruleind).type == 'D'
         bl = model.rules{sym}(ruleind).def.blocklabel;
-        if model.learnmult(bl) ~= 0
+        w = model.rules{sym}(ruleind).def.w;
+        if model.learnmult(bl) ~= 0 || sum(abs(w)) ~= 0
           dx = trees{d}(N_DX, j);
           dy = trees{d}(N_DY, j);
           def = [-(dx^2); -dx; -(dy^2); -dy];
@@ -109,7 +111,8 @@ for d = 1:length(trees)
         end
       end
       bl = model.rules{sym}(ruleind).offset.blocklabel;
-      if model.learnmult(bl) ~= 0
+      w = model.rules{sym}(ruleind).offset.w;
+      if model.learnmult(bl) ~= 0 || w ~= 0
         ex.blocks(bl).f = 10;
       end
     end
@@ -177,15 +180,8 @@ end
 feat = [];
 bls = [];
 for i = 1:length(ex.blocks)
-  % skip if empty or all zero
-  %  skipping all zero blocks mostly skips def blocks
-  %  leading to a very, very small run-time improvement
-  %  but makes memory fragmentation worse / harder to
-  %  avoid
-  %if ~isempty(ex.blocks(i).f) && sum(abs(ex.blocks(i).f)) ~= 0
-
-  % skip if empty
-  if ~isempty(ex.blocks(i).f)
+  % skip if empty or the features are all zero
+  if ~isempty(ex.blocks(i).f) && sum(abs(ex.blocks(i).f)) ~= 0
     feat = [feat; ex.blocks(i).f];
     bls = [bls; i-1;];
   end

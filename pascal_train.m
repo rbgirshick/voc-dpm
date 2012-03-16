@@ -67,31 +67,29 @@ try
   load([cachedir cls '_mix']);
 catch
   initrand();
-  model = mergemodels(models);
-  model = train(model, impos, neg_small, false, false, 8, 20, ...
+  model = model_merge(models);
+  model = train(model, impos, neg_small, false, false, 1, 5, ...
                 max_num_examples, fg_overlap, num_fp, false, 'mix');
-  model = train(model, impos, neg, false, false, 1, 5, ...
-                max_num_examples, fg_overlap, num_fp, true, 'mix_2');
   save([cachedir cls '_mix'], 'model');
 end
 
-%% add parts and update models using latent detections & hard negatives.
-%try 
-%  load([cachedir cls '_parts']);
-%catch
-%  initrand();
-%  for i = 1:2:2*n
-%    ruleind = i;
-%    partner = i+1;
-%    filterind = i;
-%    model = model_addparts(model, model.start, ruleind, ...
-%                           partner, filterind, 8, [6 6], 1);
-%  end
-%  model = train(model, impos, neg_small, false, false, 8, 10, ...
-%                max_num_examples, fg_overlap, num_fp, false, 'parts_1');
-%  model = train(model, impos, neg, false, false, 1, 5, ...
-%                max_num_examples, fg_overlap, num_fp, true, 'parts_2');
-%  save([cachedir cls '_parts'], 'model');
-%end
+% add parts and update models using latent detections & hard negatives.
+try 
+  load([cachedir cls '_parts']);
+catch
+  initrand();
+  for i = 1:2:2*n
+    ruleind = i;
+    partner = i+1;
+    filterind = i;
+    model = model_addparts(model, model.start, ruleind, ...
+                           partner, filterind, 8, [6 6], 1);
+  end
+  model = train(model, impos, neg_small, false, false, 8, 10, ...
+                max_num_examples, fg_overlap, num_fp, false, 'parts_1');
+  model = train(model, impos, neg, false, false, 1, 5, ...
+                max_num_examples, fg_overlap, num_fp, true, 'parts_2');
+  save([cachedir cls '_parts'], 'model');
+end
 
 save([cachedir cls '_final'], 'model');
