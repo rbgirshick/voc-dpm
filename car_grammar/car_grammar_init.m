@@ -9,113 +9,6 @@ car = make_car_grammar_subtypes(front, angled, side);
 %-------------------------------------------------------------------------
 %
 %-------------------------------------------------------------------------
-function M = make_car_grammar_sharing(front, side)
-
-cls = 'car';
-note = 'car grammar';
-% initialize a model
-M = model_create(cls, note);
-M.interval = 10;
-M.sbin = 8;
-%% start non-terminal
-[M, Q] = model_addnonterminal(M);
-M.start = Q;
-
-% Left-side (looking head-on at the car) part filter
-num_LSPF = 21/3;
-w = side.filters(1).w;
-
-% Build filter slices
-avg_norm = 0;
-for i = 1:num_LSPF
-  LSPF_w{i} = w(:, 3*(i-1)+1:3*i, :);
-  avg_norm = avg_norm + norm(LSPF_w{i}(:));
-end
-avg_norm = avg_norm / num_LSPF;
-
-defoffset = 0;
-defparams = [0.1 0 0.1 0];
-
-LSPF = zeros(1, num_LSPF);
-RSPF = zeros(1, num_LSPF);
-for i = 1:num_LSPF
-  li = i;
-  ri = num_LSPF+1-i;
-
-  % Add filters to the model
-  [M, LSPF(li), fid] = model_addfilter(M, LSPF_w{li}, 'M');
-  [M, RSPF(ri)] = model_addmirroredfilter(M, fid);
-end
-
-[M, LS] = model_addnonterminal(M);
-[M, RS] = model_addnonterminal(M);
-
-anchors = {};
-for i = 1:num_LSPF
-  anchors{i} = [0+(i-1)*3 0 0];
-end
-[M, bl] = model_addrule(M, 'S', LS, LSPF, 0, anchors, 'M');
-M = model_addrule(M, 'S', RS, RSPF, 0, anchors, 'M', bl);
-M.learnmult(bl) = 0;
-
-% Front (and back, for now)
-num_FPF = 9/3;
-w = front.filters(1).w;
-
-% Build filter slices
-for i = 1:num_FPF
-  FPF_w{i} = w(:, 3*(i-1)+1:3*i, :);
-  FPF_w{i} = FPF_w{i} * avg_norm / norm(FPF_w{i}(:));
-end
-
-FPF = zeros(1, num_FPF);
-for i = 1:num_FPF
-  % Add filters to the model
-  [M, FPF(i), fid] = model_addfilter(M, FPF_w{i}, 'N');
-end
-
-[M, F] = model_addnonterminal(M);
-
-anchors = {};
-for i = 1:num_FPF
-  anchors{i} = [0+(i-1)*3 0 0];
-end
-[M, bl] = model_addrule(M, 'S', F, FPF, 0, anchors, 'N');
-M.learnmult(bl) = 0;
-
-% left middle squished
-% right middle squished
-[M, LMS] = model_addnonterminal(M);
-[M, RMS] = model_addnonterminal(M);
-
-anchors = {};
-for i = 1:num_LSPF
-  anchors{i} = [0+(i-1)*1 0 0];
-end
-[M, bl] = model_addrule(M, 'S', LMS, LSPF, 0, anchors, 'M');
-M = model_addrule(M, 'S', RMS, RSPF, 0, anchors, 'M', bl);
-M.learnmult(bl) = 0;
-
-% Top-level productions
-[M, bl] = model_addrule(M, 'S', Q, LS, 0, {[0 0 0]}, 'M');
-M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 21], [0 0]);
-
-M = model_addrule(M, 'S', Q, RS, 0, {[0 0 0]}, 'M', bl);
-M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 21], [0 0]);
-
-[M, bl] = model_addrule(M, 'S', Q, [LMS F], 0, {[0 0 0] [5 0 0]}, 'M');
-M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 14], [0 0]);
-
-M = model_addrule(M, 'S', Q, [F RMS], 0, {[0 0 0] [5 0 0]}, 'M', bl);
-M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 14], [0 0]);
-
-M = model_addrule(M, 'S', Q, F, 0, {[0 0 0]}, 'N');
-M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 9], [0 0]);
-
-
-%-------------------------------------------------------------------------
-%
-%-------------------------------------------------------------------------
 function M = make_car_grammar_subtypes(front, angled, side)
 
 cls = 'car';
@@ -241,6 +134,113 @@ for s = 0:3
   M = model_addrule(M, 'S', Q, RS(s+1), 0, {[0 0 0]}, 'M', bl);
   M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 w], [0 0]);
 end
+
+
+%-------------------------------------------------------------------------
+%
+%-------------------------------------------------------------------------
+function M = make_car_grammar_sharing(front, side)
+
+cls = 'car';
+note = 'car grammar';
+% initialize a model
+M = model_create(cls, note);
+M.interval = 10;
+M.sbin = 8;
+%% start non-terminal
+[M, Q] = model_addnonterminal(M);
+M.start = Q;
+
+% Left-side (looking head-on at the car) part filter
+num_LSPF = 21/3;
+w = side.filters(1).w;
+
+% Build filter slices
+avg_norm = 0;
+for i = 1:num_LSPF
+  LSPF_w{i} = w(:, 3*(i-1)+1:3*i, :);
+  avg_norm = avg_norm + norm(LSPF_w{i}(:));
+end
+avg_norm = avg_norm / num_LSPF;
+
+defoffset = 0;
+defparams = [0.1 0 0.1 0];
+
+LSPF = zeros(1, num_LSPF);
+RSPF = zeros(1, num_LSPF);
+for i = 1:num_LSPF
+  li = i;
+  ri = num_LSPF+1-i;
+
+  % Add filters to the model
+  [M, LSPF(li), fid] = model_addfilter(M, LSPF_w{li}, 'M');
+  [M, RSPF(ri)] = model_addmirroredfilter(M, fid);
+end
+
+[M, LS] = model_addnonterminal(M);
+[M, RS] = model_addnonterminal(M);
+
+anchors = {};
+for i = 1:num_LSPF
+  anchors{i} = [0+(i-1)*3 0 0];
+end
+[M, bl] = model_addrule(M, 'S', LS, LSPF, 0, anchors, 'M');
+M = model_addrule(M, 'S', RS, RSPF, 0, anchors, 'M', bl);
+M.learnmult(bl) = 0;
+
+% Front (and back, for now)
+num_FPF = 9/3;
+w = front.filters(1).w;
+
+% Build filter slices
+for i = 1:num_FPF
+  FPF_w{i} = w(:, 3*(i-1)+1:3*i, :);
+  FPF_w{i} = FPF_w{i} * avg_norm / norm(FPF_w{i}(:));
+end
+
+FPF = zeros(1, num_FPF);
+for i = 1:num_FPF
+  % Add filters to the model
+  [M, FPF(i), fid] = model_addfilter(M, FPF_w{i}, 'N');
+end
+
+[M, F] = model_addnonterminal(M);
+
+anchors = {};
+for i = 1:num_FPF
+  anchors{i} = [0+(i-1)*3 0 0];
+end
+[M, bl] = model_addrule(M, 'S', F, FPF, 0, anchors, 'N');
+M.learnmult(bl) = 0;
+
+% left middle squished
+% right middle squished
+[M, LMS] = model_addnonterminal(M);
+[M, RMS] = model_addnonterminal(M);
+
+anchors = {};
+for i = 1:num_LSPF
+  anchors{i} = [0+(i-1)*1 0 0];
+end
+[M, bl] = model_addrule(M, 'S', LMS, LSPF, 0, anchors, 'M');
+M = model_addrule(M, 'S', RMS, RSPF, 0, anchors, 'M', bl);
+M.learnmult(bl) = 0;
+
+% Top-level productions
+[M, bl] = model_addrule(M, 'S', Q, LS, 0, {[0 0 0]}, 'M');
+M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 21], [0 0]);
+
+M = model_addrule(M, 'S', Q, RS, 0, {[0 0 0]}, 'M', bl);
+M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 21], [0 0]);
+
+[M, bl] = model_addrule(M, 'S', Q, [LMS F], 0, {[0 0 0] [5 0 0]}, 'M');
+M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 14], [0 0]);
+
+M = model_addrule(M, 'S', Q, [F RMS], 0, {[0 0 0] [5 0 0]}, 'M', bl);
+M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 14], [0 0]);
+
+M = model_addrule(M, 'S', Q, F, 0, {[0 0 0]}, 'N');
+M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 9], [0 0]);
 
 
 %-------------------------------------------------------------------------

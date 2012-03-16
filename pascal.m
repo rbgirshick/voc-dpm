@@ -34,8 +34,7 @@ end
 diary(conf.training.log([cls '-' timestamp]));
 
 th = tic;
-%model = pascal_train(cls, n, note);
-model = car_train(cls, n, note);
+model = pascal_train(cls, n, note);
 toc(th);
 % Free feature vector cache memory
 fv_cache('free');
@@ -46,7 +45,7 @@ model.interval = conf.eval.interval;
 
 boxes1 = pascal_test(cls, model, testset, testyear, testyear);
 ap1 = pascal_eval(cls, boxes1, testset, testyear, testyear);
-%[ap1, ap2] = bboxpred_rescore(cls, testset, testyear);
+[ap1, ap2] = bboxpred_rescore(cls, testset, testyear);
 
 % compute detections on the trainval dataset (used for context rescoring)
 if dotrainval
