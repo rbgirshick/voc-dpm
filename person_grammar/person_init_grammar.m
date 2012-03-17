@@ -1,4 +1,4 @@
-function one_offs()
+function person_init_grammar()
 
 % which one off to do
 train_full_person_2x_res();

@@ -1,7 +1,8 @@
 % Avoiding addpath(genpath('.')) because .git gets included
 % a large number of subdirectories, which makes startup slow
 incl = {'rescore', 'bbox_pred', 'fv_cache', ...
-        'bin', 'gdetect', 'utils'};
+        'bin', 'gdetect', 'utils', ...
+        'car_grammar', 'person_grammar'};
 for i = 1:length(incl)
   addpath(genpath(incl{i}));
 end

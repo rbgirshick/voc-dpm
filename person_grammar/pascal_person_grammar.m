@@ -1,8 +1,8 @@
-function pascal_car_grammar(dotrainval, testyear)
+function pascal_person_grammar(dotrainval, testyear)
 
 % Set configuration override
 global VOC_CONFIG_OVERRIDE;
-VOC_CONFIG_OVERRIDE = @voc_config_car_grammar;
+VOC_CONFIG_OVERRIDE = @voc_config_person_grammar;
 
 cls = 'car';
 conf = voc_config();
@@ -33,7 +33,7 @@ end
 diary(conf.training.log([cls '-' timestamp]));
 
 th = tic;
-model = pascal_train_car_grammar(note);
+model = pascal_train_person_grammar(note);
 toc(th);
 % Free feature vector cache memory
 fv_cache('free');
