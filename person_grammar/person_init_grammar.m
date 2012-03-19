@@ -23,13 +23,15 @@ spos = split('person', pos, n);
 spos = spos{3};
 cachesize = 24000;
 
-model = initmodel(cls, spos, note, 'N', 8, [23 8]);
-inds = lrsplit(model, spos, 3);
 try
   load([cachedir 'person_model_full_person_2x_1_1_1']);
+  load([cachedir 'person_model_full_person_2x_pos_inds']);
 catch
+  model = initmodel(cls, spos, note, 'N', 8, [23 8]);
+  inds = lrsplit(model, spos, 3);
   model = train(model, spos(inds), neg, true, true, 1, 1, ...
                 cachesize, 0.7, 0, false, 'full_person_2x_1');
+  save([cachedir 'person_model_full_person_2x_pos_inds'], 'inds');
 end
 model = train(model, spos(inds), neg(1:200), false, false, 1, 20, ...
               cachesize, 0.7, 0, false, 'full_person_2x_2');

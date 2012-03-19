@@ -9,13 +9,11 @@ function pyra = featpyramid(im, model, padx, pady)
 % first octave halucinates higher resolution data.
 % padx,pady optionally pads each level of the feature pyramid
 
-conf = voc_config();
-
 if nargin < 3
   [padx, pady] = getpadding(model);
 end
 
-if conf.features.extra_octave
+if model.features.extra_octave
   pyra = featpyramidbig(im, model, padx, pady);
   return;
 end
@@ -49,7 +47,7 @@ end
 
 pyra.num_levels = length(pyra.feat);
 
-td = conf.features.truncation_dim;
+td = model.features.truncation_dim;
 for i = 1:pyra.num_levels
   % add 1 to padding because feature generation deletes a 1-cell
   % wide border around the feature map

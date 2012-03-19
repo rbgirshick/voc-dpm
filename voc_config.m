@@ -36,10 +36,10 @@ PROJECT     = 'rel5-rc';
 % named my_voc_config.m, which you can create by
 % copying and modifying this file.
 
-
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 % Check for an override configuration file (but only if this is 
 % voc_config.m)
+assert_not_in_parallel_worker();
 i_am_voc_config_m = strcmp('voc_config', mfilename());
 global VOC_CONFIG_OVERRIDE;
 if i_am_voc_config_m && ~isempty(VOC_CONFIG_OVERRIDE)
@@ -47,7 +47,6 @@ if i_am_voc_config_m && ~isempty(VOC_CONFIG_OVERRIDE)
   return;
 end
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 
 % Parse individual variable overrides
 conf_val = parse_overrides(varargin);
@@ -142,6 +141,9 @@ conf.features.extra_octave = false;
 % -------------------------------------------------------------------
 % Helper functions
 % -------------------------------------------------------------------
+
+% -------------------------------------------------------------------
+% Make directory path if it does not already exist.
 function made = exists_or_mkdir(path)
 made = false;
 if exist(path) == 0
@@ -150,6 +152,9 @@ if exist(path) == 0
 end
 
 
+% -------------------------------------------------------------------
+% Returns the 'VOCopts' variable from the VOCdevkit. The path to the
+% devkit is also added to the matlab path.
 function VOCopts = get_voc_opts(conf)
 % cache VOCopts from VOCinit
 persistent voc_opts;
@@ -169,6 +174,9 @@ end
 VOCopts = voc_opts(key);
 
 
+% -------------------------------------------------------------------
+% Returns a handle to a function that will return the correct value
+% for a configuration key (see xconf_val).
 function func = parse_overrides(in)
 overrides = containers.Map();
 for i = 1:2:length(in)
@@ -177,9 +185,36 @@ end
 func = @(key, val) xconf_val(overrides, key, val);
 
 
+% -------------------------------------------------------------------
+% If key is in overrides, then return overrides' value.
+% Otherwise, return val.
 function val = xconf_val(overrides, key, val)
 % If key is in overrides, return override val
 % otherwise, simply return val
 if overrides.isKey(key)
   val = overrides(key);
+end
+
+
+% -------------------------------------------------------------------
+% Throw an error if this function is called from inside a matlabpool
+% worker.
+function assert_not_in_parallel_worker()
+% Matlab does not support accessing global variables from
+% parallel workers. The result of reading a global is undefined
+% and in practice has odd and inconsistent behavoir. 
+% The configuraton override mechanism relies on a global
+% variable. To avoid hard-to-find bugs, we make sure that
+% voc_config cannot be called from a parallel worker.
+try
+  t = getCurrentTask();
+catch
+  t = [];
+end
+
+if ~isempty(t)
+  msg = ['voc_config() cannot be called from a parallel worker ' ...
+         '(or startup.m did not run -- did you run matlab from the ' ...
+         'root of the voc-release installationd directory?'];
+  error(msg);
 end

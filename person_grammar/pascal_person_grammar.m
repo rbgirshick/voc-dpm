@@ -4,7 +4,7 @@ function pascal_person_grammar(dotrainval, testyear)
 global VOC_CONFIG_OVERRIDE;
 VOC_CONFIG_OVERRIDE = @voc_config_person_grammar;
 
-cls = 'car';
+cls = 'person';
 conf = voc_config();
 cachedir = conf.paths.model_dir;
 testset = conf.eval.test_set;
