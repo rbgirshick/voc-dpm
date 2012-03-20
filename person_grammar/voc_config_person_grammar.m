@@ -12,7 +12,7 @@ BASE_DIR    = '/var/tmp/rbg';
 PASCAL_YEAR = '2007';
 
 % Models are automatically stored in BASE_DIR/PROJECT/PASCAL_YEAR/
-PROJECT     = 'person-grammar/mergetest';
+PROJECT     = 'person-grammar/mergetest2';
 
 %
 % You probably don't need to change configuration settings below this line.
@@ -106,7 +106,7 @@ conf.training.train_set_bg = conf_val('training.train_set', 'train');
 conf.training.C = conf_val('training.C', 0.006);
 conf.training.bias_feature = 10;
 % File size limit for the feature vector cache (2^30 bytes = 1GB)
-conf.training.cache_byte_limit = 7*2^30;
+conf.training.cache_byte_limit = 4*2^30;
 % Location of training log (matlab diary)
 conf.training.log = @(x) sprintf([conf.paths.model_dir '%s.log'], x);
 
