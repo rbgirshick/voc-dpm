@@ -580,29 +580,36 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
 
   const mxArray *mx_comps = prhs[5];
   M.num_components = mxGetDimensions(mx_comps)[0];
-  M.component_sizes = new (nothrow) int[M.num_components];
-  M.component_blocks = new (nothrow) int*[M.num_components];
-  check(M.component_sizes != NULL);
-  check(M.component_blocks != NULL);
-  for (int i = 0; i < M.num_components; i++) {
-    const mxArray *mx_comp = mxGetCell(mx_comps, i);
-    if (mx_comp == NULL) {
-      M.component_sizes[i]  = 0;
-      M.component_blocks[i] = NULL;
-      continue;
+  if (M.num_components > 0) {
+    M.reg_type = model::REG_MAX;
+    M.component_sizes = new (nothrow) int[M.num_components];
+    M.component_blocks = new (nothrow) int*[M.num_components];
+    check(M.component_sizes != NULL);
+    check(M.component_blocks != NULL);
+    for (int i = 0; i < M.num_components; i++) {
+      const mxArray *mx_comp = mxGetCell(mx_comps, i);
+      if (mx_comp == NULL) {
+        M.component_sizes[i]  = 0;
+        M.component_blocks[i] = NULL;
+        continue;
+      }
+      const int *comp = (const int *)mxGetPr(mx_comp);
+      M.component_sizes[i] = mxGetDimensions(mx_comp)[0];
+      M.component_blocks[i] = new (nothrow) int[M.component_sizes[i]];
+      check(M.component_blocks[i] != NULL);
+      copy(comp, comp+M.component_sizes[i], M.component_blocks[i]);
+      if (!quiet) {
+        // Display some useful information
+        mexPrintf("Component %d has %d blocks\n  ", i, M.component_sizes[i]);
+        for (int j = 0; j < M.component_sizes[i]; j++)
+          mexPrintf("%d ", M.component_blocks[i][j]);
+        mexPrintf("\n");
+      }
     }
-    const int *comp = (const int *)mxGetPr(mx_comp);
-    M.component_sizes[i] = mxGetDimensions(mx_comp)[0];
-    M.component_blocks[i] = new (nothrow) int[M.component_sizes[i]];
-    check(M.component_blocks[i] != NULL);
-    copy(comp, comp+M.component_sizes[i], M.component_blocks[i]);
-    if (!quiet) {
-      // Display some useful information
-      mexPrintf("Component %d has %d blocks\n  ", i, M.component_sizes[i]);
-      for (int j = 0; j < M.component_sizes[i]; j++)
-        mexPrintf("%d ", M.component_blocks[i][j]);
-      mexPrintf("\n");
-    }
+    mexPrintf("Using max component regularization\n");
+  } else {
+    M.reg_type = model::REG_L2;
+    mexPrintf("Using L2 regularization\n");
   }
 
   M.C = mxGetScalar(prhs[6]);

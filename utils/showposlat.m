@@ -9,11 +9,7 @@ end
 
 numpos = length(pos);
 model.interval = conf.training.interval;
-div = 1;
-if conf.features.extra_octave
-  div = 2;
-end
-pixels = model.minsize * model.sbin / div;
+pixels = model.minsize * model.sbin / 2;
 minsize = prod(pixels);
 if nargin < 2
   start = 1;
@@ -97,12 +93,19 @@ for i = start:numpos
         boxesc = cat(1, boxesc, padarray(det(1,1:4), [0 1], 0, 'post'));
       end
       %showboxes(im, bs(1,:));
+      tree = trees{1};
     else
       fprintf('  %d: no overlap\n', b);
+      tree = [];
     end
 
+    subplot(1,2,1);
     showboxesc(im, boxesc);
     title('green = fg box;  blue = bg boxes;  red = loss adjusted boxes;  cyan = label completed detection');
+    subplot(1,2,2);
+    if ~isempty(tree)
+      vis_derived_filter(model, tree);
+    end
 
     pause;
   end

@@ -3,10 +3,10 @@ function showboxesc(im, boxes, c)
 % showboxes(im, boxes)
 % Draw boxes on top of image.
 
-clf;
+%clf;
 image(im); 
-axis equal;
-axis on;
+axis image;
+axis off;
 if ~isempty(boxes)
   for j = 1:size(boxes,1)
     numfilters = floor(size(boxes, 2)/4);
@@ -24,11 +24,9 @@ if ~isempty(boxes)
       % 0 => diff
       % 1 => fn
       % 2 => tp
+      s = '-';
       if boxes(j,end) == 0
         c = 'c';
-        if i > 14
-          c = 'm';
-        end
       elseif boxes(j,end) == 1
         c = 'r';
       elseif boxes(j,end) == 2
@@ -37,8 +35,11 @@ if ~isempty(boxes)
         c = 'b';
       elseif boxes(j,end) == 4
         c = 'm';
+        s = '--';
       end
-      line([x1 x1 x2 x2 x1 x1]', [y1 y2 y2 y1 y1 y2]', 'color', c, 'linewidth', 3);
+      line([x1 x1 x2 x2 x1 x1]', [y1 y2 y2 y1 y1 y2]', 'color', c, ...
+                                                       'linewidth', 3, ...
+                                                       'linestyle', s);
     end
   end
 end

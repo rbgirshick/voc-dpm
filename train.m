@@ -213,9 +213,7 @@ for t = 1:iter
 
     if lbfgs
       % optimize with LBFGS
-      options.verbose = 2;
-      options.maxIter = 1000;
-      %options.optTol = 0.000001*10;
+      options = conf.training.lbfgs.options;
 
       w = cat(1, blocks{:});
       lb = cat(1, lb{:});

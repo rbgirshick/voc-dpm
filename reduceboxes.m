@@ -7,6 +7,14 @@ function b = reduceboxes(model, boxes)
 % model  object model
 % boxes  filter boxes returned by gdetect.m
 
+% Only reduce boxes for mixtures of star models
+if model.type ~= model_types.MixStar
+  b = boxes;
+  return;
+end
+
+assert(model.type == model_types.MixStar);
+
 % n = #filters per component (assuming all components have
 % the same number of parts)
 n = length(model.rules{model.start}(1).rhs);

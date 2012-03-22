@@ -1,15 +1,6 @@
 function pyra = featpyramidbig(im, model, padx, pady)
 
-% pyra = featpyramid(im, model, padx, pady);
-% Compute feature pyramid.
-%
-% pyra.feat{i} is the i-th level of the feature pyramid.
-% pyra.scales{i} is the scaling factor used for the i-th level.
-% pyra.feat{i+interval} is computed at exactly half the resolution of feat{i}.
-% first 2 octaves halucinate higher resolution data.
-% padx,pady optionally pads each level of the feature pyramid
-
-conf = voc_config();
+% TODO: merge with featpyramid.m
 
 if nargin < 3
   [padx, pady] = getpadding(model);
@@ -45,14 +36,14 @@ for i = 1:interval
   end
 end
 
-eod = conf.features.extra_octave_dim;
+eod = model.features.extra_octave_dim;
 for i = 1:interval
   pyra.feat{i}(:,:,eod) = 1;
 end
 
 pyra.num_levels = length(pyra.feat);
 
-td = conf.features.truncation_dim;
+td = model.features.truncation_dim;
 for i = 1:pyra.num_levels
   % add 1 to padding because feature generation deletes a 1-cell
   % wide border around the feature map

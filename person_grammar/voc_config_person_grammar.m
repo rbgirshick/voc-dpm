@@ -1,4 +1,4 @@
-function conf = voc_config(varargin)
+function conf = voc_config_car_grammar(varargin)
 % Set up configuration variables
 
 %
@@ -12,7 +12,7 @@ BASE_DIR    = '/var/tmp/rbg';
 PASCAL_YEAR = '2007';
 
 % Models are automatically stored in BASE_DIR/PROJECT/PASCAL_YEAR/
-PROJECT     = 'rel5-rc/grammar-merge-startlevel';
+PROJECT     = 'person-grammar/mergetest2';
 
 %
 % You probably don't need to change configuration settings below this line.
@@ -36,10 +36,10 @@ PROJECT     = 'rel5-rc/grammar-merge-startlevel';
 % named my_voc_config.m, which you can create by
 % copying and modifying this file.
 
+
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 % Check for an override configuration file (but only if this is 
 % voc_config.m)
-assert_not_in_parallel_worker();
 i_am_voc_config_m = strcmp('voc_config', mfilename());
 global VOC_CONFIG_OVERRIDE;
 if i_am_voc_config_m && ~isempty(VOC_CONFIG_OVERRIDE)
@@ -48,8 +48,9 @@ if i_am_voc_config_m && ~isempty(VOC_CONFIG_OVERRIDE)
 end
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
 % Parse individual variable overrides
-conf_val = parse_overrides(varargin);
+conf_val = parse_overrides(varargin{1});
 
 % System version
 conf.version = conf_val('version', 'voc-release5');
@@ -102,33 +103,33 @@ exists_or_mkdir(conf.paths.model_dir);
 % -------------------------------------------------------------------
 conf.training.train_set_fg = conf_val('training.train_set', 'trainval');
 conf.training.train_set_bg = conf_val('training.train_set', 'train');
-conf.training.C = conf_val('training.C', 0.001);
+conf.training.C = conf_val('training.C', 0.006);
 conf.training.bias_feature = 10;
 % File size limit for the feature vector cache (2^30 bytes = 1GB)
-conf.training.cache_byte_limit = 3*2^30;
+conf.training.cache_byte_limit = 4*2^30;
 % Location of training log (matlab diary)
 conf.training.log = @(x) sprintf([conf.paths.model_dir '%s.log'], x);
 
 conf.training.cache_example_limit = 24000;
 conf.training.num_negatives_small = 200;
 conf.training.num_negatives_large = inf;
-conf.training.wlssvm_M = 0;
+conf.training.wlssvm_M = 1;
 conf.training.fg_overlap = 0.7;
 
 conf.training.lbfgs.options.verbose = 2;
 conf.training.lbfgs.options.maxIter = 1000;
-conf.training.lbfgs.options.optTol = 0.000001;
+conf.training.lbfgs.options.optTol = 0.0001;
 
-conf.training.interval_fg = 5;
+conf.training.interval_fg = 4;
 conf.training.interval_bg = 4;
 
 
 % -------------------------------------------------------------------
 % Evaluation configuration 
 % -------------------------------------------------------------------
-conf.eval.interval = 10;
+conf.eval.interval = 8;
 conf.eval.test_set = 'test';
-conf.eval.max_thresh = -1.1;
+conf.eval.max_thresh = -1.4;
 conf.pascal.VOCopts.testset = conf.eval.test_set;
 
 
@@ -139,15 +140,12 @@ conf.features.sbin = 8;
 conf.features.dim = 33;
 conf.features.truncation_dim = 32;
 conf.features.extra_octave_dim = 33;
-conf.features.extra_octave = false;
+conf.features.extra_octave = true;
 
 
 % -------------------------------------------------------------------
 % Helper functions
 % -------------------------------------------------------------------
-
-% -------------------------------------------------------------------
-% Make directory path if it does not already exist.
 function made = exists_or_mkdir(path)
 made = false;
 if exist(path) == 0
@@ -156,9 +154,6 @@ if exist(path) == 0
 end
 
 
-% -------------------------------------------------------------------
-% Returns the 'VOCopts' variable from the VOCdevkit. The path to the
-% devkit is also added to the matlab path.
 function VOCopts = get_voc_opts(conf)
 % cache VOCopts from VOCinit
 persistent voc_opts;
@@ -178,9 +173,6 @@ end
 VOCopts = voc_opts(key);
 
 
-% -------------------------------------------------------------------
-% Returns a handle to a function that will return the correct value
-% for a configuration key (see xconf_val).
 function func = parse_overrides(in)
 overrides = containers.Map();
 for i = 1:2:length(in)
@@ -189,36 +181,9 @@ end
 func = @(key, val) xconf_val(overrides, key, val);
 
 
-% -------------------------------------------------------------------
-% If key is in overrides, then return overrides' value.
-% Otherwise, return val.
 function val = xconf_val(overrides, key, val)
 % If key is in overrides, return override val
 % otherwise, simply return val
 if overrides.isKey(key)
   val = overrides(key);
-end
-
-
-% -------------------------------------------------------------------
-% Throw an error if this function is called from inside a matlabpool
-% worker.
-function assert_not_in_parallel_worker()
-% Matlab does not support accessing global variables from
-% parallel workers. The result of reading a global is undefined
-% and in practice has odd and inconsistent behavoir. 
-% The configuraton override mechanism relies on a global
-% variable. To avoid hard-to-find bugs, we make sure that
-% voc_config cannot be called from a parallel worker.
-try
-  t = getCurrentTask();
-catch
-  t = [];
-end
-
-if ~isempty(t)
-  msg = ['voc_config() cannot be called from a parallel worker ' ...
-         '(or startup.m did not run -- did you run matlab from the ' ...
-         'root of the voc-release installationd directory?'];
-  error(msg);
 end

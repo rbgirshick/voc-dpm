@@ -7,10 +7,11 @@
 
 using namespace std;
 
+
 /** -----------------------------------------------------------------
  ** This struct conflates three logically separate components
  **  - Block-sparse representation of feature vectors and parameters
- **  - Objective function (LSVM)
+ **  - Objective function (WL-SSVM)
  **  - Optimization algorithm to solve the objective function (SGD)
  **
  ** These pieces could be factored in order to define a more generic
@@ -20,6 +21,9 @@ using namespace std;
  ** all of these pieces are packaged together into the 'model'.
  **/
 struct model {
+  // Regularization types
+  enum reg_types { REG_L2 = 0, REG_MAX };
+
   /** ---------------------------------------------------------------
    ** Model description
    **/
@@ -28,7 +32,7 @@ struct model {
   int *block_sizes;
 
   /** ---------------------------------------------------------------
-   ** LSVM objective function, parameters, hyper-parameters, and 
+   ** WL-SSVM objective function, parameters, hyper-parameters, and 
    ** constraints
    **/
   // Weight vector (parameters to solve for)
@@ -43,11 +47,12 @@ struct model {
   int num_components;
   int *component_sizes;
   int **component_blocks;
+  reg_types reg_type;
 
   /** ---------------------------------------------------------------
    ** Optimization algorithm parameters
    **/
-  // Per-block learning rate gain
+  // FIXME: (fix comment) Per-block learning rate gain
   float *learn_mult;
 
   deque<double *> w_hist;
@@ -70,6 +75,7 @@ struct model {
     num_components    = 0;
     component_sizes   = NULL;
     component_blocks  = NULL;
+    reg_type          = REG_L2;
 
     // Opt. algo.
     learn_mult        = NULL;

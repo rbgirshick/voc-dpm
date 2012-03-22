@@ -7,8 +7,10 @@ function showboxes(im, boxes, out)
 if nargin > 2
   % different settings for producing pdfs
   print = true;
-  wwidth = 2.25;
-  cwidth = 1.25;
+  %wwidth = 2.25;
+  %cwidth = 1.25;
+  cwidth = 1.4;
+  wwidth = cwidth + 1.1;
   imsz = size(im);
   % resize so that the image is 300 pixels per inch
   % and 1.2 inches tall
@@ -51,7 +53,15 @@ if ~isempty(boxes)
       else
         w = wwidth;
       end
-      line([x1 x1 x2 x2 x1]', [y1 y2 y2 y1 y1]', 'color', 'w', 'linewidth', w);
+
+%      if i ==  13+1 || i == 14+1
+%        c = 'k';
+%        w = cwidth + 0.5;
+%      else
+        c = 'w';
+%      end
+
+      line([x1 x1 x2 x2 x1]', [y1 y2 y2 y1 y1]', 'color', c, 'linewidth', w);
     end
   end
   % draw the boxes with the detection window on top (reverse order)
@@ -67,8 +77,11 @@ if ~isempty(boxes)
     y1(del) = [];
     y2(del) = [];
     if i == 1
-      c = [160/255 0 0];
+      c = 'r'; %[160/255 0 0];
       s = '-';
+%    elseif i ==  13+1 || i == 14+1
+%      c = 'c';
+%      s = '--';
     else
       c = 'b';
       s = '-';

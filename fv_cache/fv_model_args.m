@@ -13,7 +13,11 @@ blocks        = get_blocks(model);
 lower_bounds  = get_lb(model);
 reg_mult      = get_rm(model);
 learn_mult    = get_lm(model);
-comps         = get_comps(model);
+if model.type == model_types.MixStar
+  comps = get_comps(model);
+else
+  comps = {};
+end
 
 
 function lb = get_lb(model)
@@ -67,6 +71,8 @@ end
 
 
 function comp = get_comps(model)
+
+assert(model.type == model_types.MixStar);
 
 n = length(model.rules{model.start});
 comp = cell(n, 1);

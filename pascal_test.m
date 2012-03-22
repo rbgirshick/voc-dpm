@@ -35,16 +35,31 @@ catch
     end
     [dets, boxes] = imgdetect(im, model, model.thresh);
     if ~isempty(boxes)
-      boxes = reduceboxes(model, boxes);
-      [dets boxes] = clipboxes(im, dets, boxes);
+      unclipped_dets = dets(:,1:4);
+      [dets, boxes, rm] = clipboxes(im, dets, boxes);
+      unclipped_dets(rm,:) = [];
+
+      % NMS
       I = nms(dets, 0.5);
-      boxes1{i} = dets(I,[1:4 end]);
-      parts1{i} = boxes(I,:);
+      dets = dets(I,:);
+      boxes = boxes(I,:);
+      unclipped_dets = unclipped_dets(I,:);
+
+      % Save detection windows in boxes
+      boxes1{i} = dets(:,[1:4 end]);
+
+      % Save filter boxes in parts
+      if model.type == model_types.MixStar
+        boxes = reduceboxes(model, boxes);
+        parts1{i} = boxes;
+      else
+        % record unclipped detection window and all filter boxes
+        parts1{i} = cat(2, unclipped_dets, boxes);
+      end
     else
       boxes1{i} = [];
       parts1{i} = [];
     end
-    %showboxes(im, boxes1{i});
   end    
   save([cachedir cls '_boxes_' testset '_' suffix], ...
        'boxes1', 'parts1');

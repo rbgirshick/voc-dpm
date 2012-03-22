@@ -13,11 +13,6 @@ using namespace std;
 static const double beta = 1000.0;
 static const double inv_beta = 1.0 / beta;
 
-
-// TODO: Implement different regularizers (L2 and softmax) and
-// the ability to switch between them
-
-
 /** -----------------------------------------------------------------
  ** Compute the value of the object function on the cache
  **/
@@ -25,6 +20,7 @@ static const double inv_beta = 1.0 / beta;
 //  out[1] : loss on positive examples
 //  out[2] : regularization term's value
 void obj_val(double out[3], ex_cache &E, model &M) {
+  // FIXME: make gradient return out[3] so this function can be removed
   // local reference
   double **w = M.w;
 
@@ -32,14 +28,17 @@ void obj_val(double out[3], ex_cache &E, model &M) {
   out[1] = 0.0; // foreground examples (from pos)
   out[2] = 0.0; // regularization
 
-//  // compute ||w||^2
-//  for (int j = 0; j < M.numblocks; j++) {
-//    for (int k = 0; k < M.blocksizes[j]; k++) {
-//      out[2] += w[j][k] * w[j][k] * M.regmult[j];
-//    }
-//  }
-
-  { // Compute softmax regularization cost
+  if (M.reg_type == model::REG_L2) {
+    // compute ||w||^2
+    for (int b = 0; b < M.num_blocks; b++) {
+      const double *wb = w[b];
+      double reg_mult  = M.reg_mult[b];
+      for (int k = 0; k < M.block_sizes[b]; k++)
+        out[2] += wb[k] * wb[k] * reg_mult;
+    }
+    out[2] *= 0.5;
+  } else if (M.reg_type == model::REG_MAX) {
+    // Compute softmax regularization cost
     double hnrms2[M.num_components];
     double max_hnrm2 = -INFINITY;
     for (int c = 0; c < M.num_components; c++) {
@@ -248,7 +247,22 @@ void gradient(double *obj_val_out, double *grad, const int dim,
 
   double obj_val = -INFINITY;
 
-  { // Cost and gradient of the softmax regularization term
+  if (M.reg_type == model::REG_L2) {
+    // Cost and gradient of the L2 regularization term
+    obj_val = 0;
+    double **w = M.w;
+    for (int b = 0; b < M.num_blocks; b++) {
+      const double *wb = w[b];
+      double reg_mult  = M.reg_mult[b];
+      double *ptr_grad = grad_blocks[0][b];
+      for (int k = 0; k < M.block_sizes[b]; k++) {
+        *(ptr_grad++) += wb[k] * reg_mult;
+        obj_val += wb[k] * wb[k] * reg_mult;
+      }
+    }
+    obj_val *= 0.5;
+  } else if (M.reg_type == model::REG_MAX) {
+    // Cost and gradient of the softmax regularization term
     double **w = M.w;
 
     double hnrms2[M.num_components];
