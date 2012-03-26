@@ -12,7 +12,7 @@ BASE_DIR    = '/var/tmp/rbg';
 PASCAL_YEAR = '2007';
 
 % Models are automatically stored in BASE_DIR/PROJECT/PASCAL_YEAR/
-PROJECT     = 'rel5-rc/grammar-merge-startlevel';
+PROJECT     = 'rel5-rc/scale-feat';
 
 %
 % You probably don't need to change configuration settings below this line.
@@ -210,10 +210,13 @@ function assert_not_in_parallel_worker()
 % The configuraton override mechanism relies on a global
 % variable. To avoid hard-to-find bugs, we make sure that
 % voc_config cannot be called from a parallel worker.
-try
-  t = getCurrentTask();
-catch
-  t = [];
+
+t = [];
+if usejava('jvm')
+  try
+      t = getCurrentTask();
+  catch 
+  end
 end
 
 if ~isempty(t)

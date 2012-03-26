@@ -140,8 +140,9 @@ static inline void update_gradient(const model &M, const fv_iter I,
   for (int j = 0; j < nbls; j++) {
     int b             = bls[j];
     double *ptr_grad  = grad_blocks[b];
-    for (int k = 0; k < M.block_sizes[b]; k++)
-      *(ptr_grad++) += mult * feat[k];
+    if (M.learn_mult[b] != 0)
+      for (int k = 0; k < M.block_sizes[b]; k++)
+        *(ptr_grad++) += mult * feat[k];
     feat += M.block_sizes[b];
   }
 }
