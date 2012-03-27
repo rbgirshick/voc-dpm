@@ -2,6 +2,11 @@ function w = model_get_block(m, obj)
 % obj is a struct with a blocklabel field
 % and possibly a flip field
 
+%if ~isfield(m, 'blocks')
+%  w = obj.w;
+%  return;
+%end
+
 bl = obj.blocklabel;
 
 shape = m.blocks(bl).shape;

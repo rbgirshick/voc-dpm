@@ -38,21 +38,21 @@ else
                                    'learn', 20);
 end
 
-%if opts.isKey('loc_w')
-%  loc_w = opts('loc_w');
-%else
-%  loc_w = [0 0];
-%end
-%
-%if opts.isKey('loc_blocklabel')
-%  loc_bl = opts('loc_blocklabel');
-%else
-%  % by default no learning and no regularization
-%  [m, loc_bl] = model_add_block(m, ...
-%                                'w', loc_w, ...
-%                                'reg_mult', 0,
-%                                'learn', 0);
-%end
+if opts.isKey('loc_w')
+  loc_w = opts('loc_w');
+else
+  loc_w = [0 0];
+end
+
+if opts.isKey('loc_blocklabel')
+  loc_bl = opts('loc_blocklabel');
+else
+  % by default no learning and no regularization
+  [m, loc_bl] = model_add_block(m, ...
+                                'w', loc_w, ...
+                                'reg_mult', 0, ...
+                                'learn', 0);
+end
 
 if opts.isKey('detection_window')
   detwindow = opts('detection_window');
@@ -74,11 +74,9 @@ m.rules{lhs}(i).shiftwindow       = shiftwindow;
 m.rules{lhs}(i).i                 = i;
 m.rules{lhs}(i).anchor            = anchors;
 m.rules{lhs}(i).is_low_res        = false;
-%m.rules{lhs}(i).offset.w          = offset_w;
 m.rules{lhs}(i).offset.blocklabel = offset_bl;
-%m.rules{lhs}(i).loc.w             = loc_w;
-%m.rules{lhs}(i).loc.blocklabel    = loc_bl;
-m.rules{lhs}(i).blocks = [offset_bl];
+m.rules{lhs}(i).loc.blocklabel    = loc_bl;
+m.rules{lhs}(i).blocks = [offset_bl loc_bl];
 
 
 m.maxsize = max([detwindow; m.maxsize]);

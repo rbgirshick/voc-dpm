@@ -56,9 +56,9 @@ end
 
 % OPT: type
 if opts.isKey('type')
-  type = opts('type');
+  btype = opts('type');
 else
-  type = block_types.Other;
+  btype = block_types.Other;
 end
 
 % Sanity checks
@@ -77,4 +77,4 @@ m.blocks(bl).learn    = learn;
 m.blocks(bl).reg_mult = reg_mult;
 m.blocks(bl).dim      = dim;
 m.blocks(bl).shape    = shape;
-m.blocks(bl).type     = type;
+m.blocks(bl).type     = btype;

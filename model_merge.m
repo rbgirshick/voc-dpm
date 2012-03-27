@@ -34,10 +34,13 @@ for i = 2:length(models)
       m.rules{j}(k).rhs = m.rules{j}(k).rhs + nums;
       m.rules{j}(k).offset.blocklabel = ...
           m.rules{j}(k).offset.blocklabel + numb;
+      m.rules{j}(k).loc.blocklabel = ...
+          m.rules{j}(k).loc.blocklabel + numb;
       if m.rules{j}(k).type == 'D'
         m.rules{j}(k).def.blocklabel = ...
             m.rules{j}(k).def.blocklabel + numb;
       end
+      m.rules{j}(k).blocks = m.rules{j}(k).blocks + numb;
     end
   end
   oldnumr = length(model.rules);
