@@ -52,14 +52,12 @@ model = model_create(cls, note);
 model.interval = conf.eval.interval;
 
 % add root filter
-[model, symbol, filter] = model_addfilter(model, zeros([sz conf.features.dim]), symmetry);
+[model, symbol] = model_add_filter(model, zeros([sz conf.features.dim]));
 
 % start non-terminal
 [model, Q] = model_addnonterminal(model);
 model.start = Q;
 
 % add structure rule deriving only a root filter placement
-model = model_addrule(model, 'S', Q, symbol, 0, {[0 0 0]});
-
-% set detection window
-model = model_setdetwindow(model, Q, 1, sz, [0 0]);
+model = model_add_struct_rule(model, Q, symbol, {[0 0 0]}, ...
+                              'detection_window', sz);

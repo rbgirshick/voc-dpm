@@ -110,10 +110,11 @@ for d = 1:length(trees)
           end
         end
       end
+      % offset
       bl = model.rules{sym}(ruleind).offset.blocklabel;
       w = model.rules{sym}(ruleind).offset.w;
       if model.learnmult(bl) ~= 0 || w ~= 0
-        ex.blocks(bl).f = 10;
+        ex.blocks(bl).f = model.bias_feature;
       end
     end
   end
@@ -148,7 +149,7 @@ fx = x - padx*(2^ds-1);
 f = feat(fy:fy+fsz(1)-1, fx:fx+fsz(2)-1, :);
 
 % flipped filter
-if model.filters(fi).symmetric == 'M' && model.filters(fi).flip
+if model.filters(fi).flip
   f = flipfeat(f);
 end
 

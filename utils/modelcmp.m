@@ -10,7 +10,8 @@ if e > 0
     I = find(b1{i} ~= b2{i});
     if ~isempty(I)
       for j = 1:length(I)
-        fprintf('at %s %d\n', map1{i}, I(j));
+        fprintf('at %s : index %d [%.5f vs %.5f]\n', ...
+                map1{i}, I(j), b1{i}(I(j)), b2{i}(I(j)));
       end
     end
   end

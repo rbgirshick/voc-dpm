@@ -16,9 +16,7 @@ function model = model_addparts(model, lhs, ruleind, partner, filterind, numpart
 
 % if the filter is mirrored, find its partner so mirrored
 % parts can be added to it as well
-sym = 'N';
 if ~isempty(partner)
-  sym = 'M';
   if length(partner) == 2
     partner_lhs = partner(1);
     partner = partner(2);
@@ -35,14 +33,17 @@ source = model.filters(filterind).w;
 pfilters = mkpartfilters(source, psize, numparts, scale);
 
 for i = 1:numparts
-  [model, symbolf, fi] = model_addfilter(model, coef_scale*pfilters(i).w, sym);
+  [model, symbolf, fi] = model_add_filter(model, coef_scale*pfilters(i).w);
   [model, N1] = model_addnonterminal(model);
 
   % add deformation rule
   defoffset = 0;
   defparams = pfilters(i).alpha*[0.1 0 0.1 0];
-  [model, offsetbl, defbl] = model_addrule(model, 'D', N1, symbolf, ...
-                                           defoffset, defparams, sym);
+
+  [model, rule] = model_add_def_rule(model, N1, symbolf, defparams);
+
+  %model.learnmult(rule.scale.blocklabel) = 1;
+  %model.regmult(rule.scale.blocklabel) = 1;
 
   % add deformation symbols to rhs of rule
   anchor1 = pfilters(i).anchor;
@@ -50,18 +51,20 @@ for i = 1:numparts
   model.rules{lhs}(ruleind).anchor = [model.rules{lhs}(ruleind).anchor anchor1];
 
   if ~isempty(partner)
-    [model, symbolfp, fi] = model_addmirroredfilter(model, fi);
+    [model, symbolfp] = model_mirror_terminal(model, symbolf);
     [model, N2] = model_addnonterminal(model);
 
     % add mirrored deformation rule
-    model = model_addrule(model, 'D', N2, symbolfp, ...
-                          defoffset, defparams, sym, offsetbl, defbl);
+    model = model_add_def_rule(model, N2, symbolfp, defparams, ...
+                               'def_blocklabel', rule.def.blocklabel, ...
+                               'offset_blocklabel', rule.offset.blocklabel, ...
+                               'flip', true);
 
-    x = pfilters(i).anchor(1) + 1;
-    y = pfilters(i).anchor(2) + 1;
+    x = pfilters(i).anchor(1);
+    y = pfilters(i).anchor(2);
     % add deformation symbols to rhs of rule
-    x2 = 2^scale*size(source, 2)-(x+psize(2)-1)+1;
-    anchor2 = [x2-1 y-1 scale];
+    x2 = 2^scale*size(source, 2) - x - psize(2);
+    anchor2 = [x2 y scale];
     model.rules{partner_lhs}(partner).rhs = [model.rules{partner_lhs}(partner).rhs N2];
     model.rules{partner_lhs}(partner).anchor = [model.rules{partner_lhs}(partner).anchor anchor2];
   end

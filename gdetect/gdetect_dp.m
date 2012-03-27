@@ -93,8 +93,8 @@ for j = 1:length(r.rhs)
   % score table to shift and down sample
   s = model.symbols(r.rhs(j)).score;
   % starting level
-  %startlevel = model.interval*ds + 1;
-  startlevel = 1;
+  startlevel = model.interval*ds + 1;
+  %startlevel = 1;
   for i = startlevel:length(s)
     level = i - model.interval*ds;
     if level >= 1
