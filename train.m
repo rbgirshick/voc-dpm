@@ -230,8 +230,8 @@ for t = 1:iter
 
       base = 1;
       for i = 1:model.numblocks
-        blocks{i} = w(base:base+model.blocksizes(i)-1);
-        base = base + model.blocksizes(i);
+        blocks{i} = w(base:base+model.blocks(i).dim-1);
+        base = base + model.blocks(i).dim;
       end
     else
 %      % optimize with SGD

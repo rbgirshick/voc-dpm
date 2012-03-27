@@ -11,10 +11,7 @@ for i = 2:length(models)
   nums = model.numsymbols;
   numf = model.numfilters;
   
-  model.blocksizes = [model.blocksizes m.blocksizes];
-  model.regmult = [model.regmult m.regmult];
-  model.learnmult = [model.learnmult m.learnmult];
-  model.lowerbounds = [model.lowerbounds m.lowerbounds];
+  model.blocks = [model.blocks m.blocks];
 
   % merge filters
   for j = 1:m.numfilters

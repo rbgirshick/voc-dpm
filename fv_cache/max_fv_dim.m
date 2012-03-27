@@ -31,21 +31,19 @@ model.symbols(s).blocks = model.rules{s}(i).blocks;
 % compute score pyramid for rule r
 function model = rule_max_dim(model, r)
 
-weight_dim = numel(r.offset.w);
-bl = r.offset.blocklabel;
-if r.type == 'D'
-  weight_dim = weight_dim + numel(r.def.w);
-  bl = [bl; r.def.blocklabel];
-end
-model.rules{r.lhs}(r.i).max_dim = weight_dim ...
+bls = r.blocks(:);
+dim = sum(cat(1, model.blocks(bls).dim));
+
+model.rules{r.lhs}(r.i).max_dim = dim ...
                                   + sum(cat(1, model.symbols(r.rhs).max_dim));
-model.rules{r.lhs}(r.i).blocks = [bl; cat(1, model.symbols(r.rhs).blocks)];
+model.rules{r.lhs}(r.i).blocks = [bls; cat(1, model.symbols(r.rhs).blocks)];
 
 
 function model = filter_dims(model)
 
 for i = 1:model.numfilters
   sym = model.filters(i).symbol;
-  model.symbols(sym).max_dim = numel(model.filters(i).w);
-  model.symbols(sym).blocks = model.filters(i).blocklabel;
+  bl = model.filters(i).blocklabel;
+  model.symbols(sym).max_dim = model.blocks(bl).dim;
+  model.symbols(sym).blocks = bl;
 end

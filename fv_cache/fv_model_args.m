@@ -21,57 +21,22 @@ end
 
 
 function lb = get_lb(model)
-
-lb = model.lowerbounds;
-for i = 1:length(lb)
-  lb{i} = lb{i}(:);
-end
+lb = {model.blocks(:).lb}';
 
 
 function rm = get_rm(model)
-
-rm = single(model.regmult');
+rm = single([model.blocks(:).reg_mult]');
 
 
 function lm = get_lm(model)
-
-lm = single(model.learnmult');
+lm = single([model.blocks(:).learn]');
 
 
 function blocks = get_blocks(model)
-
-blocks = cell(model.numblocks, 1);
-
-% filters
-for i = 1:model.numfilters
-  if model.filters(i).flip == 0
-    bl = model.filters(i).blocklabel;
-    blocks{bl} = model.filters(i).w(:);
-  end
-end
-
-% offsets
-for i = 1:length(model.rules)
-  for j = 1:length(model.rules{i})
-    bl = model.rules{i}(j).offset.blocklabel;
-    blocks{bl} = model.rules{i}(j).offset.w;
-  end
-end
-
-% deformation models
-for i = 1:length(model.rules)
-  for j = 1:length(model.rules{i})
-    if model.rules{i}(j).type == 'D' && model.rules{i}(j).def.flip == 0
-      bl = model.rules{i}(j).def.blocklabel;
-      blocks{bl} = model.rules{i}(j).def.w(:);
-    end
-  end
-end
-
+blocks = {model.blocks(:).w}';
 
 
 function comp = get_comps(model)
-
 assert(model.type == model_types.MixStar);
 
 n = length(model.rules{model.start});
@@ -80,9 +45,7 @@ comp = cell(n, 1);
 % mirrors of each other, so
 % skip every other component rule
 for i = 1:2:n
-  % component offset block
-  bl = model.rules{model.start}(i).offset.blocklabel;
-  comp{i}(end+1) = bl-1;
+  comp{i} = [comp{i} model.rules{model.start}(i).blocks-1];
   % collect part blocks
   for j = model.rules{model.start}(i).rhs
     if model.symbols(j).type == 'T'
@@ -90,12 +53,7 @@ for i = 1:2:n
       bl = model.filters(model.symbols(j).filter).blocklabel;
       comp{i}(end+1) = bl-1;
     else
-      % def block
-      bl = model.rules{j}.def.blocklabel;
-      comp{i}(end+1) = bl-1;
-      % offset block
-      bl = model.rules{j}.offset.blocklabel;
-      comp{i}(end+1) = bl-1;
+      comp{i} = [comp{i} model.rules{j}(1).blocks-1];
       % filter block
       s = model.rules{j}.rhs(1);
       bl = model.filters(model.symbols(s).filter).blocklabel;

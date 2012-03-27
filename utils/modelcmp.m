@@ -10,8 +10,10 @@ if e > 0
     I = find(b1{i} ~= b2{i});
     if ~isempty(I)
       for j = 1:length(I)
-        fprintf('at %s : index %d [%.5f vs %.5f]\n', ...
-                map1{i}, I(j), b1{i}(I(j)), b2{i}(I(j)));
+        %fprintf('at %s : index %d [%.5f vs %.5f]\n', ...
+        %        map1{i}, I(j), b1{i}(I(j)), b2{i}(I(j)));
+        fprintf('at index %d [%.5f vs %.5f]\n', ...
+                I(j), b1{i}(I(j)), b2{i}(I(j)));
       end
     end
   end
@@ -22,33 +24,38 @@ end
 
 function [m, blocks, map] = model2blocks(model)
 
-blocks = cell(model.numblocks, 1);
+if isfield(model, 'blocks')
+  map = {};
+  blocks = {model.blocks(:).w}';
+else
+  blocks = cell(model.numblocks, 1);
 
-% filters
-for i = 1:model.numfilters
-  if model.filters(i).flip == 0
-    bl = model.filters(i).blocklabel;
-    blocks{bl} = model.filters(i).w(:);
-    map{bl} = ['filter ' num2str(i)];
+  % filters
+  for i = 1:model.numfilters
+    if model.filters(i).flip == 0
+      bl = model.filters(i).blocklabel;
+      blocks{bl} = model.filters(i).w(:);
+      map{bl} = ['filter ' num2str(i)];
+    end
   end
-end
 
-% offsets
-for i = 1:length(model.rules)
-  for j = 1:length(model.rules{i})
-    bl = model.rules{i}(j).offset.blocklabel;
-    blocks{bl} = model.rules{i}(j).offset.w;
-    map{bl} = ['offset rule ' num2str(i) ' ind ' num2str(j)];
+  % offsets
+  for i = 1:length(model.rules)
+    for j = 1:length(model.rules{i})
+      bl = model.rules{i}(j).offset.blocklabel;
+      blocks{bl} = model.rules{i}(j).offset.w;
+      map{bl} = ['offset rule ' num2str(i) ' ind ' num2str(j)];
+    end
   end
-end
 
-% deformation models
-for i = 1:length(model.rules)
-  for j = 1:length(model.rules{i})
-    if model.rules{i}(j).type == 'D' && model.rules{i}(j).def.flip == 0
-      bl = model.rules{i}(j).def.blocklabel;
-      blocks{bl} = model.rules{i}(j).def.w(:);
-      map{bl} = ['def rule ' num2str(i)];
+  % deformation models
+  for i = 1:length(model.rules)
+    for j = 1:length(model.rules{i})
+      if model.rules{i}(j).type == 'D' && model.rules{i}(j).def.flip == 0
+        bl = model.rules{i}(j).def.blocklabel;
+        blocks{bl} = model.rules{i}(j).def.w(:);
+        map{bl} = ['def rule ' num2str(i)];
+      end
     end
   end
 end

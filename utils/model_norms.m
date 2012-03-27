@@ -17,7 +17,7 @@ for i = 1:2:n
     else
       % def block
       bl = model.rules{j}.def.blocklabel;
-      rm = model.regmult(bl);
+      rm = model.blocks(bl).reg_mult;
       w = model.rules{j}.def.w(:);
       norm2 = norm2 + rm*w'*w;
       % filter block

@@ -14,8 +14,8 @@ defparams = [1000 0 1000 0];
 [model, rule] = model_add_def_rule(model, N1, rootsym, defparams);
 
 % prevent learning or regularization penalty for root filter
-model.learnmult(rule.def.blocklabel) = 0;
-model.regmult(rule.def.blocklabel) = 0;
+model.blocks(rule.def.blocklabel).learn = 0;
+model.blocks(rule.def.blocklabel).reg_mult = 0;
 
 % replace the old rhs symbol with the deformation rule symbol
 model.rules{model.start}.rhs(1) = N1;
@@ -35,7 +35,7 @@ model = model_add_def_rule(model, N2, mrootsym, defparams, ...
 r = model.rules{model.start}(1);
 
 model = model_add_struct_rule(model, model.start, N2, {[0 0 0]}, ...
-                              'offset_w', r.offset.w, ...
+                              'offset_w', model.blocks(r.offset.blocklabel).w, ...
                               'offset_blocklabel', r.offset.blocklabel, ...
                               'detection_window', r.detwindow, ...
                               'shift_detection_window', r.shiftwindow);

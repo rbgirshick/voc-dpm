@@ -20,6 +20,7 @@ if opt
   mexcmd = cat(2, mexcmd, ' LDOPTIMFLAGS="-O3"');
 else
   mexcmd = cat(2, mexcmd, ' -g');
+  warning('compiling in debug mode');
 end
 
 mexcmd = cat(2, mexcmd, ' CXXFLAGS="\$CXXFLAGS -Wall -fopenmp"');

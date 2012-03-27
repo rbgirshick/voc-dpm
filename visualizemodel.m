@@ -36,7 +36,7 @@ else
   root = model.symbols(model.rules{rhs(1)}(layer).rhs).filter;
 end
 for i = 2:length(rhs)
-  defs{end+1} = model.rules{rhs(i)}(layer).def.w;
+  defs{end+1} = model_get_block(model, model.rules{rhs(i)}(layer).def);
   anchors{end+1} = model.rules{model.start}(c).anchor{i};
   fi = model.symbols(model.rules{rhs(i)}(layer).rhs).filter;
   parts = [parts fi];
@@ -44,7 +44,7 @@ end
 % make picture of root filter
 pad = 2;
 bs = 20;
-w = foldHOG(model.filters(root).w);
+w = foldHOG(model_get_block(model, model.filters(root)));
 scale = max(w(:));
 im = HOGpicture(w, bs);
 im = imresize(im, 2);
@@ -69,7 +69,7 @@ if numparts > 0
   def_scale = 500;
   for i = 1:numparts
     % part filter
-    w = model.filters(parts(i)).w;
+    w = model_get_block(model, model.filters(parts(i)));
     p = HOGpicture(foldHOG(w), bs);
     p = padarray(p, [pad pad], 0);
     p = uint8(p * (255/scale));    

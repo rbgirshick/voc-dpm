@@ -29,7 +29,7 @@ if nargin < 9
   coef_scale = 1;
 end
 
-source = model.filters(filterind).w;
+source = model_get_block(model, model.filters(filterind));
 pfilters = mkpartfilters(source, psize, numparts, scale);
 
 for i = 1:numparts

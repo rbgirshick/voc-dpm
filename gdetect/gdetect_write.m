@@ -81,8 +81,8 @@ for d = 1:length(trees)
     if model.symbols(sym).type == 'T'
       fi = model.symbols(sym).filter;
       bl = model.filters(fi).blocklabel;
-      w = model.filters(fi).w;
-      if model.learnmult(bl) ~= 0 || sum(abs(w(:))) ~= 0
+      w = model_get_block(model, model.filters(fi));
+      if model.blocks(bl).learn ~= 0 || sum(abs(w(:))) ~= 0
         ex = addfilterfeat(model, ex,                 ...
                            trees{d}(N_X, j),          ...
                            trees{d}(N_Y, j),          ...
@@ -95,8 +95,8 @@ for d = 1:length(trees)
       ruleind = trees{d}(N_RULE_INDEX, j);
       if model.rules{sym}(ruleind).type == 'D'
         bl = model.rules{sym}(ruleind).def.blocklabel;
-        w = model.rules{sym}(ruleind).def.w;
-        if model.learnmult(bl) ~= 0 || sum(abs(w)) ~= 0
+        w = model_get_block(model, model.rules{sym}(ruleind).def);
+        if model.blocks(bl).learn ~= 0 || sum(abs(w)) ~= 0
           dx = trees{d}(N_DX, j);
           dy = trees{d}(N_DY, j);
           def = [-(dx^2); -dx; -(dy^2); -dy];
@@ -112,8 +112,8 @@ for d = 1:length(trees)
       end
       % offset
       bl = model.rules{sym}(ruleind).offset.blocklabel;
-      w = model.rules{sym}(ruleind).offset.w;
-      if model.learnmult(bl) ~= 0 || w ~= 0
+      w = model_get_block(model, model.rules{sym}(ruleind).offset);
+      if model.blocks(bl).learn ~= 0 || w ~= 0
         ex.blocks(bl).f = model.bias_feature;
       end
     end
