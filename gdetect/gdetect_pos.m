@@ -18,7 +18,7 @@ function [dets, boxes, trees] = gdetect_pos(pyra, model, count, ...
 
 % get the non-loss adjusted detection (termed the "belief")
 modelp = apply_constraints(model, pyra, fg_box, fg_overlap);
-[dets, boxes, trees] = gdetect_parse(modelp, pyra, -1000, 1);
+[dets, boxes, trees] = gdetect_parse(modelp, pyra, -100, 1);
 
 % TODO: sanity check that the overlap requirement was met
 

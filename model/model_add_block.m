@@ -51,7 +51,7 @@ if opts.isKey('lower_bounds')
 else
   % default value that should be low enough to never
   % influence the model
-  lower_bounds = -100*ones(dim, 1);
+  lower_bounds = -inf*ones(dim, 1);
 end
 
 % OPT: type

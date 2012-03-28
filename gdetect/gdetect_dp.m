@@ -74,8 +74,14 @@ function model = apply_structural_rule(model, r, pady, padx)
 % prepare score for this rule
 score = model.scoretpt;
 offset_w = model_get_block(model, r.offset);
+loc_w = model_get_block(model, r.loc);
 for i = 1:length(score)
-  score{i}(:) = offset_w * model.bias_feature;
+  scale_feat = [0; 1];
+  if i <= model.interval
+    scale_feat = [1; 0];
+  end
+  score{i}(:) = offset_w * model.bias_feature ...
+                + loc_w * scale_feat;
 end
 
 % sum scores from rhs (with appropriate shift and down sample)
@@ -94,8 +100,8 @@ for j = 1:length(r.rhs)
   % score table to shift and down sample
   s = model.symbols(r.rhs(j)).score;
   % starting level
-  startlevel = model.interval*ds + 1;
-  %startlevel = 1;
+  %startlevel = model.interval*ds + 1;
+  startlevel = 1;
   for i = startlevel:length(s)
     level = i - model.interval*ds;
     if level >= 1
@@ -135,8 +141,14 @@ function model = apply_deformation_rule(model, r)
 def = model_get_block(model, r.def);
 score = model.symbols(r.rhs(1)).score;
 offset_w = model_get_block(model, r.offset);
+loc_w = model_get_block(model, r.loc);
 for i = 1:length(score)
-  score{i} = score{i} + offset_w * model.bias_feature;
+  scale_feat = [0; 1];
+  if i <= model.interval
+    scale_feat = [1; 0];
+  end
+  score{i} = score{i} + offset_w * model.bias_feature ...
+             + loc_w * scale_feat;
   %[score{i}, Ix{i}, Iy{i}] = dt(score{i}, def(1), def(2), def(3), def(4));
   [score{i}, Ix{i}, Iy{i}] = bounded_dt(score{i}, def(1), def(2), ...
                                         def(3), def(4), 4);

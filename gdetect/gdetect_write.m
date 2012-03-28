@@ -116,6 +116,17 @@ for d = 1:length(trees)
       if model.blocks(bl).learn ~= 0 || w ~= 0
         ex.blocks(bl).f = model.bias_feature;
       end
+      % location
+      bl = model.rules{sym}(ruleind).loc.blocklabel;
+      w = model_get_block(model, model.rules{sym}(ruleind).loc);
+      if model.blocks(bl).learn ~= 0 || sum(abs(w(:))) ~= 0
+        l = trees{d}(N_L, j);
+        f = [0; 1];
+        if l <= model.interval
+          f = [1; 0];
+        end
+        ex.blocks(bl).f = f;
+      end
     end
   end
   status = exwrite(ex, from_pos, is_belief, maxsize);
