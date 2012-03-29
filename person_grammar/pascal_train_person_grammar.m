@@ -28,12 +28,8 @@ fg_overlap       = conf.training.fg_overlap;
 neg_small = neg(randperm(length(neg)));
 neg_small = neg_small(1:conf.training.num_negatives_small);
 
-try
-  load([cachedir 'person_simple_grammar_occ_def']);
-  model.note = note;
-catch
-  model = person_init_grammar();
-end
+model = person_init_grammar();
+model.note = note;
 
 try 
   load([cachedir cls '_star']);

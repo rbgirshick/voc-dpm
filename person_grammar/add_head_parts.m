@@ -8,9 +8,9 @@ model = model_addparts(model, X, 1, 2, fid, num_parts, hi_res_size, 1, a);
 % add:
 %  model.rules{X}(3)
 %  model.rules{X}(4)
-[model, bl] = model_addrule(model, 'S', X, X_l, 0, {[0 0 0]}, 'M');
-model = model_addrule(model, 'S', X, X_r, 0, {[0 0 0]}, 'M', bl);
-model.learnmult(bl) = 0;
+[model, rule] = model_add_struct_rule(model, X, X_l, {[0 0 0]});
+[model, rule] = model_add_struct_rule(model, X, X_r, {[0 0 0]}, 'mirror_rule', rule);
+model.blocks(rule.offset.blocklabel).learn = 0;
 model = model_addparts(model, X, 3, 4, fid, num_parts, low_res_size, 0, a);
 model.rules{X}(3).is_low_res = true;
 model.rules{X}(4).is_low_res = true;

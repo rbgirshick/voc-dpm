@@ -1,5 +1,7 @@
 function [m, rule] = model_add_def_rule(m, lhs, rhs, def, varargin)
 
+% TODO: make def -> def_w part of varargin : doesn't make sense to spec when mirroring a rule
+
 % Add a rule to the model.
 %
 % m          object model
@@ -16,7 +18,7 @@ function [m, rule] = model_add_def_rule(m, lhs, rhs, def, varargin)
 
 valid_opts = {'flip', 'offset_w', 'offset_blocklabel', 'def_blocklabel', ...
               'loc_w', 'loc_blocklabel', 'detection_window', ...
-              'shift_detection_window'};
+              'shift_detection_window', 'mirror_rule'};
 opts = getopts(varargin, valid_opts);
 
 try
@@ -24,6 +26,14 @@ try
 catch
   i = 1;
   m.rules{lhs} = [];
+end
+
+if opts.isKey('mirror_rule')
+  rule = opts('mirror_rule');
+  opts('def_blocklabel') = rule.def.blocklabel;
+  opts('offset_blocklabel') = rule.offset.blocklabel;
+  opts('loc_blocklabel') = rule.loc.blocklabel;
+  opts('flip') = true;
 end
 
 if opts.isKey('flip')

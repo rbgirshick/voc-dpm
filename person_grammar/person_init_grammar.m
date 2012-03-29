@@ -1,49 +1,56 @@
 function model = person_init_grammar()
 
 % which one off to do
-train_full_person_2x_res();
-model = make_simple_grammar_model_occ_star_def();
+model = train_full_person_2x_res();
+model = make_simple_grammar_model_occ_star_def(model);
 
 %-------------------------------------------------------------------------
 %
 %-------------------------------------------------------------------------
-function train_full_person_2x_res()
+function model = train_full_person_2x_res()
 
 conf = voc_config(); 
 cachedir = conf.paths.model_dir;
 
-initrand();
-cls = 'person';
-note = 'full person trained at 2x resolution';
-n = 3;
-
-[pos, neg, impos] = pascal_data(cls, conf.pascal.year);
-% split data by aspect ratio into n groups
-spos = split('person', pos, n);
-spos = spos{3};
-cachesize = 24000;
-
 try
-  load([cachedir 'person_model_full_person_2x_1_1_1']);
-  load([cachedir 'person_model_full_person_2x_pos_inds']);
+  load([cachedir 'person_full_person_2x']);
 catch
-  model = initmodel(cls, spos, note, 'N', 8, [23 8]);
-  inds = lrsplit(model, spos, 3);
-  model = train(model, spos(inds), neg, true, true, 1, 1, ...
-                cachesize, 0.7, 0, false, 'full_person_2x_1');
-  save([cachedir 'person_model_full_person_2x_pos_inds'], 'inds');
+  initrand();
+  cls = 'person';
+  note = 'full person trained at 2x resolution';
+  n = 3;
+
+  [pos, neg, impos] = pascal_data(cls, conf.pascal.year);
+  % split data by aspect ratio into n groups
+  spos = split('person', pos, n);
+  spos = spos{3};
+  cachesize = 24000;
+
+  try
+    load([cachedir 'person_model_full_person_2x_1_1_1']);
+    load([cachedir 'person_model_full_person_2x_pos_inds']);
+  catch
+    model = initmodel(cls, spos, note, 'N', 8, [23 8]);
+    % allow root detections in the first pyramid octave
+    lbl = model.rules{model.start}(1).loc.blocklabel;
+    model.blocks(lbl).w(:) = 0;
+
+    inds = lrsplit(model, spos, 3);
+    model = train(model, spos(inds), neg, true, true, 1, 1, ...
+                  cachesize, 0.7, 0, false, 'full_person_2x_1');
+    save([cachedir 'person_model_full_person_2x_pos_inds'], 'inds');
+  end
+  model = train(model, spos(inds), neg(1:200), false, false, 1, 20, ...
+                cachesize, 0.7, 0, false, 'full_person_2x_2');
+
+  save([cachedir cls '_full_person_2x'], 'model');
 end
-model = train(model, spos(inds), neg(1:200), false, false, 1, 20, ...
-              cachesize, 0.7, 0, false, 'full_person_2x_2');
-
-save([cachedir cls '_full_person_2x'], 'model');
-
 
 
 %-------------------------------------------------------------------------
 %
 %-------------------------------------------------------------------------
-function M = make_simple_grammar_model_occ_star_def()
+function M = make_simple_grammar_model_occ_star_def(model)
 
 cls = 'person';
 note = 'simple grammar model for person';
@@ -51,8 +58,7 @@ note = 'simple grammar model for person';
 conf = voc_config(); 
 cachedir = conf.paths.model_dir;
 
-load([cachedir cls '_full_person_2x']);
-w = model.filters(1).w;
+w = model_get_block(model, model.filters(1));
 X_f = w(1:8, :, :);
 Y1_f = w(9:11, :, :);
 Y2_f = w(12:14, :, :);
@@ -72,20 +78,20 @@ M.sbin = 8;
 M.start = Q;
 
 % Add filters to the model
-[M, X_l, X_fid1] = model_addfilter(M, X_f, 'M');
-[M, X_r, X_fid2] = model_addmirroredfilter(M, X_fid1);
-[M, Y1_lf, Y1_fid1] = model_addfilter(M, Y1_f, 'M');
-[M, Y1_rf, Y1_fid2] = model_addmirroredfilter(M, Y1_fid1);
-[M, Y2_lf, Y2_fid1] = model_addfilter(M, Y2_f, 'M');
-[M, Y2_rf, Y2_fid2] = model_addmirroredfilter(M, Y2_fid1);
-[M, Y3_lf, Y3_fid1] = model_addfilter(M, Y3_f, 'M');
-[M, Y3_rf, Y3_fid2] = model_addmirroredfilter(M, Y3_fid1);
-[M, Y4_lf, Y4_fid1] = model_addfilter(M, Y4_f, 'M');
-[M, Y4_rf, Y4_fid2] = model_addmirroredfilter(M, Y4_fid1);
-[M, Y5_lf, Y5_fid1] = model_addfilter(M, Y5_f, 'M');
-[M, Y5_rf, Y5_fid2] = model_addmirroredfilter(M, Y5_fid1);
-[M, O_lf, O_fid1] = model_addfilter(M, O_f, 'M');
-[M, O_rf, O_fid2] = model_addmirroredfilter(M, O_fid1);
+[M, X_l]   = model_add_filter(M, X_f);
+[M, X_r]   = model_mirror_terminal(M, X_l);
+[M, Y1_lf] = model_add_filter(M, Y1_f);
+[M, Y1_rf] = model_mirror_terminal(M, Y1_lf);
+[M, Y2_lf] = model_add_filter(M, Y2_f);
+[M, Y2_rf] = model_mirror_terminal(M, Y2_lf);
+[M, Y3_lf] = model_add_filter(M, Y3_f);
+[M, Y3_rf] = model_mirror_terminal(M, Y3_lf);
+[M, Y4_lf] = model_add_filter(M, Y4_f);
+[M, Y4_rf] = model_mirror_terminal(M, Y4_lf);
+[M, Y5_lf] = model_add_filter(M, Y5_f);
+[M, Y5_rf] = model_mirror_terminal(M, Y5_lf);
+[M, O_lf]  = model_add_filter(M, O_f);
+[M, O_rf]  = model_mirror_terminal(M, O_lf);
 
 defoffset = 0;
 defparams = 0.1*[0.1 0 0.1 0];
@@ -95,43 +101,31 @@ defparams = 0.1*[0.1 0 0.1 0];
 [M, Y3_l] = model_addnonterminal(M);
 [M, Y4_l] = model_addnonterminal(M);
 [M, Y5_l] = model_addnonterminal(M);
-[M, O_l] = model_addnonterminal(M);
+[M, O_l]  = model_addnonterminal(M);
 [M, Y1_r] = model_addnonterminal(M);
 [M, Y2_r] = model_addnonterminal(M);
 [M, Y3_r] = model_addnonterminal(M);
 [M, Y4_r] = model_addnonterminal(M);
 [M, Y5_r] = model_addnonterminal(M);
-[M, O_r] = model_addnonterminal(M);
+[M, O_r]  = model_addnonterminal(M);
 
-[M, obl, dbl] = model_addrule(M, 'D', Y1_l, Y1_lf, ...
-                              defoffset, defparams, 'M');
-[M, obl, dbl] = model_addrule(M, 'D', Y1_r, Y1_rf, ...
-                              defoffset, defparams, 'M', obl, dbl);
+[M, rule] = model_add_def_rule(M, Y1_l, Y1_lf, defparams);
+[M, rule] = model_add_def_rule(M, Y1_r, Y1_rf, defparams, 'mirror_rule', rule);
 
-[M, obl, dbl] = model_addrule(M, 'D', Y2_l, Y2_lf, ...
-                              defoffset, defparams, 'M');
-[M, obl, dbl] = model_addrule(M, 'D', Y2_r, Y2_rf, ...
-                              defoffset, defparams, 'M', obl, dbl);
+[M, rule] = model_add_def_rule(M, Y2_l, Y2_lf, defparams);
+[M, rule] = model_add_def_rule(M, Y2_r, Y2_rf, defparams, 'mirror_rule', rule);
 
-[M, obl, dbl] = model_addrule(M, 'D', Y3_l, Y3_lf, ...
-                              defoffset, defparams, 'M');
-[M, obl, dbl] = model_addrule(M, 'D', Y3_r, Y3_rf, ...
-                              defoffset, defparams, 'M', obl, dbl);
+[M, rule] = model_add_def_rule(M, Y3_l, Y3_lf, defparams);
+[M, rule] = model_add_def_rule(M, Y3_r, Y3_rf, defparams, 'mirror_rule', rule);
 
-[M, obl, dbl] = model_addrule(M, 'D', Y4_l, Y4_lf, ...
-                              defoffset, defparams, 'M');
-[M, obl, dbl] = model_addrule(M, 'D', Y4_r, Y4_rf, ...
-                              defoffset, defparams, 'M', obl, dbl);
+[M, rule] = model_add_def_rule(M, Y4_l, Y4_lf, defparams);
+[M, rule] = model_add_def_rule(M, Y4_r, Y4_rf, defparams, 'mirror_rule', rule);
 
-[M, obl, dbl] = model_addrule(M, 'D', Y5_l, Y5_lf, ...
-                              defoffset, defparams, 'M');
-[M, obl, dbl] = model_addrule(M, 'D', Y5_r, Y5_rf, ...
-                              defoffset, defparams, 'M', obl, dbl);
+[M, rule] = model_add_def_rule(M, Y5_l, Y5_lf, defparams);
+[M, rule] = model_add_def_rule(M, Y5_r, Y5_rf, defparams, 'mirror_rule', rule);
 
-[M, obl, dbl] = model_addrule(M, 'D', O_l, O_lf, ...
-                              defoffset, defparams, 'M');
-[M, obl, dbl] = model_addrule(M, 'D', O_r, O_rf, ...
-                              defoffset, defparams, 'M', obl, dbl);
+[M, rule] = model_add_def_rule(M, O_l, O_lf, defparams);
+[M, rule] = model_add_def_rule(M, O_r, O_rf, defparams, 'mirror_rule', rule);
 
 % Add rules:
 %  X -> X_l | X_r
@@ -147,33 +141,33 @@ defparams = 0.1*[0.1 0 0.1 0];
 [M, Y5] = model_addnonterminal(M);
 [M, O] = model_addnonterminal(M);
 
-[M, bl] = model_addrule(M, 'S', X, X_l, 0, {[0 0 0]}, 'M');
-M = model_addrule(M, 'S', X, X_r, 0, {[0 0 0]}, 'M', bl);
-M.learnmult(bl) = 0;
+[M, rule] = model_add_struct_rule(M, X, X_l, {[0 0 0]});
+[M, rule] = model_add_struct_rule(M, X, X_r, {[0 0 0]}, 'mirror_rule', rule);
+M.blocks(rule.offset.blocklabel).learn = 0;
 
-[M, bl] = model_addrule(M, 'S', Y1, Y1_l, 0, {[0 0 0]}, 'M');
-M = model_addrule(M, 'S', Y1, Y1_r, 0, {[0 0 0]}, 'M', bl);
-M.learnmult(bl) = 0;
+[M, rule] = model_add_struct_rule(M, Y1, Y1_l, {[0 0 0]});
+[M, rule] = model_add_struct_rule(M, Y1, Y1_r, {[0 0 0]}, 'mirror_rule', rule);
+M.blocks(rule.offset.blocklabel).learn = 0;
 
-[M, bl] = model_addrule(M, 'S', Y2, Y2_l, 0, {[0 0 0]}, 'M');
-M = model_addrule(M, 'S', Y2, Y2_r, 0, {[0 0 0]}, 'M', bl);
-M.learnmult(bl) = 0;
+[M, rule] = model_add_struct_rule(M, Y2, Y2_l, {[0 0 0]});
+[M, rule] = model_add_struct_rule(M, Y2, Y2_r, {[0 0 0]}, 'mirror_rule', rule);
+M.blocks(rule.offset.blocklabel).learn = 0;
 
-[M, bl] = model_addrule(M, 'S', Y3, Y3_l, 0, {[0 0 0]}, 'M');
-M = model_addrule(M, 'S', Y3, Y3_r, 0, {[0 0 0]}, 'M', bl);
-M.learnmult(bl) = 0;
+[M, rule] = model_add_struct_rule(M, Y3, Y3_l, {[0 0 0]});
+[M, rule] = model_add_struct_rule(M, Y3, Y3_r, {[0 0 0]}, 'mirror_rule', rule);
+M.blocks(rule.offset.blocklabel).learn = 0;
 
-[M, bl] = model_addrule(M, 'S', Y4, Y4_l, 0, {[0 0 0]}, 'M');
-M = model_addrule(M, 'S', Y4, Y4_r, 0, {[0 0 0]}, 'M', bl);
-M.learnmult(bl) = 0;
+[M, rule] = model_add_struct_rule(M, Y4, Y4_l, {[0 0 0]});
+[M, rule] = model_add_struct_rule(M, Y4, Y4_r, {[0 0 0]}, 'mirror_rule', rule);
+M.blocks(rule.offset.blocklabel).learn = 0;
 
-[M, bl] = model_addrule(M, 'S', Y5, Y5_l, 0, {[0 0 0]}, 'M');
-M = model_addrule(M, 'S', Y5, Y5_r, 0, {[0 0 0]}, 'M', bl);
-M.learnmult(bl) = 0;
+[M, rule] = model_add_struct_rule(M, Y5, Y5_l, {[0 0 0]});
+[M, rule] = model_add_struct_rule(M, Y5, Y5_r, {[0 0 0]}, 'mirror_rule', rule);
+M.blocks(rule.offset.blocklabel).learn = 0;
 
-[M, bl] = model_addrule(M, 'S', O, O_l, 0, {[0 0 0]}, 'M');
-M = model_addrule(M, 'S', O, O_r, 0, {[0 0 0]}, 'M', bl);
-M.learnmult(bl) = 0;
+[M, rule] = model_add_struct_rule(M, O, O_l, {[0 0 0]});
+[M, rule] = model_add_struct_rule(M, O, O_r, {[0 0 0]}, 'mirror_rule', rule);
+M.blocks(rule.offset.blocklabel).learn = 0;
 
 
 % Add rules:
@@ -181,47 +175,39 @@ M.learnmult(bl) = 0;
 
 %regmult = 1;
 
-[M, bl] = model_addrule(M, 'S', Q, [X O], 0, {[0 0 0], [0 8 0]});
-%M.learnmult(bl) = 1;
-%M.regmult(bl) = regmult;
+[M, rule] = model_add_struct_rule(M, Q, [X O], ...
+                                  {[0 0 0], [0 8 0]}, ...
+                                  'detection_window', [8 8]);
 
-[M, bl] = model_addrule(M, 'S', Q, [X Y1 O], 0, {[0 0 0], [0 8 0], [0 11 0]});
-%M.learnmult(bl) = 1;
-%M.regmult(bl) = regmult;
+[M, rule] = model_add_struct_rule(M, Q, [X Y1 O], ...
+                                  {[0 0 0], [0 8 0], [0 11 0]}, ...
+                                  'detection_window', [11 8]);
 
-[M, bl] = model_addrule(M, 'S', Q, [X Y1 Y2 O], 0, {[0 0 0], [0 8 0], [0 11 0], [0 14 0]});
-%M.learnmult(bl) = 1;
-%M.regmult(bl) = regmult;
+[M, rule] = model_add_struct_rule(M, Q, [X Y1 Y2 O], ...
+                                  {[0 0 0], [0 8 0], [0 11 0], [0 14 0]}, ...
+                                  'detection_window', [14 8]);
 
-[M, bl] = model_addrule(M, 'S', Q, [X Y1 Y2 Y3 O], 0, {[0 0 0], [0 8 0], [0 11 0], [0 14 0], [0 17 0]});
-%M.learnmult(bl) = 1;
-%M.regmult(bl) = regmult;
+[M, rule] = model_add_struct_rule(M, Q, [X Y1 Y2 Y3 O], ...
+                                  {[0 0 0], [0 8 0], [0 11 0], [0 14 0], [0 17 0]}, ...
+                                  'detection_window', [17 8]);
 
-[M, bl] = model_addrule(M, 'S', Q, [X Y1 Y2 Y3 Y4 O], 0, {[0 0 0], [0 8 0], [0 11 0], [0 14 0], [0 17 0], [0 20 0]});
-%M.learnmult(bl) = 1;
-%M.regmult(bl) = regmult;
+[M, rule] = model_add_struct_rule(M, Q, [X Y1 Y2 Y3 Y4 O], ...
+                                  {[0 0 0], [0 8 0], [0 11 0], [0 14 0], [0 17 0], [0 20 0]}, ...
+                                  'detection_window', [20 8]);
 
-[M, bl] = model_addrule(M, 'S', Q, [X Y1 Y2 Y3 Y4 Y5], 0, {[0 0 0], [0 8 0], [0 11 0], [0 14 0], [0 17 0], [0 20 0]});
-%M.learnmult(bl) = 1;
-%M.regmult(bl) = regmult;
-
-% Set detection windows
-
-M = model_setdetwindow(M, Q, 1, [8 8], [0 0]);
-M = model_setdetwindow(M, Q, 2, [11 8], [0 0]);
-M = model_setdetwindow(M, Q, 3, [14 8], [0 0]);
-M = model_setdetwindow(M, Q, 4, [17 8], [0 0]);
-M = model_setdetwindow(M, Q, 5, [20 8], [0 0]);
-M = model_setdetwindow(M, Q, 6, [23 8], [0 0]);
-
-%% Add global blocklabel
-%[M, bl] = model_addblock(M, 1, 0, 20);
-%M.global_offset.w = 0;
-%M.global_offset.blocklabel = bl;
+[M, rule] = model_add_struct_rule(M, Q, [X Y1 Y2 Y3 Y4 Y5], ...
+                                  {[0 0 0], [0 8 0], [0 11 0], [0 14 0], [0 17 0], [0 20 0]}, ...
+                                  'detection_window', [23 8]);
 
 M.type = model_types.Grammar;
 model = M;
 save([cachedir cls '_simple_grammar_occ_def'], 'model');
+
+
+
+%
+% DEPRECATED
+%
 
 
 

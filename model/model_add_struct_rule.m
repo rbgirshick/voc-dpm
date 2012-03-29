@@ -10,7 +10,8 @@ function [m, rule] = model_add_struct_rule(m, lhs, rhs, anchors, varargin)
 
 valid_opts = {'offset_w', 'offset_blocklabel', ...
               'loc_w', 'loc_blocklabel', ...
-              'detection_window', 'shift_detection_window'};
+              'detection_window', 'shift_detection_window', ...
+              'mirror_rule'};
 opts = getopts(varargin, valid_opts);
 
 try
@@ -18,6 +19,12 @@ try
 catch
   i = 1;
   m.rules{lhs} = [];
+end
+
+if opts.isKey('mirror_rule')
+  rule = opts('mirror_rule');
+  opts('offset_blocklabel') = rule.offset.blocklabel;
+  opts('loc_blocklabel') = rule.loc.blocklabel;
 end
 
 if opts.isKey('offset_w')
