@@ -8,13 +8,10 @@ function [m, rule] = model_add_struct_rule(m, lhs, rhs, anchors, varargin)
 % rhs        right hand side rule symbols
 % anchors
 
-%m = model_add_struct_rule(m, dst_lhs, rhs, anchor, ...
-%                          'offset_w', r.offset.w, ...
-%                          'offset_blocklabel', r.offset.blocklabel, ...
-%                          'detection_window', r.detwindow, ...
-%                          'shift_detection_window', r.shiftwindow)
-
-opts = getopts(varargin);
+valid_opts = {'offset_w', 'offset_blocklabel', ...
+              'loc_w', 'loc_blocklabel', ...
+              'detection_window', 'shift_detection_window'};
+opts = getopts(varargin, valid_opts);
 
 try
   i = length(m.rules{lhs}) + 1;
@@ -77,7 +74,6 @@ m.rules{lhs}(i).is_low_res        = false;
 m.rules{lhs}(i).offset.blocklabel = offset_bl;
 m.rules{lhs}(i).loc.blocklabel    = loc_bl;
 m.rules{lhs}(i).blocks = [offset_bl loc_bl];
-
 
 m.maxsize = max([detwindow; m.maxsize]);
 m.minsize = min([detwindow; m.minsize]);

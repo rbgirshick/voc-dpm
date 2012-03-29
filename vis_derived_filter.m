@@ -42,7 +42,7 @@ for i = 2:size(tree,2)
       off_x = off_x + pad(2);
     end
 
-    w = model.filters(model.symbols(s).filter).w;
+    w = model_get_block(model, model.filters(model.symbols(s).filter));
     wsz = size(w);
     fsz = size(f);
     req_fsz = [off_y + y + wsz(1), off_x + x + wsz(2), wsz(3)];

@@ -1,4 +1,4 @@
-function map = getopts(in)
+function map = getopts(in, valid_keys)
 
 map = containers.Map();
 
@@ -6,6 +6,16 @@ map = containers.Map();
 %  map(defaults{i}) = defaults{i+1};
 %end
 
+if ~isempty(valid_keys)
+  valid_keys = containers.Map(valid_keys, ...
+                              num2cell(ones(length(valid_keys), 1)));
+end
+
 for i = 1:2:length(in)
-  map(in{i}) = in{i+1};
+  key = in{i};
+  val = in{i+1};
+  if ~isempty(valid_keys) && ~valid_keys.isKey(key)
+    error('invalid key: %s', key);
+  end
+  map(key) = val;
 end

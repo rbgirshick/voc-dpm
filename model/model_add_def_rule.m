@@ -14,7 +14,10 @@ function [m, rule] = model_add_def_rule(m, lhs, rhs, def, varargin)
 %                       'offset_blocklabel', r.offset.blocklabel, ...
 %                       'flip'
 
-opts = getopts(varargin);
+valid_opts = {'flip', 'offset_w', 'offset_blocklabel', 'def_blocklabel', ...
+              'loc_w', 'loc_blocklabel', 'detection_window', ...
+              'shift_detection_window'};
+opts = getopts(varargin, valid_opts);
 
 try
   i = length(m.rules{lhs}) + 1;

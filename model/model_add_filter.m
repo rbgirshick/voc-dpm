@@ -6,7 +6,8 @@ function [m, symbol, filterind] = model_add_filter(m, w, varargin)
 % blocklabel  block to use for the filter weights
 % flip        is this filter vertically flipped
 
-opts = getopts(varargin);
+valid_opts = {'blocklabel', 'flip'};
+opts = getopts(varargin, valid_opts);
 
 if opts.isKey('blocklabel')
   blocklabel = opts('blocklabel');

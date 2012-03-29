@@ -10,7 +10,8 @@ function [m, bl] = model_add_block(m, varargin);
 % w
 % type
 
-opts = getopts(varargin);
+valid_opts = {'reg_mult', 'learn', 'lower_bounds', 'shape', 'w', 'type'};
+opts = getopts(varargin, valid_opts);
 
 % OPT: w
 if opts.isKey('w')
@@ -49,9 +50,8 @@ end
 if opts.isKey('lower_bounds')
   lower_bounds = opts('lower_bounds');
 else
-  % default value that should be low enough to never
-  % influence the model
   lower_bounds = -inf*ones(dim, 1);
+  %lower_bounds = -100*ones(dim, 1);
 end
 
 % OPT: type

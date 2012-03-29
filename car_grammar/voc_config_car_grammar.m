@@ -12,7 +12,7 @@ BASE_DIR    = '/var/tmp/rbg';
 PASCAL_YEAR = '2007';
 
 % Models are automatically stored in BASE_DIR/PROJECT/PASCAL_YEAR/
-PROJECT     = 'car-grammar/mergetest2';
+PROJECT     = 'rel5-rc/debug5-car-grammar/';
 
 %
 % You probably don't need to change configuration settings below this line.

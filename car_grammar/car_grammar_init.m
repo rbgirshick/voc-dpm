@@ -26,7 +26,7 @@ M.type = model_types.Grammar;
 % Left-side
 %--------------------------------------------------------------------
 num_LSPF = 21/3;
-w = side.filters(1).w;
+w = model_get_block(side, side.filters(1));
 
 % Build filter slices
 for i = 1:num_LSPF
@@ -49,7 +49,7 @@ end
 % Front (and back, for now)
 %--------------------------------------------------------------------
 num_FPF = num_LSPF;
-w = front.filters(1).w;
+w = model_get_block(front, front.filters(1));
 
 % Build filter slices
 for i = 1:num_FPF
@@ -71,7 +71,7 @@ RSP  = zeros(1, num_LSPF);
 for i = 1:num_LSPF
   % Add filters
   % Front/back
-  [M, FPF(i), fid] = model_addfilter(M, FPF_w{i}, 'N');
+  [M, FPF(i)] = model_add_filter(M, FPF_w{i});
 end
 for i = 1:num_LSPF
   li = i;
@@ -79,21 +79,24 @@ for i = 1:num_LSPF
 
   % Add filters
   % Left/right side
-  [M, LSPF(li), fid] = model_addfilter(M, LSPF_w{li}, 'M');
-  [M, RSPF(ri)] = model_addmirroredfilter(M, fid);
+  [M, LSPF(li)] = model_add_filter(M, LSPF_w{li});
+  [M, RSPF(ri)] = model_mirror_terminal(M, LSPF(li));
 %  % Left/right angled
-%  [M, LAPF(li), fid] = model_addfilter(M, LAPF_w{li}, 'M');
-%  [M, RAPF(ri)] = model_addmirroredfilter(M, fid);
+%  [M, LAPF(li)] = model_add_filter(M, LAPF_w{li});
+%  [M, RAPF(ri)] = model_mirror_terminal(M, LAPF(li));
 
   % Add left/right def. schemas with subtypes
   [M, LSP(li)] = model_addnonterminal(M);
   [M, RSP(ri)] = model_addnonterminal(M);
   % side subtype
-  [M, obl, dbl] = model_addrule(M, 'D', LSP(li), LSPF(li), ...
-                                defoffset, defparams, 'M');
-  [M, obl, dbl] = model_addrule(M, 'D', RSP(ri), RSPF(ri), ...
-                                defoffset, defparams, 'M', obl, dbl);
-  M.learnmult(obl) = 1;
+
+  [M, rule] = model_add_def_rule(M, LSP(li), LSPF(li), defparams);
+  M = model_add_def_rule(M, RSP(ri), RSPF(ri), defparams, ...
+                         'def_blocklabel', rule.def.blocklabel, ...
+                         'offset_blocklabel', rule.offset.blocklabel, ...
+                         'loc_blocklabel', rule.loc.blocklabel, ...
+                         'flip', true);
+  M.blocks(rule.offset.blocklabel).learn = 1;
 
 %  % angled subtype
 %  [M, obl, dbl] = model_addrule(M, 'D', LSP(li), LAPF(li), ...
@@ -103,13 +106,17 @@ for i = 1:num_LSPF
 %  M.learnmult(obl) = 1;
 
   % front/back subtype
-  [M, obl, dbl] = model_addrule(M, 'D', LSP(li), FPF(li), ...
-                                defoffset, defparams, 'M');
-  [M, obl, dbl] = model_addrule(M, 'D', RSP(ri), FPF(ri), ...
-                                defoffset, defparams, 'M', obl, dbl);
-  M.learnmult(obl) = 1;
+  [M, rule] = model_add_def_rule(M, LSP(li), FPF(li), defparams);
+  M = model_add_def_rule(M, RSP(ri), FPF(ri), defparams, ...
+                         'def_blocklabel', rule.def.blocklabel, ...
+                         'offset_blocklabel', rule.offset.blocklabel, ...
+                         'loc_blocklabel', rule.loc.blocklabel, ...
+                         'flip', true);
+  M.blocks(rule.offset.blocklabel).learn = 1;
 end
 
+%  LS -> LSP(squish0) | LSP(squish1) | LSP(squish2) | LSP(squish3)
+%  RS -> RSP(squish0) | RSP(squish1) | RSP(squish2) | RSP(squish3)
 LS = zeros(1, length(0:3));
 RS = zeros(1, length(0:3));
 for s = 0:3
@@ -120,20 +127,28 @@ for s = 0:3
   for i = 1:num_LSPF
     anchors{i} = [0+(i-1)*s 0 0];
   end
-  [M, bl] = model_addrule(M, 'S', LS(s+1), LSP, 0, anchors, 'M');
-  M = model_addrule(M, 'S', RS(s+1), RSP, 0, anchors, 'M', bl);
-  M.learnmult(bl) = 0;
+  [M, rule] = model_add_struct_rule(M, LS(s+1), LSP, anchors);
+  M = model_add_struct_rule(M, RS(s+1), RSP, anchors, ...
+                            'offset_w', M.blocks(rule.offset.blocklabel).w, ...
+                            'offset_blocklabel', rule.offset.blocklabel, ...
+                            'loc_w', M.blocks(rule.loc.blocklabel).w, ...
+                            'loc_blocklabel', rule.loc.blocklabel);
+  M.blocks(rule.offset.blocklabel).learn = 0;
 end
 
 %  Q -> LS(0) | LS(1) | LS(2) | LS(3)
 %  Q -> RS(0) | RS(1) | RS(2) | RS(3)
 for s = 0:3
   w = 3 + s*(num_LSPF-1);
-  [M, bl] = model_addrule(M, 'S', Q, LS(s+1), 0, {[0 0 0]}, 'M');
-  M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 w], [0 0]);
-
-  M = model_addrule(M, 'S', Q, RS(s+1), 0, {[0 0 0]}, 'M', bl);
-  M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 w], [0 0]);
+  [M, rule] = model_add_struct_rule(M, Q, LS(s+1), {[0 0 0]}, ...
+                                    'detection_window', [8 w]);
+  M = model_add_struct_rule(M, Q, RS(s+1), {[0 0 0]}, ...
+                            'offset_w', M.blocks(rule.offset.blocklabel).w, ...
+                            'offset_blocklabel', rule.offset.blocklabel, ...
+                            'loc_w', M.blocks(rule.loc.blocklabel).w, ...
+                            'loc_blocklabel', rule.loc.blocklabel, ...
+                            'detection_window', rule.detwindow, ...
+                            'shift_detection_window', rule.shiftwindow);
 end
 
 
@@ -406,6 +421,10 @@ try
 catch
   note = 'side view';
   model = initmodel(cls, side_pos, note, 'N', 8, [8 21]);
+  % allow root detections in the first pyramid octave
+  lbl = model.rules{model.start}(1).loc.blocklabel;
+  model.blocks(lbl).w(:) = 0;
+
   inds = lrsplit(model, side_pos, 3);
 
   model = train(model, side_pos(inds), neg, true, true, 1, 1, ...
@@ -422,6 +441,10 @@ try
 catch
   note = 'angled view';
   model = initmodel(cls, angled_pos, note, 'N', 8, [8 15]);
+  % allow root detections in the first pyramid octave
+  lbl = model.rules{model.start}(1).loc.blocklabel;
+  model.blocks(lbl).w(:) = 0;
+
   inds = lrsplit(model, angled_pos, 3);
 
   model = train(model, angled_pos(inds), neg, true, true, 1, 1, ...
@@ -439,6 +462,10 @@ try
 catch
   note = 'front view';
   model = initmodel(cls, front_pos, note, 'N', 8, [8 9]);
+  % allow root detections in the first pyramid octave
+  lbl = model.rules{model.start}(1).loc.blocklabel;
+  model.blocks(lbl).w(:) = 0;
+
   inds = lrsplit(model, front_pos, 3);
 
   model = train(model, front_pos(inds), neg, true, true, 1, 1, ...
