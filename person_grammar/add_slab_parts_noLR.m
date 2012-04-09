@@ -6,7 +6,7 @@ function model = add_slab_parts_noLR(model, X, num_parts, hi_res_size, low_res_s
 F = model.rules{X}(1).rhs(1);
 fid = model.symbols(F).filter;
 
-[model, N] = model_addnonterminal(model);
+[model, N] = model_add_nonterminal(model);
 model.rules{X}(1).rhs(1) = N;
 [model, bl] = model_addrule(model, 'S', N, F, 0, {[0 0 0]}, 'N');
 model.learnmult(bl) = 0;

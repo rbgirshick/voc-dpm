@@ -18,7 +18,7 @@ M = model_create(cls, note);
 M.interval = 10;
 M.sbin = 8;
 %% start non-terminal
-[M, Q] = model_addnonterminal(M);
+[M, Q] = model_add_nonterminal(M);
 M.start = Q;
 M.type = model_types.Grammar;
 
@@ -86,8 +86,8 @@ for i = 1:num_LSPF
 %  [M, RAPF(ri)] = model_mirror_terminal(M, LAPF(li));
 
   % Add left/right def. schemas with subtypes
-  [M, LSP(li)] = model_addnonterminal(M);
-  [M, RSP(ri)] = model_addnonterminal(M);
+  [M, LSP(li)] = model_add_nonterminal(M);
+  [M, RSP(ri)] = model_add_nonterminal(M);
   % side subtype
 
   [M, rule] = model_add_def_rule(M, LSP(li), LSPF(li), defparams);
@@ -120,8 +120,8 @@ end
 LS = zeros(1, length(0:3));
 RS = zeros(1, length(0:3));
 for s = 0:3
-  [M, LS(s+1)] = model_addnonterminal(M);
-  [M, RS(s+1)] = model_addnonterminal(M);
+  [M, LS(s+1)] = model_add_nonterminal(M);
+  [M, RS(s+1)] = model_add_nonterminal(M);
 
   anchors = {};
   for i = 1:num_LSPF
@@ -152,247 +152,247 @@ for s = 0:3
 end
 
 
-%-------------------------------------------------------------------------
+%%-------------------------------------------------------------------------
+%%
+%%-------------------------------------------------------------------------
+%function M = make_car_grammar_sharing(front, side)
 %
-%-------------------------------------------------------------------------
-function M = make_car_grammar_sharing(front, side)
-
-cls = 'car';
-note = 'car grammar';
-% initialize a model
-M = model_create(cls, note);
-M.interval = 10;
-M.sbin = 8;
-%% start non-terminal
-[M, Q] = model_addnonterminal(M);
-M.start = Q;
-
-% Left-side (looking head-on at the car) part filter
-num_LSPF = 21/3;
-w = side.filters(1).w;
-
-% Build filter slices
-avg_norm = 0;
-for i = 1:num_LSPF
-  LSPF_w{i} = w(:, 3*(i-1)+1:3*i, :);
-  avg_norm = avg_norm + norm(LSPF_w{i}(:));
-end
-avg_norm = avg_norm / num_LSPF;
-
-defoffset = 0;
-defparams = [0.1 0 0.1 0];
-
-LSPF = zeros(1, num_LSPF);
-RSPF = zeros(1, num_LSPF);
-for i = 1:num_LSPF
-  li = i;
-  ri = num_LSPF+1-i;
-
-  % Add filters to the model
-  [M, LSPF(li), fid] = model_addfilter(M, LSPF_w{li}, 'M');
-  [M, RSPF(ri)] = model_addmirroredfilter(M, fid);
-end
-
-[M, LS] = model_addnonterminal(M);
-[M, RS] = model_addnonterminal(M);
-
-anchors = {};
-for i = 1:num_LSPF
-  anchors{i} = [0+(i-1)*3 0 0];
-end
-[M, bl] = model_addrule(M, 'S', LS, LSPF, 0, anchors, 'M');
-M = model_addrule(M, 'S', RS, RSPF, 0, anchors, 'M', bl);
-M.learnmult(bl) = 0;
-
-% Front (and back, for now)
-num_FPF = 9/3;
-w = front.filters(1).w;
-
-% Build filter slices
-for i = 1:num_FPF
-  FPF_w{i} = w(:, 3*(i-1)+1:3*i, :);
-  FPF_w{i} = FPF_w{i} * avg_norm / norm(FPF_w{i}(:));
-end
-
-FPF = zeros(1, num_FPF);
-for i = 1:num_FPF
-  % Add filters to the model
-  [M, FPF(i), fid] = model_addfilter(M, FPF_w{i}, 'N');
-end
-
-[M, F] = model_addnonterminal(M);
-
-anchors = {};
-for i = 1:num_FPF
-  anchors{i} = [0+(i-1)*3 0 0];
-end
-[M, bl] = model_addrule(M, 'S', F, FPF, 0, anchors, 'N');
-M.learnmult(bl) = 0;
-
-% left middle squished
-% right middle squished
-[M, LMS] = model_addnonterminal(M);
-[M, RMS] = model_addnonterminal(M);
-
-anchors = {};
-for i = 1:num_LSPF
-  anchors{i} = [0+(i-1)*1 0 0];
-end
-[M, bl] = model_addrule(M, 'S', LMS, LSPF, 0, anchors, 'M');
-M = model_addrule(M, 'S', RMS, RSPF, 0, anchors, 'M', bl);
-M.learnmult(bl) = 0;
-
-% Top-level productions
-[M, bl] = model_addrule(M, 'S', Q, LS, 0, {[0 0 0]}, 'M');
-M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 21], [0 0]);
-
-M = model_addrule(M, 'S', Q, RS, 0, {[0 0 0]}, 'M', bl);
-M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 21], [0 0]);
-
-[M, bl] = model_addrule(M, 'S', Q, [LMS F], 0, {[0 0 0] [5 0 0]}, 'M');
-M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 14], [0 0]);
-
-M = model_addrule(M, 'S', Q, [F RMS], 0, {[0 0 0] [5 0 0]}, 'M', bl);
-M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 14], [0 0]);
-
-M = model_addrule(M, 'S', Q, F, 0, {[0 0 0]}, 'N');
-M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 9], [0 0]);
-
-
-%-------------------------------------------------------------------------
+%cls = 'car';
+%note = 'car grammar';
+%% initialize a model
+%M = model_create(cls, note);
+%M.interval = 10;
+%M.sbin = 8;
+%%% start non-terminal
+%[M, Q] = model_add_nonterminal(M);
+%M.start = Q;
 %
-%-------------------------------------------------------------------------
-function M = make_car_grammar(front, side)
-
-cls = 'car';
-note = 'car grammar';
-% initialize a model
-M = model_create(cls, note);
-M.interval = 10;
-M.sbin = 8;
-%% start non-terminal
-[M, Q] = model_addnonterminal(M);
-M.start = Q;
-
-% Left-side (looking head-on at the car) part filter
-num_LSPF = 21/3;
-w = side.filters(1).w;
-
-% Build filter slices
-for i = 1:num_LSPF
-  LSPF_w{i} = w(:, 3*(i-1)+1:3*i, :);
-end
-
-defoffset = 0;
-defparams = [0.1 0 0.1 0];
-
-LSPF = zeros(1, num_LSPF);
-RSPF = zeros(1, num_LSPF);
-LSP  = zeros(1, num_LSPF);
-RSP  = zeros(1, num_LSPF);
-for i = 1:num_LSPF
-  li = i;
-  ri = num_LSPF+1-i;
-
-  % Add filters to the model
-  [M, LSPF(li), fid] = model_addfilter(M, LSPF_w{li}, 'M');
-  [M, RSPF(ri)] = model_addmirroredfilter(M, fid);
-
-  % Add def. schemas
-  [M, LSP(li)] = model_addnonterminal(M);
-  [M, RSP(ri)] = model_addnonterminal(M);
-  [M, obl, dbl] = model_addrule(M, 'D', LSP(li), LSPF(li), ...
-                                defoffset, defparams, 'M');
-  [M, obl, dbl] = model_addrule(M, 'D', RSP(ri), RSPF(ri), ...
-                                defoffset, defparams, 'M', obl, dbl);
-end
-
-LS = zeros(1, length(0:3));
-RS = zeros(1, length(0:3));
-for s = 0:3
-  [M, LS(s+1)] = model_addnonterminal(M);
-  [M, RS(s+1)] = model_addnonterminal(M);
-
-  anchors = {};
-  for i = 1:num_LSPF
-    anchors{i} = [0+(i-1)*s 0 0];
-  end
-  [M, bl] = model_addrule(M, 'S', LS(s+1), LSP, 0, anchors, 'M');
-  M = model_addrule(M, 'S', RS(s+1), RSP, 0, anchors, 'M', bl);
-  M.learnmult(bl) = 0;
-end
-
-% Front (and back, for now)
-num_FPF = 9/3;
-w = front.filters(1).w;
-
-% Build filter slices
-for i = 1:num_FPF
-  FPF_w{i} = w(:, 3*(i-1)+1:3*i, :);
-end
-
-FPF = zeros(1, num_FPF);
-FP  = zeros(1, num_FPF);
-for i = 1:num_FPF
-  li = i;
-
-  % Add filters to the model
-  [M, FPF(li), fid] = model_addfilter(M, FPF_w{li}, 'N');
-
-  % Add def. schemas
-  [M, FP(li)] = model_addnonterminal(M);
-  [M, obl, dbl] = model_addrule(M, 'D', FP(li), FPF(li), ...
-                                defoffset, defparams, 'N');
-end
-
-F = zeros(1, length(0:3));
-for s = 0:3
-  [M, F(s+1)] = model_addnonterminal(M);
-
-  anchors = {};
-  for i = 1:num_FPF
-    anchors{i} = [0+(i-1)*s 0 0];
-  end
-  [M, bl] = model_addrule(M, 'S', F(s+1), FP, 0, anchors, 'N');
-  M.learnmult(bl) = 0;
-end
-
-% Add rules:
-%  Q -> LS(i) F(j) for 0<=i,j<=3
-%  Q -> F(j) RS(i) for 0<=i,j<=3
-
-
-%  Q -> LS(1) | LS(2) | LS(3) [not using LS(0) or RS(0)]
-%  Q -> RS(1) | RS(2) | RS(3)
-for s = 1:3
-  w = 3 + s*(num_LSPF-1);
-  [M, bl] = model_addrule(M, 'S', Q, LS(s+1), 0, {[0 0 0]}, 'M');
-  M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 w], [0 0]);
-
-  M = model_addrule(M, 'S', Q, RS(s+1), 0, {[0 0 0]}, 'M', bl);
-  M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 w], [0 0]);
-end
-
-%  Q -> F(1) | F(2) | F(3) [not using F(0)]
-for s = 1:3
-  w = 3 + s*(num_FPF-1);
-  M = model_addrule(M, 'S', Q, F(s+1), 0, {[0 0 0]}, 'N');
-  M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 w], [0 0]);
-end
-
-for s1 = 0:3
-  for s2 = 0:3
-    w1 = 3 + s1*(num_LSPF-1);
-    w2 = 3 + s2*(num_FPF-1);
-    w = w1 + w2;
-
-    [M, bl] = model_addrule(M, 'S', Q, [LS(s1+1) F(s2+1)], 0, {[0 0 0] [w1 0 0]}, 'M');
-    M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 w], [0 0]);
-
-    M = model_addrule(M, 'S', Q, [F(s2+1) RS(s1+1)], 0, {[0 0 0] [w2 0 0]}, 'M', bl);
-    M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 w], [0 0]);
-  end
-end
+%% Left-side (looking head-on at the car) part filter
+%num_LSPF = 21/3;
+%w = side.filters(1).w;
+%
+%% Build filter slices
+%avg_norm = 0;
+%for i = 1:num_LSPF
+%  LSPF_w{i} = w(:, 3*(i-1)+1:3*i, :);
+%  avg_norm = avg_norm + norm(LSPF_w{i}(:));
+%end
+%avg_norm = avg_norm / num_LSPF;
+%
+%defoffset = 0;
+%defparams = [0.1 0 0.1 0];
+%
+%LSPF = zeros(1, num_LSPF);
+%RSPF = zeros(1, num_LSPF);
+%for i = 1:num_LSPF
+%  li = i;
+%  ri = num_LSPF+1-i;
+%
+%  % Add filters to the model
+%  [M, LSPF(li), fid] = model_addfilter(M, LSPF_w{li}, 'M');
+%  [M, RSPF(ri)] = model_addmirroredfilter(M, fid);
+%end
+%
+%[M, LS] = model_add_nonterminal(M);
+%[M, RS] = model_add_nonterminal(M);
+%
+%anchors = {};
+%for i = 1:num_LSPF
+%  anchors{i} = [0+(i-1)*3 0 0];
+%end
+%[M, bl] = model_addrule(M, 'S', LS, LSPF, 0, anchors, 'M');
+%M = model_addrule(M, 'S', RS, RSPF, 0, anchors, 'M', bl);
+%M.learnmult(bl) = 0;
+%
+%% Front (and back, for now)
+%num_FPF = 9/3;
+%w = front.filters(1).w;
+%
+%% Build filter slices
+%for i = 1:num_FPF
+%  FPF_w{i} = w(:, 3*(i-1)+1:3*i, :);
+%  FPF_w{i} = FPF_w{i} * avg_norm / norm(FPF_w{i}(:));
+%end
+%
+%FPF = zeros(1, num_FPF);
+%for i = 1:num_FPF
+%  % Add filters to the model
+%  [M, FPF(i), fid] = model_addfilter(M, FPF_w{i}, 'N');
+%end
+%
+%[M, F] = model_add_nonterminal(M);
+%
+%anchors = {};
+%for i = 1:num_FPF
+%  anchors{i} = [0+(i-1)*3 0 0];
+%end
+%[M, bl] = model_addrule(M, 'S', F, FPF, 0, anchors, 'N');
+%M.learnmult(bl) = 0;
+%
+%% left middle squished
+%% right middle squished
+%[M, LMS] = model_add_nonterminal(M);
+%[M, RMS] = model_add_nonterminal(M);
+%
+%anchors = {};
+%for i = 1:num_LSPF
+%  anchors{i} = [0+(i-1)*1 0 0];
+%end
+%[M, bl] = model_addrule(M, 'S', LMS, LSPF, 0, anchors, 'M');
+%M = model_addrule(M, 'S', RMS, RSPF, 0, anchors, 'M', bl);
+%M.learnmult(bl) = 0;
+%
+%% Top-level productions
+%[M, bl] = model_addrule(M, 'S', Q, LS, 0, {[0 0 0]}, 'M');
+%M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 21], [0 0]);
+%
+%M = model_addrule(M, 'S', Q, RS, 0, {[0 0 0]}, 'M', bl);
+%M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 21], [0 0]);
+%
+%[M, bl] = model_addrule(M, 'S', Q, [LMS F], 0, {[0 0 0] [5 0 0]}, 'M');
+%M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 14], [0 0]);
+%
+%M = model_addrule(M, 'S', Q, [F RMS], 0, {[0 0 0] [5 0 0]}, 'M', bl);
+%M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 14], [0 0]);
+%
+%M = model_addrule(M, 'S', Q, F, 0, {[0 0 0]}, 'N');
+%M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 9], [0 0]);
+%
+%
+%%-------------------------------------------------------------------------
+%%
+%%-------------------------------------------------------------------------
+%function M = make_car_grammar(front, side)
+%
+%cls = 'car';
+%note = 'car grammar';
+%% initialize a model
+%M = model_create(cls, note);
+%M.interval = 10;
+%M.sbin = 8;
+%%% start non-terminal
+%[M, Q] = model_add_nonterminal(M);
+%M.start = Q;
+%
+%% Left-side (looking head-on at the car) part filter
+%num_LSPF = 21/3;
+%w = side.filters(1).w;
+%
+%% Build filter slices
+%for i = 1:num_LSPF
+%  LSPF_w{i} = w(:, 3*(i-1)+1:3*i, :);
+%end
+%
+%defoffset = 0;
+%defparams = [0.1 0 0.1 0];
+%
+%LSPF = zeros(1, num_LSPF);
+%RSPF = zeros(1, num_LSPF);
+%LSP  = zeros(1, num_LSPF);
+%RSP  = zeros(1, num_LSPF);
+%for i = 1:num_LSPF
+%  li = i;
+%  ri = num_LSPF+1-i;
+%
+%  % Add filters to the model
+%  [M, LSPF(li), fid] = model_addfilter(M, LSPF_w{li}, 'M');
+%  [M, RSPF(ri)] = model_addmirroredfilter(M, fid);
+%
+%  % Add def. schemas
+%  [M, LSP(li)] = model_add_nonterminal(M);
+%  [M, RSP(ri)] = model_add_nonterminal(M);
+%  [M, obl, dbl] = model_addrule(M, 'D', LSP(li), LSPF(li), ...
+%                                defoffset, defparams, 'M');
+%  [M, obl, dbl] = model_addrule(M, 'D', RSP(ri), RSPF(ri), ...
+%                                defoffset, defparams, 'M', obl, dbl);
+%end
+%
+%LS = zeros(1, length(0:3));
+%RS = zeros(1, length(0:3));
+%for s = 0:3
+%  [M, LS(s+1)] = model_add_nonterminal(M);
+%  [M, RS(s+1)] = model_add_nonterminal(M);
+%
+%  anchors = {};
+%  for i = 1:num_LSPF
+%    anchors{i} = [0+(i-1)*s 0 0];
+%  end
+%  [M, bl] = model_addrule(M, 'S', LS(s+1), LSP, 0, anchors, 'M');
+%  M = model_addrule(M, 'S', RS(s+1), RSP, 0, anchors, 'M', bl);
+%  M.learnmult(bl) = 0;
+%end
+%
+%% Front (and back, for now)
+%num_FPF = 9/3;
+%w = front.filters(1).w;
+%
+%% Build filter slices
+%for i = 1:num_FPF
+%  FPF_w{i} = w(:, 3*(i-1)+1:3*i, :);
+%end
+%
+%FPF = zeros(1, num_FPF);
+%FP  = zeros(1, num_FPF);
+%for i = 1:num_FPF
+%  li = i;
+%
+%  % Add filters to the model
+%  [M, FPF(li), fid] = model_addfilter(M, FPF_w{li}, 'N');
+%
+%  % Add def. schemas
+%  [M, FP(li)] = model_add_nonterminal(M);
+%  [M, obl, dbl] = model_addrule(M, 'D', FP(li), FPF(li), ...
+%                                defoffset, defparams, 'N');
+%end
+%
+%F = zeros(1, length(0:3));
+%for s = 0:3
+%  [M, F(s+1)] = model_add_nonterminal(M);
+%
+%  anchors = {};
+%  for i = 1:num_FPF
+%    anchors{i} = [0+(i-1)*s 0 0];
+%  end
+%  [M, bl] = model_addrule(M, 'S', F(s+1), FP, 0, anchors, 'N');
+%  M.learnmult(bl) = 0;
+%end
+%
+%% Add rules:
+%%  Q -> LS(i) F(j) for 0<=i,j<=3
+%%  Q -> F(j) RS(i) for 0<=i,j<=3
+%
+%
+%%  Q -> LS(1) | LS(2) | LS(3) [not using LS(0) or RS(0)]
+%%  Q -> RS(1) | RS(2) | RS(3)
+%for s = 1:3
+%  w = 3 + s*(num_LSPF-1);
+%  [M, bl] = model_addrule(M, 'S', Q, LS(s+1), 0, {[0 0 0]}, 'M');
+%  M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 w], [0 0]);
+%
+%  M = model_addrule(M, 'S', Q, RS(s+1), 0, {[0 0 0]}, 'M', bl);
+%  M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 w], [0 0]);
+%end
+%
+%%  Q -> F(1) | F(2) | F(3) [not using F(0)]
+%for s = 1:3
+%  w = 3 + s*(num_FPF-1);
+%  M = model_addrule(M, 'S', Q, F(s+1), 0, {[0 0 0]}, 'N');
+%  M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 w], [0 0]);
+%end
+%
+%for s1 = 0:3
+%  for s2 = 0:3
+%    w1 = 3 + s1*(num_LSPF-1);
+%    w2 = 3 + s2*(num_FPF-1);
+%    w = w1 + w2;
+%
+%    [M, bl] = model_addrule(M, 'S', Q, [LS(s1+1) F(s2+1)], 0, {[0 0 0] [w1 0 0]}, 'M');
+%    M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 w], [0 0]);
+%
+%    M = model_addrule(M, 'S', Q, [F(s2+1) RS(s1+1)], 0, {[0 0 0] [w2 0 0]}, 'M', bl);
+%    M = model_setdetwindow(M, Q, length(M.rules{Q}), [8 w], [0 0]);
+%  end
+%end
 
 
 
@@ -420,7 +420,7 @@ try
   load([cachedir cls '_init_side']);
 catch
   note = 'side view';
-  model = initmodel(cls, side_pos, note, 'N', 8, [8 21]);
+  model = root_model(cls, side_pos, note, 'N', 8, [8 21]);
   % allow root detections in the first pyramid octave
   lbl = model.rules{model.start}(1).loc.blocklabel;
   model.blocks(lbl).w(:) = 0;
@@ -440,7 +440,7 @@ try
   load([cachedir cls '_init_angled']);
 catch
   note = 'angled view';
-  model = initmodel(cls, angled_pos, note, 'N', 8, [8 15]);
+  model = root_model(cls, angled_pos, note, 'N', 8, [8 15]);
   % allow root detections in the first pyramid octave
   lbl = model.rules{model.start}(1).loc.blocklabel;
   model.blocks(lbl).w(:) = 0;
@@ -461,7 +461,7 @@ try
   load([cachedir cls '_init_front']);
 catch
   note = 'front view';
-  model = initmodel(cls, front_pos, note, 'N', 8, [8 9]);
+  model = root_model(cls, front_pos, note, 'N', 8, [8 9]);
   % allow root detections in the first pyramid octave
   lbl = model.rules{model.start}(1).loc.blocklabel;
   model.blocks(lbl).w(:) = 0;

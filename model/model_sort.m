@@ -22,8 +22,8 @@ end
 
 % mark symbol i as pre-visit
 V(i) = 1;
-for r = rules_with_lhs(m, i)
-  for s = r.rhs
+for r = 1:length(m.rules{i})
+  for s = m.rules{r}.rhs
     % recurse if s is a non-terminal and not already visited
     if m.symbols(s).type == 'N' && V(s) < 2
       [L, V] = model_sort(m, s, L, V);

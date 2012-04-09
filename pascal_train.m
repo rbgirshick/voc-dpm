@@ -37,7 +37,7 @@ catch
   initrand();
   for i = 1:n
     % split data into two groups: left vs. right facing instances
-    models{i} = initmodel(cls, spos{i}, note, 'N');
+    models{i} = root_model(cls, spos{i}, note, 'N');
     inds = lrsplit(models{i}, spos{i}, i);
     models{i} = train(models{i}, spos{i}(inds), neg, true, true, 1, 1, ...
                       max_num_examples, fg_overlap, 0, false, ...
@@ -53,7 +53,7 @@ try
 catch
   initrand();
   for i = 1:n
-    models{i} = lrmodel(models{i});
+    models{i} = lr_root_model(models{i});
     models{i} = train(models{i}, spos{i}, neg_small, false, false, 4, 3, ...
                       max_num_examples, fg_overlap, 0, false, ...
                       ['lrsplit2_' num2str(i)]);
@@ -81,8 +81,8 @@ catch
     ruleind = i;
     partner = i+1;
     filterind = i;
-    model = model_addparts(model, model.start, ruleind, ...
-                           partner, filterind, 8, [6 6], 1);
+    model = model_add_parts(model, model.start, ruleind, ...
+                            partner, filterind, 8, [6 6], 1);
   end
   model = train(model, impos, neg_small, false, false, 8, 10, ...
                 max_num_examples, fg_overlap, num_fp, false, 'parts_1');

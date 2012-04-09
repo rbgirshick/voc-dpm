@@ -1,4 +1,4 @@
-function model = lrmodel(model)
+function model = lr_root_model(model)
 % produce a model with left/right symmetric root filters
 %
 % model  object model with a single root filter
@@ -7,7 +7,7 @@ function model = lrmodel(model)
 rootsym = model.rules{model.start}.rhs(1);
 
 % create a fresh nonterminal for the new deformation rule
-[model, N1] = model_addnonterminal(model);
+[model, N1] = model_add_nonterminal(model);
 
 % add deformation rule with rigid deformation model for root filter
 defparams = [1000 0 1000 0];
@@ -24,7 +24,7 @@ model.rules{model.start}.rhs(1) = N1;
 [model, mrootsym] = model_mirror_terminal(model, rootsym);
 
 % add mirrored deformation rule
-[model, N2] = model_addnonterminal(model);
+[model, N2] = model_add_nonterminal(model);
 
 model = model_add_def_rule(model, N2, mrootsym, defparams, ...
                            'def_blocklabel', rule.def.blocklabel, ...

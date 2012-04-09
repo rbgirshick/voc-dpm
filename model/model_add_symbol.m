@@ -1,4 +1,4 @@
-function [m, i] = model_addsymbol(m, type)
+function [m, i] = model_add_symbol(m, type)
 % Add a symbol to the model.
 %
 % m     object model

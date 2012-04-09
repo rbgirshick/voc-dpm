@@ -32,7 +32,7 @@ m.filters(j).size       = [size(w, 1) size(w, 2)];
 m.filters(j).flip       = flip;
 
 % new symbol for terminal associated with filter f
-[m, i] = model_addsymbol(m, 'T');
+[m, i] = model_add_symbol(m, 'T');
 m.symbols(i).filter = j;
 m.filters(j).symbol = i;
 

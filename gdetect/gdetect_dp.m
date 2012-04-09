@@ -80,7 +80,7 @@ for i = 1:length(score)
   if i <= model.interval
     scale_feat = [1; 0];
   end
-  score{i}(:) = offset_w * model.bias_feature ...
+  score{i}(:) = offset_w * model.features.bias ...
                 + loc_w * scale_feat;
 end
 
@@ -147,7 +147,7 @@ for i = 1:length(score)
   if i <= model.interval
     scale_feat = [1; 0];
   end
-  score{i} = score{i} + offset_w * model.bias_feature ...
+  score{i} = score{i} + offset_w * model.features.bias ...
              + loc_w * scale_feat;
   %[score{i}, Ix{i}, Iy{i}] = dt(score{i}, def(1), def(2), def(3), def(4));
   [score{i}, Ix{i}, Iy{i}] = bounded_dt(score{i}, def(1), def(2), ...

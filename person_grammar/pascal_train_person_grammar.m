@@ -28,7 +28,7 @@ fg_overlap       = conf.training.fg_overlap;
 neg_small = neg(randperm(length(neg)));
 neg_small = neg_small(1:conf.training.num_negatives_small);
 
-model = person_init_grammar();
+model = person_grammar_init();
 model.note = note;
 
 try 

@@ -10,7 +10,7 @@ else
     error('Mirroring currently only supports symbols with uniform extents.');
   end
 
-  [m, ns] = model_addnonterminal(m);
+  [m, ns] = model_add_nonterminal(m);
   for i = 1:length(m.rules{s});
     r = m.rules{s}(i);
     if r.type == 'S'

@@ -243,7 +243,7 @@ for t = 1:iter
 %      blocks = fv_cache('get_model');
     end
 
-    model = parsemodel(model, blocks);
+    model = model_update_blocks(model, blocks);
     cache(tneg,:) = [nl pl rt nl+pl+rt];
     for tt = 1:tneg
       fprintf('cache objective, neg: %f, pos: %f, reg: %f, total: %f\n', ...
@@ -412,7 +412,7 @@ for i = 1:numpos
   feat = features(im, model.sbin);
   key = [0 i 0 0 0];
   bls = [obl; fbl] - 1;
-  feat = [model.bias_feature; feat(:)];
+  feat = [model.features.bias; feat(:)];
   fv_cache('add', int32(key), int32(bls), single(feat), ...
                   int32(is_belief), int32(is_mined), loss); 
   write_zero_fv(true, key);
@@ -596,7 +596,7 @@ for i = 1:numneg
       dataid = (i-1)*rndneg+j + 100000; % assumes < 100K foreground examples
       key = [0 dataid 0 0 0];
       bls = [obl; fbl] - 1;
-      f = [model.bias_feature; f(:)];
+      f = [model.features.bias; f(:)];
       fv_cache('add', int32(key), int32(bls), single(f), ...
                       int32(is_belief), int32(is_mined), loss); 
       % write zero belief vector

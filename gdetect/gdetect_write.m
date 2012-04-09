@@ -114,7 +114,7 @@ for d = 1:length(trees)
       bl = model.rules{sym}(ruleind).offset.blocklabel;
       w = model_get_block(model, model.rules{sym}(ruleind).offset);
       if model.blocks(bl).learn ~= 0 || w ~= 0
-        ex.blocks(bl).f = model.bias_feature;
+        ex.blocks(bl).f = model.features.bias;
       end
       % location
       bl = model.rules{sym}(ruleind).loc.blocklabel;

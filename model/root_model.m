@@ -1,4 +1,4 @@
-function model = initmodel(cls, pos, note, symmetry, sbin, sz)
+function model = root_model(cls, pos, note, symmetry, sbin, sz)
 
 % model = initmodel(cls, pos, note, symmetry, sbin, sz)
 % Initialize model structure.
@@ -55,7 +55,7 @@ model.interval = conf.eval.interval;
 [model, symbol] = model_add_filter(model, zeros([sz conf.features.dim]));
 
 % start non-terminal
-[model, Q] = model_addnonterminal(model);
+[model, Q] = model_add_nonterminal(model);
 model.start = Q;
 
 % add structure rule deriving only a root filter placement

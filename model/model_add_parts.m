@@ -1,4 +1,4 @@
-function model = model_addparts(model, lhs, ruleind, partner, filterind, numparts, psize, scale, coef_scale)
+function model = model_add_parts(model, lhs, ruleind, partner, filterind, numparts, psize, scale, coef_scale)
 % Add part filters to a model.
 %
 % model      object model
@@ -34,7 +34,7 @@ pfilters = mkpartfilters(source, psize, numparts, scale);
 
 for i = 1:numparts
   [model, symbolf, fi] = model_add_filter(model, coef_scale*pfilters(i).w);
-  [model, N1] = model_addnonterminal(model);
+  [model, N1] = model_add_nonterminal(model);
 
   % add deformation rule
   defoffset = 0;
@@ -52,7 +52,7 @@ for i = 1:numparts
 
   if ~isempty(partner)
     [model, symbolfp] = model_mirror_terminal(model, symbolf);
-    [model, N2] = model_addnonterminal(model);
+    [model, N2] = model_add_nonterminal(model);
 
     % add mirrored deformation rule
     model = model_add_def_rule(model, N2, symbolfp, defparams, ...

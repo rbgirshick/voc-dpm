@@ -27,10 +27,10 @@ end
 mexcmd = [mexcmd ' CXXFLAGS="\$CXXFLAGS -Wall"'];
 mexcmd = [mexcmd ' LDFLAGS="\$LDFLAGS -Wall"'];
 
-eval([mexcmd ' resize.cc']);
-eval([mexcmd ' dt.cc']);
-eval([mexcmd ' bounded_dt.cc']);
-eval([mexcmd ' features.cc']);
+eval([mexcmd ' features/resize.cc']);
+eval([mexcmd ' features/features.cc']);
+eval([mexcmd ' gdetect/dt.cc']);
+eval([mexcmd ' gdetect/bounded_dt.cc']);
 eval([mexcmd ' gdetect/get_detection_trees.cc']);
 eval([mexcmd ' gdetect/compute_overlap.cc']);
 
@@ -38,7 +38,7 @@ eval([mexcmd ' gdetect/compute_overlap.cc']);
 % 0 is fastest, 3 is slowest 
 
 % 0) multithreaded convolution using SSE
-eval([mexcmd ' fconvsse.cc -o fconv']);
+eval([mexcmd ' gdetect/fconvsse.cc -o fconv']);
 
 % 1) multithreaded convolution using blas
 %    WARNING: the blas version does not work with matlab >= 2010b 
