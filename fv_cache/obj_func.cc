@@ -177,7 +177,7 @@ void gradient(double *obj_val_out, double *grad, const int dim,
 //  mexPrintf("update: %d/%d %.3f\n", num_to_update, num_examples, 
 //                                    num_to_update/(double)num_examples);
 
-  #pragma omp parallel default(none) shared(grad_threads, grad_blocks, obj_vals)
+  #pragma omp parallel shared(grad_threads, grad_blocks, obj_vals)
   {
     double *grad_th = new (nothrow) double[dim];
     check(grad_th != NULL);
@@ -200,6 +200,7 @@ void gradient(double *obj_val_out, double *grad, const int dim,
     #pragma omp for schedule(static)
     for (int q = 0; q < num_examples; q++) {
       // Check margin-bound pruning condition
+      // See Appendix B of my dissertation for details
       E[q].hist++;
       int hist = E[q].hist;
       if (hist < model::hist_size) {

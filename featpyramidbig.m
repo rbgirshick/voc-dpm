@@ -36,11 +36,6 @@ for i = 1:interval
   end
 end
 
-%eod = model.features.extra_octave_dim;
-%for i = 1:interval
-%  pyra.feat{i}(:,:,eod) = 1;
-%end
-
 pyra.num_levels = length(pyra.feat);
 
 td = model.features.truncation_dim;

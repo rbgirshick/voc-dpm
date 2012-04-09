@@ -12,7 +12,7 @@ BASE_DIR    = '/var/tmp/rbg';
 PASCAL_YEAR = '2007';
 
 % Models are automatically stored in BASE_DIR/PROJECT/PASCAL_YEAR/
-PROJECT     = 'rel5-rc/debug5-car-grammar/';
+PROJECT     = 'rel5-dev/car-grammar/';
 
 %
 % You probably don't need to change configuration settings below this line.
@@ -137,9 +137,8 @@ conf.pascal.VOCopts.testset = conf.eval.test_set;
 % Feature configuration 
 % -------------------------------------------------------------------
 conf.features.sbin = 8;
-conf.features.dim = 33;
+conf.features.dim = 32;
 conf.features.truncation_dim = 32;
-conf.features.extra_octave_dim = 33;
 conf.features.extra_octave = false;
 
 

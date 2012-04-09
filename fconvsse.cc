@@ -31,7 +31,7 @@
 
 // N.B. If you change the number of features you will need to unroll
 // the unrolled loop in process() more.
-#define NUM_FEATURES 36
+#define NUM_FEATURES 32
 
 
 /*
@@ -109,11 +109,6 @@ void *process(void *thread_arg) {
 
           a = _mm_load_ps(A_off+28);
           b = _mm_load_ps(B_off+28);
-          c = _mm_mul_ps(a, b);
-          v = _mm_add_ps(v, c);
-
-          a = _mm_load_ps(A_off+32);
-          b = _mm_load_ps(B_off+32);
           c = _mm_mul_ps(a, b);
           v = _mm_add_ps(v, c);
 
