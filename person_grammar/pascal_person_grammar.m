@@ -18,10 +18,6 @@ if nargin < 2
   testyear = conf.pascal.year;
 end
 
-% TODO: should save entire code used for this run
-% Take the code, zip it into an archive named by date
-% print the name of the code archive to the log file
-% add the code name to the training note
 timestamp = datestr(datevec(now()), 'dd.mmm.yyyy:HH.MM.SS');
 
 % set the note to the training time if none is given

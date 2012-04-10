@@ -20,8 +20,9 @@ static const double inv_beta = 1.0 / beta;
 //  out[1] : loss on positive examples
 //  out[2] : regularization term's value
 void obj_val(double out[3], ex_cache &E, model &M) {
-  // FIXME: make gradient return out[3] so this function can be removed
-  // local reference
+  // FIXME: merge with gradient()
+  //  - make gradient return out[3] so this function can be removed
+  //    local reference
   double **w = M.w;
 
   out[0] = 0.0; // background examples (from neg)
@@ -163,20 +164,6 @@ void gradient(double *obj_val_out, double *grad, const int dim,
   check(obj_vals != NULL);
   fill(obj_vals, obj_vals+num_threads, 0);
 
-//  const int num_examples = E.size();
-//  int num_to_update = 0;
-//  for (int q = 0; q < num_examples; q++) {
-//    int hist = E[q].hist + 1;
-//    double skip = E[q].margin_bound
-//                  - M.dw_norm_hist[hist] 
-//                    * (E[q].belief_norm + E[q].max_nonbelief_norm);
-//
-//    if (skip < 0)
-//      num_to_update++;
-//  }
-//  mexPrintf("update: %d/%d %.3f\n", num_to_update, num_examples, 
-//                                    num_to_update/(double)num_examples);
-
   #pragma omp parallel shared(grad_threads, grad_blocks, obj_vals)
   {
     double *grad_th = new (nothrow) double[dim];
@@ -207,7 +194,7 @@ void gradient(double *obj_val_out, double *grad, const int dim,
         double skip = E[q].margin_bound
                       - M.dw_norm_hist[hist] 
                         * (E[q].belief_norm + E[q].max_nonbelief_norm);
-        if (skip >= 0)
+        if (skip > 0)
           continue;
       } 
 

@@ -17,8 +17,7 @@ for l = 1:length(pyra.feat)
   for b = 1:num_boxes
     if testoverlap(l, model, pyra, boxes(b,:), overlap)
       do_levels(l) = true;
-      % TODO: generalize this so it works for models 
-      % with more than one level of parts
+      % WARNING: assumes that models only have one level of parts
       if l - model.interval > 0
         do_levels(l-model.interval) = true;
       end

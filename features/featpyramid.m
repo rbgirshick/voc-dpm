@@ -13,9 +13,9 @@ if nargin < 3
   [padx, pady] = getpadding(model);
 end
 
+extra_interval = 0;
 if model.features.extra_octave
-  pyra = featpyramidbig(im, model, padx, pady);
-  return;
+  extra_interval = model.interval;
 end
 
 sbin = model.sbin;
@@ -23,25 +23,30 @@ interval = model.interval;
 sc = 2^(1/interval);
 imsize = [size(im, 1) size(im, 2)];
 max_scale = 1 + floor(log(min(imsize)/(5*sbin))/log(sc));
-pyra.feat = cell(max_scale + interval, 1);
-pyra.scales = zeros(max_scale + interval, 1);
+pyra.feat = cell(max_scale + extra_interval + interval, 1);
+pyra.scales = zeros(max_scale + extra_interval + interval, 1);
 pyra.imsize = imsize;
 
 % our resize function wants floating point values
 im = double(im);
 for i = 1:interval
   scaled = resize(im, 1/sc^(i-1));
-  % "first" 2x interval
-  pyra.feat{i} = features(scaled, sbin/2);
-  pyra.scales(i) = 2/sc^(i-1);
-  % "second" 2x interval
-  pyra.feat{i+interval} = features(scaled, sbin);
-  pyra.scales(i+interval) = 1/sc^(i-1);
-  % remaining interals
+  if extra_interval > 0
+    % Optional (sbin/4) x (sbin/4) features
+    pyra.feat{i} = features(scaled, sbin/4);
+    pyra.scales(i) = 4/sc^(i-1);
+  end
+  % (sbin/2) x (sbin/2) features
+  pyra.feat{i+extra_interval} = features(scaled, sbin/2);
+  pyra.scales(i+extra_interval) = 2/sc^(i-1);
+  % sbin x sbin HOG features 
+  pyra.feat{i+extra_interval+interval} = features(scaled, sbin);
+  pyra.scales(i+extra_interval+interval) = 1/sc^(i-1);
+  % Remaining pyramid octaves 
   for j = i+interval:interval:max_scale
     scaled = resize(scaled, 0.5);
-    pyra.feat{j+interval} = features(scaled, sbin);
-    pyra.scales(j+interval) = 0.5 * pyra.scales(j);
+    pyra.feat{j+extra_interval+interval} = features(scaled, sbin);
+    pyra.scales(j+extra_interval+interval) = 0.5 * pyra.scales(j+extra_interval);
   end
 end
 

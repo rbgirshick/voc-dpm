@@ -52,12 +52,21 @@ struct model {
   /** ---------------------------------------------------------------
    ** Optimization algorithm parameters
    **/
-  // FIXME: (fix comment) Per-block learning rate gain
+  // For gradient computation, this serves as a boolean indicating
+  // if a block is learned (nonzero value) or not learned (zero value)
+  // For the legacy SGD code, this serves as the per-block learning 
+  // rate gain
   float *learn_mult;
 
-  deque<double *> w_hist;
-  vector<double> dw_norm_hist;
+  // Margin-bound pruning state (see Appendix B of my dissertation)
+  
+  // Size of weight vector history
   static const int hist_size = 50;
+  // Historical weight vectors
+  deque<double *> w_hist;
+  // Norms of the difference between the current weight vector and
+  // each historical weight vector
+  vector<double> dw_norm_hist;
 
   /** ---------------------------------------------------------------
    ** Constructor
@@ -80,7 +89,7 @@ struct model {
     // Opt. algo.
     learn_mult        = NULL;
 
-    // Weight vector history for margin bound pruning
+    // Weight vector history for margin-bound pruning
     w_hist            = deque<double *>(hist_size, NULL);
     dw_norm_hist      = vector<double>(hist_size, INFINITY);
   }

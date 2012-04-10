@@ -573,10 +573,12 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
   copy(learn_mult, learn_mult+M.num_blocks, M.learn_mult);
 
   if (!quiet) {
-    printf("%8s %10s %10s %10s\n", "block id", "dim", "reg mult", "learn");
+    mexPrintf("%8s %6s %10s %10s\n", "block id", "dim", "reg mult", "learn?");
     for (int i = 0; i < M.num_blocks; i++)
-      printf("%8d %6d %10.1f %10.1f\n", i, M.block_sizes[i], 
-                                        M.reg_mult[i], M.learn_mult[i]);
+      mexPrintf("%8d %6d %10.1f %10s (%3.1f)\n", 
+                i, M.block_sizes[i], M.reg_mult[i], 
+                (M.learn_mult[i] == 0) ? "no" : "yes", 
+                M.learn_mult[i]);
   }
 
   const mxArray *mx_comps = prhs[5];

@@ -39,10 +39,10 @@ extern bool INTERRUPTED;
 struct fv {
   // Feature vector key fields  
   enum { KEY_LABEL = 0,   // LABEL is no longer used
-         KEY_DATA_ID,
-         KEY_X,
-         KEY_Y,
-         KEY_SCALE,
+         KEY_DATA_ID,     // Source image id
+         KEY_X,           // x location
+         KEY_Y,           // y location
+         KEY_SCALE,       // scale
          KEY_LEN };
 
   int     key[KEY_LEN];
@@ -61,7 +61,9 @@ struct fv {
   double  loss;
   double  margin;
 
+  // Feature vector memory pool
   static mempool<float> feat_pool;
+  // Block label list memory pool
   static mempool<int> block_label_pool;
 
   

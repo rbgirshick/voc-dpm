@@ -12,7 +12,7 @@ BASE_DIR    = '/var/tmp/rbg';
 PASCAL_YEAR = '2011';
 
 % Models are automatically stored in BASE_DIR/PROJECT/PASCAL_YEAR/
-PROJECT     = 'rel5-dev/loc-work/person-grammar';
+PROJECT     = 'rel5-dev/person-grammar';
 
 %
 % You probably don't need to change configuration settings below this line.
