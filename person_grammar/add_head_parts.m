@@ -12,5 +12,5 @@ model = model_add_parts(model, X, 1, 2, fid, num_parts, hi_res_size, 1, a);
 model.blocks(rule.offset.blocklabel).learn = 0;
 model = model_add_parts(model, X, 3, 4, fid, num_parts, low_res_size, 0, a);
 % Prevent these rules from winning above the bottom octave
-model.rules{X}(3).loc.w = [0 -1000 -1000];
-model.rules{X}(4).loc.w = [0 -1000 -1000];
+model.blocks(model.rules{X}(3).loc.blocklabel).w = [0 -1000 -1000];
+model.blocks(model.rules{X}(4).loc.blocklabel).w = [0 -1000 -1000];
