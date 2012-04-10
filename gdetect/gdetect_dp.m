@@ -26,15 +26,6 @@ function model = symbol_score(model, s, pyra)
 % model  object model
 % s      grammar symbol
 
-% force use of high res parts when they can be placed
-for i = 1:length(model.rules{s})
-  if model.rules{s}(i).is_low_res
-    for j = 1+model.interval:length(pyra.feat)
-      model.rules{s}(i).score{j}(:) = -inf;
-    end
-  end
-end
-
 % take pointwise max over scores for each rule with s as the lhs
 rules = model.rules{s};
 score = rules(1).score;
@@ -72,16 +63,13 @@ function model = apply_structural_rule(model, r, pady, padx)
 
 % structural rule -> shift and sum scores from rhs symbols
 % prepare score for this rule
-score = model.scoretpt;
-offset_w = model_get_block(model, r.offset);
-loc_w = model_get_block(model, r.loc);
+score      = model.scoretpt;
+offset_w   = model_get_block(model, r.offset);
+loc_w      = model_get_block(model, r.loc);
+loc_f      = loc_feat(model, length(score));
+loc_scores = loc_w * loc_f;
 for i = 1:length(score)
-  scale_feat = [0; 1];
-  if i <= model.interval
-    scale_feat = [1; 0];
-  end
-  score{i}(:) = offset_w * model.features.bias ...
-                + loc_w * scale_feat;
+  score{i}(:) = offset_w * model.features.bias + loc_scores(i);
 end
 
 % sum scores from rhs (with appropriate shift and down sample)
@@ -138,24 +126,24 @@ function model = apply_deformation_rule(model, r)
 % r      deformation rule
 
 % deformation rule -> apply distance transform
-def = model_get_block(model, r.def);
-score = model.symbols(r.rhs(1)).score;
-offset_w = model_get_block(model, r.offset);
-loc_w = model_get_block(model, r.loc);
+def_w      = model_get_block(model, r.def);
+score      = model.symbols(r.rhs(1)).score;
+offset_w   = model_get_block(model, r.offset);
+loc_w      = model_get_block(model, r.loc);
+loc_f      = loc_feat(model, length(score));
+loc_scores = loc_w * loc_f;
 for i = 1:length(score)
-  scale_feat = [0; 1];
-  if i <= model.interval
-    scale_feat = [1; 0];
-  end
-  score{i} = score{i} + offset_w * model.features.bias ...
-             + loc_w * scale_feat;
-  %[score{i}, Ix{i}, Iy{i}] = dt(score{i}, def(1), def(2), def(3), def(4));
-  [score{i}, Ix{i}, Iy{i}] = bounded_dt(score{i}, def(1), def(2), ...
-                                        def(3), def(4), 4);
+  score{i} = score{i} + offset_w * model.features.bias + loc_scores(i);
+  % Bounded distance transform with +/- 4 HOG cells (9x9 window)
+  [score{i}, Ix{i}, Iy{i}] = bounded_dt(score{i}, def_w(1), def_w(2), ...
+                                        def_w(3), def_w(4), 4);
+  % Unbounded distance transform
+  %[score{i}, Ix{i}, Iy{i}] = dt(score{i}, def_w(1), def_w(2), ...
+  %                              def_w(3), def_w(4));
 end
 model.rules{r.lhs}(r.i).score = score;
-model.rules{r.lhs}(r.i).Ix = Ix;
-model.rules{r.lhs}(r.i).Iy = Iy;
+model.rules{r.lhs}(r.i).Ix    = Ix;
+model.rules{r.lhs}(r.i).Iy    = Iy;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

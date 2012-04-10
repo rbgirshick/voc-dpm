@@ -48,7 +48,7 @@ end
 if opts.isKey('loc_w')
   loc_w = opts('loc_w');
 else
-  loc_w = [0 0];
+  loc_w = [0 0 0];
 end
 
 if opts.isKey('loc_blocklabel')
@@ -80,7 +80,6 @@ m.rules{lhs}(i).detwindow         = detwindow;
 m.rules{lhs}(i).shiftwindow       = shiftwindow;
 m.rules{lhs}(i).i                 = i;
 m.rules{lhs}(i).anchor            = anchors;
-m.rules{lhs}(i).is_low_res        = false;
 m.rules{lhs}(i).offset.blocklabel = offset_bl;
 m.rules{lhs}(i).loc.blocklabel    = loc_bl;
 m.rules{lhs}(i).blocks            = [offset_bl loc_bl];

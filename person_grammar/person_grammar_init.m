@@ -173,8 +173,6 @@ M.blocks(rule.offset.blocklabel).learn = 0;
 % Add rules:
 %  Q -> XO | XYO | XYZ
 
-%regmult = 1;
-
 [M, rule] = model_add_struct_rule(M, Q, [X O], ...
                                   {[0 0 0], [0 8 0]}, ...
                                   'detection_window', [8 8]);

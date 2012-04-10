@@ -48,8 +48,8 @@ for i = 1:numparts
 
   [model, rule] = model_add_def_rule(model, N1, symbolf, 'def_w', defparams);
 
-  model.blocks(rule.loc.blocklabel).learn = 1;
-  model.blocks(rule.loc.blocklabel).regmult = 1;
+  %model.blocks(rule.loc.blocklabel).learn = 1;
+  %model.blocks(rule.loc.blocklabel).regmult = 1;
 
   % add deformation symbols to rhs of rule
   anchor1 = pfilters(i).anchor;

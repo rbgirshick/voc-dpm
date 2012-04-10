@@ -12,11 +12,11 @@ function f = loc_feat(model, num_levels)
 f = zeros(3, num_levels);
 
 b = 1;
-e = model.interval
+e = min(num_levels, model.interval);
 f(1, b:e) = 1;
 
 b = e+1;
-e = 2*e;
+e = min(num_levels, 2*e);
 f(2, b:e) = 1;
 
 b = e+1;

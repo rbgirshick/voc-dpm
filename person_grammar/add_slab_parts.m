@@ -25,5 +25,6 @@ model = model_add_parts(model, N_l, 1, [N_r 1], fid, num_parts, hi_res_size, 1, 
 [model, rule] = model_add_struct_rule(model, N_r, F_r, {[0 0 0]}, 'mirror_rule', rule);
 model.blocks(rule.offset.blocklabel).learn = 0;
 model = model_add_parts(model, N_l, 2, [N_r 2], fid, num_parts, low_res_size, 0, a);
-model.rules{N_l}(2).is_low_res = true;
-model.rules{N_r}(2).is_low_res = true;
+% Prevent these rules from winning above the bottom octave
+model.rules{N_l}(2).loc.w = [0 -1000 -1000];
+model.rules{N_r}(2).loc.w = [0 -1000 -1000];

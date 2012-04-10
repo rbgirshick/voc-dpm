@@ -65,6 +65,18 @@ else
   is_belief = 0;
 end
 
+% location/scale features
+loc_f = loc_feat(model, pyra.num_levels);
+
+% Precompute which blocks we need to write features for
+% We can skip writing features for a block if
+% the block is not learned AND the weights are all zero
+write_block = false(model.numblocks, 1);
+for i = 1:model.numblocks
+  all_zero = all(model.blocks(i).w == 0);
+  write_block(i) = ~(model.blocks(i).learn == 0 && all_zero == 0);
+end
+
 count = 0;
 for d = 1:length(trees)
   r = trees{d}(N_RULE_INDEX, 1);
@@ -81,8 +93,7 @@ for d = 1:length(trees)
     if model.symbols(sym).type == 'T'
       fi = model.symbols(sym).filter;
       bl = model.filters(fi).blocklabel;
-      w = model_get_block(model, model.filters(fi));
-      if model.blocks(bl).learn ~= 0 || sum(abs(w(:))) ~= 0
+      if write_block(bl)
         ex = addfilterfeat(model, ex,                 ...
                            trees{d}(N_X, j),          ...
                            trees{d}(N_Y, j),          ...
@@ -95,8 +106,7 @@ for d = 1:length(trees)
       ruleind = trees{d}(N_RULE_INDEX, j);
       if model.rules{sym}(ruleind).type == 'D'
         bl = model.rules{sym}(ruleind).def.blocklabel;
-        w = model_get_block(model, model.rules{sym}(ruleind).def);
-        if model.blocks(bl).learn ~= 0 || sum(abs(w)) ~= 0
+        if write_block(bl)
           dx = trees{d}(N_DX, j);
           dy = trees{d}(N_DY, j);
           def = [-(dx^2); -dx; -(dy^2); -dy];
@@ -112,20 +122,14 @@ for d = 1:length(trees)
       end
       % offset
       bl = model.rules{sym}(ruleind).offset.blocklabel;
-      w = model_get_block(model, model.rules{sym}(ruleind).offset);
-      if model.blocks(bl).learn ~= 0 || w ~= 0
+      if write_block(bl)
         ex.blocks(bl).f = model.features.bias;
       end
       % location
       bl = model.rules{sym}(ruleind).loc.blocklabel;
-      w = model_get_block(model, model.rules{sym}(ruleind).loc);
-      if model.blocks(bl).learn ~= 0 || sum(abs(w(:))) ~= 0
+      if write_block(bl)
         l = trees{d}(N_L, j);
-        f = [0; 1];
-        if l <= model.interval
-          f = [1; 0];
-        end
-        ex.blocks(bl).f = f;
+        ex.blocks(bl).f = loc_f(:,l);
       end
     end
   end
@@ -193,7 +197,7 @@ feat = [];
 bls = [];
 for i = 1:length(ex.blocks)
   % skip if empty or the features are all zero
-  if ~isempty(ex.blocks(i).f) && sum(abs(ex.blocks(i).f)) ~= 0
+  if ~isempty(ex.blocks(i).f) && ~all(ex.blocks(i).f == 0)
     feat = [feat; ex.blocks(i).f];
     bls = [bls; i-1;];
   end
