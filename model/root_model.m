@@ -52,7 +52,7 @@ model = model_create(cls, note);
 model.interval = conf.eval.interval;
 
 % add root filter
-[model, symbol] = model_add_filter(model, zeros([sz conf.features.dim]));
+[model, symbol] = model_add_terminal(model, 'w', zeros([sz conf.features.dim]));
 
 % start non-terminal
 [model, Q] = model_add_nonterminal(model);

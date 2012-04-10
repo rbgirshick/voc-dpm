@@ -1,4 +1,4 @@
-function [m, symbol, filterind] = model_add_filter(m, w, varargin)
+function [m, symbol, filterind] = model_add_terminal(m, varargin)
 % Add a filter to the model.  Automatically allocates a new block if blocklabel is empty.
 %
 % m           object model
@@ -6,8 +6,22 @@ function [m, symbol, filterind] = model_add_filter(m, w, varargin)
 % blocklabel  block to use for the filter weights
 % flip        is this filter vertically flipped
 
-valid_opts = {'blocklabel', 'flip'};
+valid_opts = {'w', 'blocklabel', 'flip', 'mirror_terminal'};
 opts = getopts(varargin, valid_opts);
+
+if opts.isKey('mirror_terminal')
+  src_terminal = opts('mirror_terminal');
+  fi = m.symbols(src_terminal).filter;
+  opts('blocklabel') = m.filters(fi).blocklabel;
+  opts('w')          = flipfeat(model_get_block(m, m.filters(fi)));
+  opts('flip')       = ~m.filters(fi).flip;
+end
+
+if opts.isKey('w')
+  w = opts('w');
+else
+  error('argument ''w'' is required');
+end
 
 if opts.isKey('blocklabel')
   blocklabel = opts('blocklabel');

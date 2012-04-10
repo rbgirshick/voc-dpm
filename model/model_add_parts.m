@@ -33,14 +33,14 @@ source = model_get_block(model, model.filters(filterind));
 pfilters = mkpartfilters(source, psize, numparts, scale);
 
 for i = 1:numparts
-  [model, symbolf, fi] = model_add_filter(model, coef_scale*pfilters(i).w);
+  [model, symbolf, fi] = model_add_terminal(model, 'w', coef_scale*pfilters(i).w);
   [model, N1] = model_add_nonterminal(model);
 
   % add deformation rule
   defoffset = 0;
   defparams = pfilters(i).alpha*[0.1 0 0.1 0];
 
-  [model, rule] = model_add_def_rule(model, N1, symbolf, defparams);
+  [model, rule] = model_add_def_rule(model, N1, symbolf, 'def_w', defparams);
 
   model.blocks(rule.loc.blocklabel).learn = 1;
   model.blocks(rule.loc.blocklabel).regmult = 1;
@@ -51,15 +51,11 @@ for i = 1:numparts
   model.rules{lhs}(ruleind).anchor = [model.rules{lhs}(ruleind).anchor anchor1];
 
   if ~isempty(partner)
-    [model, symbolfp] = model_mirror_terminal(model, symbolf);
+    [model, symbolfp] = model_add_terminal(model, 'mirror_terminal', symbolf);
     [model, N2] = model_add_nonterminal(model);
 
     % add mirrored deformation rule
-    model = model_add_def_rule(model, N2, symbolfp, defparams, ...
-                               'def_blocklabel', rule.def.blocklabel, ...
-                               'offset_blocklabel', rule.offset.blocklabel, ...
-                               'loc_blocklabel', rule.loc.blocklabel, ...
-                               'flip', true);
+    model = model_add_def_rule(model, N2, symbolfp, 'mirror_rule', rule);
 
     x = pfilters(i).anchor(1);
     y = pfilters(i).anchor(2);

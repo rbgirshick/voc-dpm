@@ -71,7 +71,7 @@ RSP  = zeros(1, num_LSPF);
 for i = 1:num_LSPF
   % Add filters
   % Front/back
-  [M, FPF(i)] = model_add_filter(M, FPF_w{i});
+  [M, FPF(i)] = model_add_terminal(M, 'w', FPF_w{i});
 end
 for i = 1:num_LSPF
   li = i;
@@ -79,23 +79,19 @@ for i = 1:num_LSPF
 
   % Add filters
   % Left/right side
-  [M, LSPF(li)] = model_add_filter(M, LSPF_w{li});
-  [M, RSPF(ri)] = model_mirror_terminal(M, LSPF(li));
+  [M, LSPF(li)] = model_add_terminal(M, 'w', LSPF_w{li});
+  [M, RSPF(ri)] = model_add_terminal(M, 'mirror_terminal', LSPF(li));
 %  % Left/right angled
-%  [M, LAPF(li)] = model_add_filter(M, LAPF_w{li});
-%  [M, RAPF(ri)] = model_mirror_terminal(M, LAPF(li));
+%  [M, LAPF(li)] = model_add_terminal(M, 'w', LAPF_w{li});
+%  [M, RAPF(ri)] = model_add_terminal(M, 'mirror_terminal', LAPF(li));
 
   % Add left/right def. schemas with subtypes
   [M, LSP(li)] = model_add_nonterminal(M);
   [M, RSP(ri)] = model_add_nonterminal(M);
   % side subtype
 
-  [M, rule] = model_add_def_rule(M, LSP(li), LSPF(li), defparams);
-  M = model_add_def_rule(M, RSP(ri), RSPF(ri), defparams, ...
-                         'def_blocklabel', rule.def.blocklabel, ...
-                         'offset_blocklabel', rule.offset.blocklabel, ...
-                         'loc_blocklabel', rule.loc.blocklabel, ...
-                         'flip', true);
+  [M, rule] = model_add_def_rule(M, LSP(li), LSPF(li), 'def_w', defparams);
+  M = model_add_def_rule(M, RSP(ri), RSPF(ri), 'mirror_rule', rule);
   M.blocks(rule.offset.blocklabel).learn = 1;
 
 %  % angled subtype
@@ -106,12 +102,8 @@ for i = 1:num_LSPF
 %  M.learnmult(obl) = 1;
 
   % front/back subtype
-  [M, rule] = model_add_def_rule(M, LSP(li), FPF(li), defparams);
-  M = model_add_def_rule(M, RSP(ri), FPF(ri), defparams, ...
-                         'def_blocklabel', rule.def.blocklabel, ...
-                         'offset_blocklabel', rule.offset.blocklabel, ...
-                         'loc_blocklabel', rule.loc.blocklabel, ...
-                         'flip', true);
+  [M, rule] = model_add_def_rule(M, LSP(li), FPF(li), 'def_w', defparams);
+  M = model_add_def_rule(M, RSP(ri), FPF(ri), 'mirror_rule', rule);
   M.blocks(rule.offset.blocklabel).learn = 1;
 end
 
@@ -128,11 +120,7 @@ for s = 0:3
     anchors{i} = [0+(i-1)*s 0 0];
   end
   [M, rule] = model_add_struct_rule(M, LS(s+1), LSP, anchors);
-  M = model_add_struct_rule(M, RS(s+1), RSP, anchors, ...
-                            'offset_w', M.blocks(rule.offset.blocklabel).w, ...
-                            'offset_blocklabel', rule.offset.blocklabel, ...
-                            'loc_w', M.blocks(rule.loc.blocklabel).w, ...
-                            'loc_blocklabel', rule.loc.blocklabel);
+  M = model_add_struct_rule(M, RS(s+1), RSP, anchors, 'mirror_rule', rule);
   M.blocks(rule.offset.blocklabel).learn = 0;
 end
 
@@ -142,13 +130,7 @@ for s = 0:3
   w = 3 + s*(num_LSPF-1);
   [M, rule] = model_add_struct_rule(M, Q, LS(s+1), {[0 0 0]}, ...
                                     'detection_window', [8 w]);
-  M = model_add_struct_rule(M, Q, RS(s+1), {[0 0 0]}, ...
-                            'offset_w', M.blocks(rule.offset.blocklabel).w, ...
-                            'offset_blocklabel', rule.offset.blocklabel, ...
-                            'loc_w', M.blocks(rule.loc.blocklabel).w, ...
-                            'loc_blocklabel', rule.loc.blocklabel, ...
-                            'detection_window', rule.detwindow, ...
-                            'shift_detection_window', rule.shiftwindow);
+  M = model_add_struct_rule(M, Q, RS(s+1), {[0 0 0]}, 'mirror_rule', rule);
 end
 
 

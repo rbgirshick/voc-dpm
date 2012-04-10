@@ -78,20 +78,20 @@ M.sbin = 8;
 M.start = Q;
 
 % Add filters to the model
-[M, X_l]   = model_add_filter(M, X_f);
-[M, X_r]   = model_mirror_terminal(M, X_l);
-[M, Y1_lf] = model_add_filter(M, Y1_f);
-[M, Y1_rf] = model_mirror_terminal(M, Y1_lf);
-[M, Y2_lf] = model_add_filter(M, Y2_f);
-[M, Y2_rf] = model_mirror_terminal(M, Y2_lf);
-[M, Y3_lf] = model_add_filter(M, Y3_f);
-[M, Y3_rf] = model_mirror_terminal(M, Y3_lf);
-[M, Y4_lf] = model_add_filter(M, Y4_f);
-[M, Y4_rf] = model_mirror_terminal(M, Y4_lf);
-[M, Y5_lf] = model_add_filter(M, Y5_f);
-[M, Y5_rf] = model_mirror_terminal(M, Y5_lf);
-[M, O_lf]  = model_add_filter(M, O_f);
-[M, O_rf]  = model_mirror_terminal(M, O_lf);
+[M, X_l]   = model_add_terminal(M, 'w', X_f);
+[M, X_r]   = model_add_terminal(M, 'mirror_terminal', X_l);
+[M, Y1_lf] = model_add_terminal(M, 'w', Y1_f);
+[M, Y1_rf] = model_add_terminal(M, 'mirror_terminal', Y1_lf);
+[M, Y2_lf] = model_add_terminal(M, 'w', Y2_f);
+[M, Y2_rf] = model_add_terminal(M, 'mirror_terminal', Y2_lf);
+[M, Y3_lf] = model_add_terminal(M, 'w', Y3_f);
+[M, Y3_rf] = model_add_terminal(M, 'mirror_terminal', Y3_lf);
+[M, Y4_lf] = model_add_terminal(M, 'w', Y4_f);
+[M, Y4_rf] = model_add_terminal(M, 'mirror_terminal', Y4_lf);
+[M, Y5_lf] = model_add_terminal(M, 'w', Y5_f);
+[M, Y5_rf] = model_add_terminal(M, 'mirror_terminal', Y5_lf);
+[M, O_lf]  = model_add_terminal(M, 'w', O_f);
+[M, O_rf]  = model_add_terminal(M, 'mirror_terminal', O_lf);
 
 defoffset = 0;
 defparams = 0.1*[0.1 0 0.1 0];
@@ -109,23 +109,23 @@ defparams = 0.1*[0.1 0 0.1 0];
 [M, Y5_r] = model_add_nonterminal(M);
 [M, O_r]  = model_add_nonterminal(M);
 
-[M, rule] = model_add_def_rule(M, Y1_l, Y1_lf, defparams);
-[M, rule] = model_add_def_rule(M, Y1_r, Y1_rf, defparams, 'mirror_rule', rule);
+[M, rule] = model_add_def_rule(M, Y1_l, Y1_lf, 'def_w', defparams);
+[M, rule] = model_add_def_rule(M, Y1_r, Y1_rf, 'mirror_rule', rule);
 
-[M, rule] = model_add_def_rule(M, Y2_l, Y2_lf, defparams);
-[M, rule] = model_add_def_rule(M, Y2_r, Y2_rf, defparams, 'mirror_rule', rule);
+[M, rule] = model_add_def_rule(M, Y2_l, Y2_lf, 'def_w', defparams);
+[M, rule] = model_add_def_rule(M, Y2_r, Y2_rf, 'mirror_rule', rule);
 
-[M, rule] = model_add_def_rule(M, Y3_l, Y3_lf, defparams);
-[M, rule] = model_add_def_rule(M, Y3_r, Y3_rf, defparams, 'mirror_rule', rule);
+[M, rule] = model_add_def_rule(M, Y3_l, Y3_lf, 'def_w', defparams);
+[M, rule] = model_add_def_rule(M, Y3_r, Y3_rf, 'mirror_rule', rule);
 
-[M, rule] = model_add_def_rule(M, Y4_l, Y4_lf, defparams);
-[M, rule] = model_add_def_rule(M, Y4_r, Y4_rf, defparams, 'mirror_rule', rule);
+[M, rule] = model_add_def_rule(M, Y4_l, Y4_lf, 'def_w', defparams);
+[M, rule] = model_add_def_rule(M, Y4_r, Y4_rf, 'mirror_rule', rule);
 
-[M, rule] = model_add_def_rule(M, Y5_l, Y5_lf, defparams);
-[M, rule] = model_add_def_rule(M, Y5_r, Y5_rf, defparams, 'mirror_rule', rule);
+[M, rule] = model_add_def_rule(M, Y5_l, Y5_lf, 'def_w', defparams);
+[M, rule] = model_add_def_rule(M, Y5_r, Y5_rf, 'mirror_rule', rule);
 
-[M, rule] = model_add_def_rule(M, O_l, O_lf, defparams);
-[M, rule] = model_add_def_rule(M, O_r, O_rf, defparams, 'mirror_rule', rule);
+[M, rule] = model_add_def_rule(M, O_l, O_lf, 'def_w', defparams);
+[M, rule] = model_add_def_rule(M, O_r, O_rf, 'mirror_rule', rule);
 
 % Add rules:
 %  X -> X_l | X_r
@@ -133,13 +133,13 @@ defparams = 0.1*[0.1 0 0.1 0];
 %  Z -> Z_l | Z_r
 %  O -> O_l | O_r
 
-[M, X] = model_add_nonterminal(M);
+[M, X]  = model_add_nonterminal(M);
 [M, Y1] = model_add_nonterminal(M);
 [M, Y2] = model_add_nonterminal(M);
 [M, Y3] = model_add_nonterminal(M);
 [M, Y4] = model_add_nonterminal(M);
 [M, Y5] = model_add_nonterminal(M);
-[M, O] = model_add_nonterminal(M);
+[M, O]  = model_add_nonterminal(M);
 
 [M, rule] = model_add_struct_rule(M, X, X_l, {[0 0 0]});
 [M, rule] = model_add_struct_rule(M, X, X_r, {[0 0 0]}, 'mirror_rule', rule);

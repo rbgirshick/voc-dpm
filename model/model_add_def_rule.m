@@ -1,22 +1,7 @@
-function [m, rule] = model_add_def_rule(m, lhs, rhs, def, varargin)
+function [m, rule] = model_add_def_rule(m, lhs, rhs, varargin)
 
-% TODO: make def -> def_w part of varargin : doesn't make sense to spec when mirroring a rule
-
-% Add a rule to the model.
-%
-% m          object model
-% type       'D'eformation or 'S'tructural
-% lhs        left hand side rule symbol
-% rhs        right hand side rule symbols
-% def
-
-%m = model_add_def_rule(m, lhs, rhs, def,
-%                       'def_blocklabel', 3,
-%                       'offset_w', r.offset.w, ...
-%                       'offset_blocklabel', r.offset.blocklabel, ...
-%                       'flip'
-
-valid_opts = {'flip', 'offset_w', 'offset_blocklabel', 'def_blocklabel', ...
+valid_opts = {'flip', 'offset_w', 'offset_blocklabel', ...
+              'def_w', 'def_blocklabel', ...
               'loc_w', 'loc_blocklabel', 'detection_window', ...
               'shift_detection_window', 'mirror_rule'};
 opts = getopts(varargin, valid_opts);
@@ -30,10 +15,12 @@ end
 
 if opts.isKey('mirror_rule')
   rule = opts('mirror_rule');
-  opts('def_blocklabel') = rule.def.blocklabel;
-  opts('offset_blocklabel') = rule.offset.blocklabel;
-  opts('loc_blocklabel') = rule.loc.blocklabel;
-  opts('flip') = true;
+  opts('flip')                    = ~rule.flip;
+  opts('def_blocklabel')          = rule.def.blocklabel;
+  opts('offset_blocklabel')       = rule.offset.blocklabel;
+  opts('loc_blocklabel')          = rule.loc.blocklabel;
+  opts('detection_window')        = rule.detwindow;
+  opts('shift_detection_window')  = rule.shiftwindow;
 end
 
 if opts.isKey('flip')
@@ -59,13 +46,19 @@ else
                                    'learn', 0);
 end
 
+if opts.isKey('def_w')
+  def_w = opts('def_w');
+else
+  error('argument ''def_w'' required');
+end
+
 if opts.isKey('def_blocklabel')
   def_bl = opts('def_blocklabel');
 else
   lb = [0.001; -inf; 0.001; -inf];
   [m, def_bl] = model_add_block(m, ...
                                 'type', block_types.SepQuadDef, ...
-                                'w', def, ...
+                                'w', def_w, ...
                                 'reg_mult', 10, ...
                                 'learn', 0.1, ...
                                 'lower_bounds', lb);
@@ -110,6 +103,6 @@ m.rules{lhs}(i).offset.blocklabel = offset_bl;
 m.rules{lhs}(i).def.blocklabel    = def_bl;
 m.rules{lhs}(i).def.flip          = flip;
 m.rules{lhs}(i).loc.blocklabel    = loc_bl;
-m.rules{lhs}(i).blocks = [offset_bl def_bl loc_bl];
+m.rules{lhs}(i).blocks            = [offset_bl def_bl loc_bl];
 
 rule = m.rules{lhs}(i);

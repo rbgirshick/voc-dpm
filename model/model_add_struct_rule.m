@@ -23,8 +23,10 @@ end
 
 if opts.isKey('mirror_rule')
   rule = opts('mirror_rule');
-  opts('offset_blocklabel') = rule.offset.blocklabel;
-  opts('loc_blocklabel') = rule.loc.blocklabel;
+  opts('offset_blocklabel')       = rule.offset.blocklabel;
+  opts('loc_blocklabel')          = rule.loc.blocklabel;
+  opts('detection_window')        = rule.detwindow;
+  opts('shift_detection_window')  = rule.shiftwindow;
 end
 
 if opts.isKey('offset_w')
@@ -80,7 +82,7 @@ m.rules{lhs}(i).anchor            = anchors;
 m.rules{lhs}(i).is_low_res        = false;
 m.rules{lhs}(i).offset.blocklabel = offset_bl;
 m.rules{lhs}(i).loc.blocklabel    = loc_bl;
-m.rules{lhs}(i).blocks = [offset_bl loc_bl];
+m.rules{lhs}(i).blocks            = [offset_bl loc_bl];
 
 m.maxsize = max([detwindow; m.maxsize]);
 m.minsize = min([detwindow; m.minsize]);
