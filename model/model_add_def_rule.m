@@ -15,7 +15,7 @@ end
 
 if opts.isKey('mirror_rule')
   rule = opts('mirror_rule');
-  opts('flip')                    = ~rule.flip;
+  opts('flip')                    = ~rule.def.flip;
   opts('def_blocklabel')          = rule.def.blocklabel;
   opts('offset_blocklabel')       = rule.offset.blocklabel;
   opts('loc_blocklabel')          = rule.loc.blocklabel;
@@ -49,7 +49,9 @@ end
 if opts.isKey('def_w')
   def_w = opts('def_w');
 else
-  error('argument ''def_w'' required');
+  if ~opts.isKey('def_blocklabel')
+    error('argument ''def_w'' required');
+  end
 end
 
 if opts.isKey('def_blocklabel')
