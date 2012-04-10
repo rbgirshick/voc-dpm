@@ -1,18 +1,24 @@
-function model = model_add_parts(model, lhs, ruleind, partner, filterind, numparts, psize, scale, coef_scale)
-% Add part filters to a model.
+function model = model_add_parts(model, lhs, ruleind, partner, ...
+                                 filterind, numparts, psize, ...
+                                 scale, coef_scale)
+
+% Adds deformable parts to a rule.
 %
-% model      object model
-% lhs        add parts to: model.rules{lhs}(ruleind)
-% ruleind    add parts to: model.rules{lhs}(ruleind)
-% partner    partner ruleind: model.rules{lhs}(ruleind) and 
-%            model.rules{lhs}(partner) are mirror images of each other
-%            Or, if length(partner) == 2: model.rules{partner(1)}(partner(2))
-% filterind  source filter to initialize parts from
-% numparts   number of parts to add
-% psize      size of each part
-% scale      number of octaves down from lhs to place parts 
-%            (only scale = 0,1 are tested)
-% coef_scale part filter coeficients are scaled by this value
+% model        object model
+% lhs          parts are added to:
+% ruleind         model.rules{lhs}(ruleind)
+% partner      partner ruleind: 
+%                 model.rules{lhs}(ruleind) and 
+%                 model.rules{lhs}(partner) are l/r mirror images of each other
+%              Or, if length(partner) == 2:
+%                 model.rules{lhs}(ruleind) and 
+%                 model.rules{partner(1)}(partner(2)) are l/r mirror images
+% filterind    filter that parts are initialize from
+% numparts     number of parts to add
+% psize        size of each part
+% scale        number of octaves down from lhs to place parts 
+%              (only scale = 0,1 have been tested)
+% coef_scale   part filter coeficients are scaled by this value
 
 % if the filter is mirrored, find its partner so mirrored
 % parts can be added to it as well

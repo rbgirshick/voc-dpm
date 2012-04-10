@@ -46,14 +46,6 @@ try
 catch
   initrand();
 
-  for i = 1:length(model.rules)
-    if ~isempty(model.rules{i})
-      for j = 1:length(model.rules{i})
-        model.rules{i}(j).is_low_res = false;
-      end
-    end
-  end
-
   syms = model.rules{model.start}(6).rhs;
   model = add_head_parts(model, syms(1), 3, [8 8], [5 5], 1);   % X
   model = add_slab_parts(model, syms(2), 2, [6 8], [3 4], 0.1); % Y1

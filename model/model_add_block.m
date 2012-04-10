@@ -1,5 +1,6 @@
 function [m, bl] = model_add_block(m, varargin);
-% Add a block of weights to the model.
+
+% Add a block of parameters to the model.
 %
 % m            object model
 
@@ -30,6 +31,7 @@ else
   shape = size(w);
 end
 
+% Dimension of the block's parameter vector
 dim = prod(shape);
 
 % OPT: reg_mult
@@ -51,7 +53,6 @@ if opts.isKey('lower_bounds')
   lower_bounds = opts('lower_bounds');
 else
   lower_bounds = -inf*ones(dim, 1);
-  %lower_bounds = -100*ones(dim, 1);
 end
 
 % OPT: type

@@ -58,7 +58,10 @@ model.interval = conf.eval.interval;
 [model, Q] = model_add_nonterminal(model);
 model.start = Q;
 
-% add structure rule deriving only a root filter placement
+% Add a structural rule for producing the root filter
+%
+% loc_w = [-1000 0] prevents the root filter from being placed
+% in the bottom octave of the feature pyramid
 model = model_add_struct_rule(model, Q, symbol, {[0 0 0]}, ...
                               'loc_w', [-1000 0], ...
                               'detection_window', sz);

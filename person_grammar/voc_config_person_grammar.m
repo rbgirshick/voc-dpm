@@ -9,10 +9,10 @@ function conf = voc_config_car_grammar(varargin)
 BASE_DIR    = '/var/tmp/rbg';
 
 % PASCAL dataset year
-PASCAL_YEAR = '2007';
+PASCAL_YEAR = '2011';
 
 % Models are automatically stored in BASE_DIR/PROJECT/PASCAL_YEAR/
-PROJECT     = 'rel5-rc/debug6-person-grammar';
+PROJECT     = 'rel5-dev/person-grammar';
 
 %
 % You probably don't need to change configuration settings below this line.
@@ -101,8 +101,8 @@ exists_or_mkdir(conf.paths.model_dir);
 % -------------------------------------------------------------------
 % Training configuration 
 % -------------------------------------------------------------------
-conf.training.train_set_fg = conf_val('training.train_set', 'trainval');
-conf.training.train_set_bg = conf_val('training.train_set', 'train');
+conf.training.train_set_fg = conf_val('training.train_set', 'train1');
+conf.training.train_set_bg = conf_val('training.train_set', 'train1');
 conf.training.C = conf_val('training.C', 0.006);
 conf.training.bias_feature = 10;
 % File size limit for the feature vector cache (2^30 bytes = 1GB)
@@ -128,7 +128,7 @@ conf.training.interval_bg = 4;
 % Evaluation configuration 
 % -------------------------------------------------------------------
 conf.eval.interval = 8;
-conf.eval.test_set = 'test';
+conf.eval.test_set = 'val1';
 conf.eval.max_thresh = -1.4;
 conf.pascal.VOCopts.testset = conf.eval.test_set;
 

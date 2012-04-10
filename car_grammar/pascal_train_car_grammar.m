@@ -37,41 +37,4 @@ catch
   save([cachedir cls '_star'], 'model');
 end
 
-
-%try 
-%  load([cachedir cls '_parts']);
-%catch
-%  initrand();
-%
-%  % add parts to head+shoulder rules at two scales
-%  %load('/var/tmp/rbg/sp/models/person_star_2010_1_1_11.mat');
-%  %load('/var/tmp/rbg/sp/models/person_star_2007_1_1_13.mat');
-%  %model.note = note;
-%
-%  for i = 1:length(model.rules)
-%    if ~isempty(model.rules{i})
-%      for j = 1:length(model.rules{i})
-%        model.rules{i}(j).is_low_res = false;
-%      end
-%    end
-%  end
-%
-%  syms = model.rules{model.start}(6).rhs;
-%  model = add_head_parts(model, syms(1), 3, [8 8], [5 5], 1);   % X
-%  model = add_slab_parts(model, syms(2), 2, [6 8], [3 4], 0.1); % Y1
-%%%
-%%  model = add_slab_parts(model, syms(3), 2, [6 8], [3 4], 0.1); % Y2
-%%  model = add_slab_parts(model, syms(4), 2, [6 8], [3 4], 0.1); % Y3
-%%  model = add_slab_parts(model, syms(5), 2, [6 8], [3 4], 0.1); % Y4
-%%  model = add_slab_parts(model, syms(6), 2, [4 8], [2 4], 0.1); % Y5
-%%  osym = model.rules{model.start}(1).rhs(2);
-%%  model = add_slab_parts(model, osym, 2, [8 8], [4 4]);         % O
-%
-%  model = train(model, impos, neg_small, false, false, 8, 20, ...
-%                max_num_examples, fg_overlap, num_fp, false, 'parts_1');
-%  model = train(model, impos, neg, false, false, 1, 5, ...
-%                max_num_examples, fg_overlap, num_fp, true, 'parts_2');
-%  save([cachedir cls '_parts'], 'model');
-%end
-
 save([cachedir cls '_final'], 'model');
