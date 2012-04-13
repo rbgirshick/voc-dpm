@@ -1,6 +1,6 @@
 function [m, rule] = model_add_struct_rule(m, lhs, rhs, anchors, varargin)
 
-% Add a structural production schema to the model:
+% Add a structural schema to the model:
 %  LHS(\omega) --f(\omega)--> RHS_1(\omega+anchors_1) ... RHS_N(\omega+anchors_N),
 %  where f(\omega) = offset_w + loc_w * loc_feat(\omega)
 %

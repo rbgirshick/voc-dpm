@@ -1,5 +1,10 @@
 function [m, rule] = model_add_def_rule(m, lhs, rhs, varargin)
 
+% Add a deformation schema to the model:
+%  LHS(\omega) --f(\omega,\delta)--> RHS(\omega+\delta)
+%  where f(\omega,\delta) = offset_w + loc_w * loc_feat(\omega) 
+%                                    + def_w * def_feat(\delta)
+
 valid_opts = {'flip', 'offset_w', 'offset_blocklabel', ...
               'def_w', 'def_blocklabel', ...
               'loc_w', 'loc_blocklabel', 'detection_window', ...
