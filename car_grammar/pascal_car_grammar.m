@@ -2,7 +2,9 @@ function pascal_car_grammar(dotrainval, testyear)
 
 % Set configuration override
 global VOC_CONFIG_OVERRIDE;
-VOC_CONFIG_OVERRIDE = @voc_config_car_grammar;
+if isempty(VOC_CONFIG_OVERRIDE)
+  VOC_CONFIG_OVERRIDE = @voc_config_car_grammar;
+end
 
 cls = 'car';
 conf = voc_config();
@@ -49,3 +51,6 @@ fprintf('AP = %.4f (without bounding box prediction)\n', ap1)
 if dotrainval
   trainval(cls);
 end
+
+% Clear the override
+clearvars -global VOC_CONFIG_OVERRIDE;

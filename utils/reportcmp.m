@@ -33,5 +33,5 @@ I = (score1 == 0)|(score2 == 0);
 score1(I) = [];
 score2(I) = [];
 fprintf('Computing p-value...');
-[p, ptt] = rndtest(score1, score2);
+[p, ptt] = rndtest(score1', score2');
 fprintf('\nProbability that difference is due to chance: p = %.4f permutation test (%.4f t-test)\n', p, ptt);
