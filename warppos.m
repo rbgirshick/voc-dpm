@@ -13,7 +13,8 @@ numpos = length(pos);
 warped = cell(numpos);
 cropsize = (fsize+2) * model.sbin;
 parfor i = 1:numpos
-  fprintf('%s: warp: %d/%d\n', model.class, i, numpos);
+  fprintf('%s %s: warp: %d/%d\n', ...
+          procid(), model.class, i, numpos)
   im = imreadx(pos(i));
   padx = model.sbin * widths(i) / pixels(2);
   pady = model.sbin * heights(i) / pixels(1);

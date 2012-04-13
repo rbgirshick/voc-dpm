@@ -21,14 +21,6 @@
 
 #define IS_ALIGNED(ptr) ((((uintptr_t)(ptr)) & 0xF) == 0)
 
-/**
- * Compile with:
- * mex -O CXXFLAGS="\$CXXFLAGS -march=native" fconvsse.cc
- *
- * You may need to replace `native` with the arch of your machine's CPU
- * if you're using an older version of gcc that doesn't support -march=native.
- */
-
 // N.B. If you change the number of features you will need to unroll
 // the unrolled loop in process() more.
 #define NUM_FEATURES 32

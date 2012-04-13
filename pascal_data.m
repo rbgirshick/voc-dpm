@@ -28,8 +28,8 @@ catch
   numimpos = 0;
   dataid = 0;
   for i = 1:length(ids);
-    fprintf('%s: parsing positives (%s %s): %d/%d\n', ...
-            cls, dataset_fg, year, i, length(ids));
+    tic_toc_print('%s: parsing positives (%s %s): %d/%d\n', ...
+                  cls, dataset_fg, year, i, length(ids));
     rec = PASreadrecord(sprintf(VOCopts.annopath, ids{i}));
     clsinds = strmatch(cls, {rec.objects(:).class}, 'exact');
     % skip difficult examples
@@ -118,7 +118,8 @@ catch
   neg = [];
   numneg = 0;
   for i = 1:length(ids);
-    fprintf('%s: parsing negatives (%s %s): %d/%d\n', cls, dataset_bg, year, i, length(ids));
+    tic_toc_print('%s: parsing negatives (%s %s): %d/%d\n', ...
+                  cls, dataset_bg, year, i, length(ids));
     rec = PASreadrecord(sprintf(VOCopts.annopath, ids{i}));
     clsinds = strmatch(cls, {rec.objects(:).class}, 'exact');
     if length(clsinds) == 0

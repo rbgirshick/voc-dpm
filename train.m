@@ -151,7 +151,8 @@ for t = 1:iter
   cache = zeros(negiter,4);
   neg_loss = zeros(negiter,1);
   for tneg = 1:negiter
-    fprintf('%s iter: %d/%d, neg iter %d/%d\n', procid(), t, iter, tneg, negiter);
+    fprintf('%s iter: %d/%d, neg iter %d/%d\n', ...
+            procid(), t, iter, tneg, negiter);
        
     if datamine
       % add new negatives
@@ -401,7 +402,8 @@ is_belief = 1;
 is_mined = 0;
 loss = 0;
 for i = 1:numpos
-  fprintf('%s %s: iter %d: warped positive: %d/%d\n', procid(), model.class, t, i, numpos);
+  fprintf('%s %s: iter %d: warped positive: %d/%d\n', ...
+          procid(), model.class, t, i, numpos);
   bbox = [pos(i).x1 pos(i).y1 pos(i).x2 pos(i).y2];
   % skip small examples
   if (bbox(3)-bbox(1)+1)*(bbox(4)-bbox(2)+1) < minsize
@@ -409,7 +411,7 @@ for i = 1:numpos
   end    
   % get example
   im = warped{i};
-  feat = features(im, model.sbin);
+  feat = features(double(im), model.sbin);
   key = [0 i 0 0 0];
   bls = [obl; fbl] - 1;
   feat = [model.features.bias; feat(:)];
@@ -585,7 +587,8 @@ is_belief = 0;
 is_mined = 1;
 loss = 1;
 for i = 1:numneg
-  fprintf('%s %s: iter %d: random negatives: %d/%d\n', procid(), model.class, t, i, numneg);
+  tic_toc_print('%s %s: iter %d: random negatives: %d/%d\n', ...
+                procid(), model.class, t, i, numneg);
   im = imreadx(neg(i));
   feat = features(double(im), model.sbin);  
   if size(feat,2) > rsize(2) && size(feat,1) > rsize(1)

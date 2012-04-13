@@ -83,6 +83,11 @@ catch
     filterind = i;
     model = model_add_parts(model, model.start, ruleind, ...
                             partner, filterind, 8, [6 6], 1);
+    % Enable learning scale prior
+    bl = model.rules{model.start}(i).loc.blocklabel;
+    model.blocks(bl).w(:)     = 0;
+    model.blocks(bl).learn    = 1;
+    model.blocks(bl).reg_mult = 1;
   end
   model = train(model, impos, neg_small, false, false, 8, 10, ...
                 max_num_examples, fg_overlap, num_fp, false, 'parts_1');

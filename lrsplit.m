@@ -19,8 +19,9 @@ end
 % cache features
 fprintf('Caching features\n');
 for i = 1:length(warped)
-  fprintf('%d/%d\n', i, length(warped));
-  feats{i} = features(warped{i}, model.sbin);
+  tic_toc_print('%s %s: lrsplit features: %d/%d\n', ...
+                procid(), model.class, i, length(warped));
+  feats{i} = features(double(warped{i}), model.sbin);
   feats{i} = feats{i}(:);
 end
 

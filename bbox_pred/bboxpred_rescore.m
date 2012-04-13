@@ -30,7 +30,8 @@ ids = textread(sprintf(VOCopts.imgsetpath, testset), '%s');
 newboxes = cell(length(parts1),1);
 newparts = cell(length(parts1),1);
 for i = 1:length(parts1)
-  fprintf('%s %s: bbox rescoring %s: %d/%d\n', procid(), name, testset, i, length(parts1));
+  tic_toc_print('%s %s: bbox rescoring %s: %d/%d\n', ...
+                procid(), name, testset, i, length(parts1));
   if isempty(parts1{i})
     continue;
   end

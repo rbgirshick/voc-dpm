@@ -51,12 +51,12 @@ end
 model = model_create(cls, note);
 model.interval = conf.eval.interval;
 
-% add root filter
-[model, symbol] = model_add_terminal(model, 'w', zeros([sz conf.features.dim]));
-
 % start non-terminal
 [model, Q] = model_add_nonterminal(model);
 model.start = Q;
+
+% add root filter
+[model, symbol] = model_add_terminal(model, 'w', zeros([sz conf.features.dim]));
 
 % Add a structural rule for producing the root filter
 %
