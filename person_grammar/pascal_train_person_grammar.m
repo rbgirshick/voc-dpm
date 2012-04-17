@@ -8,7 +8,7 @@ function model = pascal_train_person_grammar(note)
 % At every "checkpoint" in the training process we reset the 
 % RNG's seed to a fixed value so that experimental results are 
 % reproducible.
-initrand();
+seed_rand();
 
 if nargin < 3
   note = '';
@@ -34,7 +34,7 @@ model.note = note;
 try 
   load([cachedir cls '_star']);
 catch
-  initrand();
+  seed_rand();
   model = train(model, impos, neg_small, false, false, 1, 20, ...
                 max_num_examples, fg_overlap, num_fp, false, 'star');
   save([cachedir cls '_star'], 'model');
@@ -44,7 +44,7 @@ end
 try 
   load([cachedir cls '_parts']);
 catch
-  initrand();
+  seed_rand();
 
   syms = model.rules{model.start}(6).rhs;
   model = add_head_parts(model, syms(1), 3, [8 8], [5 5], 1);   % X

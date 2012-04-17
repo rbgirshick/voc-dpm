@@ -386,7 +386,7 @@ function [front, angled, side] = train_car_views()
 conf = voc_config(); 
 cachedir = conf.paths.model_dir;
 
-initrand();
+seed_rand();
 cls = 'car';
 cachesize = 24000;
 n = 3;

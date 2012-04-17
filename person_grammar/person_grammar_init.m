@@ -15,7 +15,7 @@ cachedir = conf.paths.model_dir;
 try
   load([cachedir 'person_full_person_2x']);
 catch
-  initrand();
+  seed_rand();
   cls = 'person';
   note = 'full person trained at 2x resolution';
   n = 3;
@@ -518,7 +518,7 @@ save([cachedir cls '_simple_grammar_occ_def'], 'model');
 %function train_full_person_2x_res_noLR()
 %
 %globals; 
-%initrand();
+%seed_rand();
 %cls = 'person';
 %note = 'full person trained at 2x resolution';
 %n = 3;

@@ -3,7 +3,7 @@ function model = pascal_train_car_grammar(note)
 % At every "checkpoint" in the training process we reset the 
 % RNG's seed to a fixed value so that experimental results are 
 % reproducible.
-initrand();
+seed_rand();
 
 if nargin < 2
   note = '';
@@ -28,7 +28,7 @@ model = car_grammar_init();
 try 
   load([cachedir cls '_star']);
 catch
-  initrand();
+  seed_rand();
   model = train(model, impos, neg_small, false, false, 8, 20, ...
                 max_num_examples, fg_overlap, num_fp, false, 'star');
   model = train(model, impos, neg, false, false, 1, 5, ...

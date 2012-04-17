@@ -1,4 +1,4 @@
-function initrand()
+function seed_rand()
 % Initialize random number generator to a fixed seed.
 % This ensures that results are reproducible.
 

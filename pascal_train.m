@@ -8,7 +8,7 @@ function model = pascal_train(cls, n, note)
 % At every "checkpoint" in the training process we reset the 
 % RNG's seed to a fixed value so that experimental results are 
 % reproducible.
-initrand();
+seed_rand();
 
 if nargin < 3
   note = '';
@@ -34,7 +34,7 @@ neg_small = neg_small(1:conf.training.num_negatives_small);
 try
   load([cachedir cls '_lrsplit1']);
 catch
-  initrand();
+  seed_rand();
   for i = 1:n
     % split data into two groups: left vs. right facing instances
     models{i} = root_model(cls, spos{i}, note, 'N');
@@ -51,7 +51,7 @@ end
 try
   load([cachedir cls '_lrsplit2']);
 catch
-  initrand();
+  seed_rand();
   for i = 1:n
     models{i} = lr_root_model(models{i});
     models{i} = train(models{i}, spos{i}, neg_small, false, false, 4, 3, ...
@@ -65,7 +65,7 @@ end
 try 
   load([cachedir cls '_mix']);
 catch
-  initrand();
+  seed_rand();
   model = model_merge(models);
   model = train(model, impos, neg_small, false, false, 1, 5, ...
                 max_num_examples, fg_overlap, num_fp, false, 'mix');
@@ -76,7 +76,7 @@ end
 try 
   load([cachedir cls '_parts']);
 catch
-  initrand();
+  seed_rand();
   for i = 1:2:2*n
     ruleind = i;
     partner = i+1;
