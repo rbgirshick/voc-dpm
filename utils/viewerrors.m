@@ -1,80 +1,23 @@
-function ap = viewerrors(cls, boxes, testset, year, saveim, model)
+function ap = viewerrors(model, boxes, testset, year, saveim)
 
-% ap = pascal_eval(cls, boxes, testset, suffix)
-% Score bounding boxes using the PASCAL development kit.
+% For visualizing mistakes on the validation set
 
 warning on verbose;
 warning off MATLAB:HandleGraphics:noJVM;
 
-if nargin < 5
-  saveim = true;
-end
+cls = model.class;
 
 conf = voc_config('pascal.year', year, ...
                   'eval.test_set', testset);
 VOCopts  = conf.pascal.VOCopts;
 cachedir = conf.paths.model_dir;
 
-ids = textread(sprintf(VOCopts.imgsetpath, testset), '%s');
+% Load test set ground-truth
+fprintf('%s: viewerrors: loading ground truth\n', cls);
+[gtids, recs, hash, gt, npos] = load_ground_truth(model, conf);
 
-% write out detections in PASCAL format and score
-fid = fopen(sprintf(VOCopts.detrespath, 'comp3', cls), 'w');
-for i = 1:length(ids);
-  bbox = boxes{i};
-  for j = 1:size(bbox,1)
-    fprintf(fid, '%s %.14f %d %d %d %d\n', ids{i}, bbox(j,end), bbox(j,1:4));
-  end
-end
-fclose(fid);
-
-
-% load test set
-
-cp = [cachedir cls '_ground_truth_' testset '_' year];
-try
-  load(cp, 'gtids', 'recs', 'hash', 'gt', 'npos');
-  fprintf('%s: pr: loaded ground truth\n', cls);
-catch
-  [gtids, t] = textread(sprintf(VOCopts.imgsetpath,VOCopts.testset), '%s %d');
-  tic;
-  for i = 1:length(gtids)
-    % display progress
-    if toc > 1
-      fprintf('%s: pr: load: %d/%d\n', cls, i, length(gtids));
-      drawnow;
-      tic;
-    end
-
-    % read annotation
-    recs(i) = PASreadrecord(sprintf(VOCopts.annopath, gtids{i}));
-  end
-
-  % hash image ids
-  hash = xVOChash_init(gtids);
-          
-  % extract ground truth objects
-  npos = 0;
-  gt(length(gtids)) = struct('BB', [], 'diff', [], 'det', [], 'overlap', [], 'tp_boxes', []);
-  for i = 1:length(gtids)
-    % extract objects of class
-    clsinds = strmatch(cls, {recs(i).objects(:).class}, 'exact');
-    gt(i).BB = cat(1, recs(i).objects(clsinds).bbox)';
-    gt(i).diff = [recs(i).objects(clsinds).difficult];
-    gt(i).det = false(length(clsinds), 1);
-    gt(i).overlap = -inf*ones(length(clsinds), 1);
-    gt(i).tp_boxes = zeros(length(clsinds), 4);
-    npos = npos + sum(~gt(i).diff);
-  end
-
-  save(cp, 'gtids', 'recs', 'hash', 'gt', 'npos');
-end
-
-fprintf('%s: pr: evaluating detections\n',cls);
-
-% load results
-[ids, confidence, b1, b2, b3, b4] = ...
-  textread(sprintf(VOCopts.detrespath, 'comp3', cls), '%s %f %f %f %f %f');
-BB = [b1 b2 b3 b4]';
+% Load detections from the model
+[ids, confidence, BB] = get_detections(boxes, model, conf);
 
 % sort detections by decreasing confidence
 [sc, si] = sort(-confidence);
@@ -87,14 +30,9 @@ tp = zeros(nd,1);
 fp = zeros(nd,1);
 md = zeros(nd,1);
 od = zeros(nd,1);
-tic;
 for d = 1:2000%nd
   % display progress
-  if toc > 1
-    fprintf('%s: pr: compute: %d/%d\n',cls,d,nd);
-    drawnow;
-    tic;
-  end
+  tic_toc_print('%s: pr: compute: %d/%d\n',cls,d,nd);
   
   % find ground truth image
   i = xVOChash_lookup(hash, ids{d});
@@ -140,16 +78,19 @@ for d = 1:2000%nd
   if ovmax >= VOCopts.minoverlap
     if ~gt(i).diff(jmax)
       if ~gt(i).det(jmax)
-        tp(d) = 1;            % true positive
+        % true positive
+        tp(d) = 1;
         gt(i).det(jmax) = true;
         gt(i).tp_boxes(jmax,:) = bb';
       else
-        fp(d) = 1;            % false positive (multiple detection)
+        % false positive (multiple detection)
+        fp(d) = 1;
         md(d) = 1;
       end
     end
   else
-    fp(d) = 1;                    % false positive
+    % false positive (low or no overlap)
+    fp(d) = 1;
   end
 end
 
@@ -159,8 +100,7 @@ ctp = cumsum(tp);
 rec = ctp/npos;
 prec = ctp./(cfp+ctp);
 
-
-fprintf('total recalled = %d / %d\n', sum(tp), npos);
+fprintf('total recalled = %d/%d (%.1f%%)\n', sum(tp), npos, 100*sum(tp)/npos);
 
 if 1
 
@@ -172,12 +112,13 @@ end
 fprintf('displaying false positives\n');
 count = 0;
 d = 1;
-while rec(d) <= 0.4
+while d < nd && rec(d) <= 0.6
   if fp(d)
     count = count + 1;
     i = xVOChash_lookup(hash, ids{d});
     im = imread([VOCopts.datadir recs(i).imgname]);
 
+    % Recompute the detection to get the derivation tree
     score = -sc(d);
     [det, bs, trees] = imgdetect(im, model, model.thresh);
     I = find(abs(det(:,end) - score) < 1e-6);
@@ -289,19 +230,71 @@ if saveim
   fclose(htmlfid);
 end
 
-%% % compute precision/recall
-%% fp=cumsum(fp);
-%% tp=cumsum(tp);
-%% rec=tp/npos;
-%% prec=tp./(fp+tp);
-%% 
-%% % compute average precision
-%% 
-%% ap=0;
-%% for t=0:0.1:1
-%%     p=max(prec(rec>=t));
-%%     if isempty(p)
-%%         p=0;
-%%     end
-%%     ap=ap+p/11;
-%% end
+
+function [gtids, recs, hash, gt, npos] = load_ground_truth(model, conf)
+
+VOCopts  = conf.pascal.VOCopts;
+year     = conf.pascal.year;
+cachedir = conf.paths.model_dir;
+cls      = model.class;
+testset  = conf.eval.test_set;
+
+cp = [cachedir cls '_ground_truth_' testset '_' year];
+try
+  load(cp, 'gtids', 'recs', 'hash', 'gt', 'npos');
+catch
+  [gtids, t] = textread(sprintf(VOCopts.imgsetpath,VOCopts.testset), '%s %d');
+  for i = 1:length(gtids)
+    % display progress
+    tic_toc_print('%s: pr: load: %d/%d\n', cls, i, length(gtids));
+    % read annotation
+    recs(i) = PASreadrecord(sprintf(VOCopts.annopath, gtids{i}));
+  end
+
+  % hash image ids
+  hash = xVOChash_init(gtids);
+     
+  % extract ground truth objects
+  npos = 0;
+  gt(length(gtids)) = struct('BB', [], 'diff', [], 'det', [], 'overlap', [], 'tp_boxes', []);
+  for i = 1:length(gtids)
+    % extract objects of class
+    clsinds = strmatch(cls, {recs(i).objects(:).class}, 'exact');
+    gt(i).BB = cat(1, recs(i).objects(clsinds).bbox)';
+    gt(i).diff = [recs(i).objects(clsinds).difficult];
+    gt(i).det = false(length(clsinds), 1);
+    gt(i).overlap = -inf*ones(length(clsinds), 1);
+    gt(i).tp_boxes = zeros(length(clsinds), 4);
+    npos = npos + sum(~gt(i).diff);
+  end
+
+  save(cp, 'gtids', 'recs', 'hash', 'gt', 'npos');
+end
+
+
+
+function [ids, confidence, BB] = get_detections(boxes, model, conf)
+
+VOCopts  = conf.pascal.VOCopts;
+year     = conf.pascal.year;
+cachedir = conf.paths.model_dir;
+cls      = model.class;
+testset  = conf.eval.test_set;
+
+ids = textread(sprintf(VOCopts.imgsetpath, testset), '%s');
+
+% Write and read detection data in the same way as pascal_eval.m 
+% and the VOCdevkit
+
+% write out detections in PASCAL format and score
+fid = fopen(sprintf(VOCopts.detrespath, 'comp3', cls), 'w');
+for i = 1:length(ids);
+  bbox = boxes{i};
+  for j = 1:size(bbox,1)
+    fprintf(fid, '%s %.14f %d %d %d %d\n', ids{i}, bbox(j,end), bbox(j,1:4));
+  end
+end
+fclose(fid);
+[ids, confidence, b1, b2, b3, b4] = ...
+  textread(sprintf(VOCopts.detrespath, 'comp3', cls), '%s %f %f %f %f %f');
+BB = [b1 b2 b3 b4]';
