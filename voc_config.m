@@ -12,7 +12,7 @@ BASE_DIR    = '/var/tmp/rbg';
 PASCAL_YEAR = '2007';
 
 % Models are automatically stored in BASE_DIR/PROJECT/PASCAL_YEAR/
-PROJECT     = 'rel5-dev/mix-loc';
+PROJECT     = 'rel5-dev/learn-loc-w';
 
 %
 % You probably don't need to change configuration settings below this line.

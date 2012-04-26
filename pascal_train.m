@@ -78,8 +78,8 @@ try
 catch
   seed_rand();
   for i = 1:2:2*n
-    ruleind = i;
-    partner = i+1;
+    ruleind   = i;
+    partner   = i+1;
     filterind = i;
     model = model_add_parts(model, model.start, ruleind, ...
                             partner, filterind, 8, [6 6], 1);

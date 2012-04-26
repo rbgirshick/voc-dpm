@@ -1,7 +1,7 @@
-function reportcmp(dir1, suffix1, dir2, suffix2)
+function report(dir1, suffix1, dir2, suffix2)
 
-conf = voc_config();
-VOCopts = conf.pascal.VOCopts;
+globals;
+pascal_init;
 
 count1 = 0;
 count2 = 0;
@@ -29,9 +29,8 @@ fprintf('   ------------------------------\n');
 fprintf('%12s %.3f -> %.3f\tdiff = %6.3f\n', 'average', a1, a2, a2-a1);
 
 % remove missing data points
-I = (score1 == 0)|(score2 == 0);
-score1(I) = [];
-score2(I) = [];
-fprintf('Computing p-value...');
-[p, ptt] = rndtest(score1', score2');
-fprintf('\nProbability that difference is due to chance: p = %.4f permutation test (%.4f t-test)\n', p, ptt);
+%score1(score1 == 0) = [];
+%score2(score2 == 0) = [];
+%fprintf('Computing p-value...');
+%p = rndtest(score1, score2);
+%fprintf('\nProbability that difference is due to chance: p = %.4f\n', p);
