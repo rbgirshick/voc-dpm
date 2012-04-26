@@ -123,13 +123,21 @@ for d = 1:length(trees)
       % offset
       bl = model.rules{sym}(ruleind).offset.blocklabel;
       if write_block(bl)
-        ex.blocks(bl).f = model.features.bias;
+        if isempty(ex.blocks(bl).f)
+          ex.blocks(bl).f = model.features.bias;
+        else
+          ex.blocks(bl).f = ex.blocks(bl).f + model.features.bias;
+        end
       end
-      % location
+      % location/scale features
       bl = model.rules{sym}(ruleind).loc.blocklabel;
       if write_block(bl)
         l = trees{d}(N_L, j);
-        ex.blocks(bl).f = loc_f(:,l);
+        if isempty(ex.blocks(bl).f)
+          ex.blocks(bl).f = loc_f(:,l);
+        else
+          ex.blocks(bl).f = ex.blocks(bl).f + loc_f(:,l);
+        end
       end
     end
   end

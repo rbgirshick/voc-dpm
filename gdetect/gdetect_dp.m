@@ -64,12 +64,12 @@ function model = apply_structural_rule(model, r, pady, padx)
 % structural rule -> shift and sum scores from rhs symbols
 % prepare score for this rule
 score      = model.scoretpt;
-offset_w   = model_get_block(model, r.offset);
+bias       = model_get_block(model, r.offset) * model.features.bias;
 loc_w      = model_get_block(model, r.loc);
 loc_f      = loc_feat(model, length(score));
 loc_scores = loc_w * loc_f;
 for i = 1:length(score)
-  score{i}(:) = offset_w * model.features.bias + loc_scores(i);
+  score{i}(:) = bias + loc_scores(i);
 end
 
 % sum scores from rhs (with appropriate shift and down sample)
@@ -128,12 +128,12 @@ function model = apply_deformation_rule(model, r)
 % deformation rule -> apply distance transform
 def_w      = model_get_block(model, r.def);
 score      = model.symbols(r.rhs(1)).score;
-offset_w   = model_get_block(model, r.offset);
+bias       = model_get_block(model, r.offset) * model.features.bias;
 loc_w      = model_get_block(model, r.loc);
 loc_f      = loc_feat(model, length(score));
 loc_scores = loc_w * loc_f;
 for i = 1:length(score)
-  score{i} = score{i} + offset_w * model.features.bias + loc_scores(i);
+  score{i} = score{i} + bias + loc_scores(i);
   % Bounded distance transform with +/- 4 HOG cells (9x9 window)
   [score{i}, Ix{i}, Iy{i}] = bounded_dt(score{i}, def_w(1), def_w(2), ...
                                         def_w(3), def_w(4), 4);

@@ -18,11 +18,13 @@ end
 
 % cache features
 fprintf('Caching features\n');
-for i = 1:length(warped)
+numpos = length(warped);
+dim = numel(features(double(warped{1}), model.sbin));
+F = zeros(numpos, dim);
+for i = 1:numpos
   tic_toc_print('%s %s: lrsplit features: %d/%d\n', ...
                 procid(), model.class, i, length(warped));
-  feats{i} = features(double(warped{i}), model.sbin);
-  feats{i} = feats{i}(:);
+  F(i,:) = reshape(features(double(warped{i}), model.sbin), [1 dim]);
 end
 
 maxiter = 25;
@@ -30,9 +32,10 @@ bestv = inf;
 A = [];
 B = [];
 for j = 1:maxiter
-  [tmpA tmpB v] = cluster(feats);
+  tic_toc_print('cluster iter: %d/%d\n', j, maxiter);
+  [tmpA tmpB v] = cluster(F);
   if v < bestv
-    fprintf('new total intra-cluster variance: %f\n', v);
+    fprintf('cluster objective: %.3f\n', v);
     A = tmpA;
     B = tmpB;
     bestv = v;
@@ -57,7 +60,7 @@ end
 
 
 function [A B v] = cluster(pos)
-numpos = length(pos);
+numpos = size(pos,1);
 
 % pick seed example at random
 % we know that if k is even, then
@@ -66,8 +69,8 @@ k = 2*ceil(rand(1)*floor(numpos/2));
 A = [k];
 B = [k-1];
 
-Asum = pos{k};
-Bsum = pos{k-1};
+Asum = pos(k,:);
+Bsum = pos(k-1,:);
 
 % go over data in a random order
 % greedily assign each example to the closest
@@ -80,8 +83,8 @@ for i = inds
     continue;
   end
 
-  f1 = pos{i};
-  f2 = pos{i-1};
+  f1 = pos(i,:);
+  f2 = pos(i-1,:);
   
   dA = norm(f1 - Asum./length(A));
   dB = norm(f1 - Bsum./length(B));
@@ -111,8 +114,8 @@ for j = 1:maxiter
   for i = inds
     Ai = A(i);
     Bi = B(i);
-    f1 = pos{Ai};
-    f2 = pos{Bi};
+    f1 = pos(Ai,:);
+    f2 = pos(Bi,:);
     
     dA = norm(f1 - (Asum-f1)./(length(A)-1));
     dB = norm(f1 - (Bsum-f2)./(length(B)-1));
@@ -127,21 +130,13 @@ for j = 1:maxiter
   end
 
   % compute total intra-cluster variance
-  v = 0;
-  for i = A
-    f = pos{i};
-    v = v + sum((f - Asum./length(A)).^2);
-  end
-
-  for i = B
-    f = pos{i};
-    v = v + sum((f - Bsum./length(B)).^2);
-  end
+  Amu = Asum./length(A);
+  Bmu = Bsum./length(B);
+  v = sum(sum((bsxfun(@minus, pos(A,:), Amu).^2)));
+  v = v + sum(sum((bsxfun(@minus, pos(B,:), Bmu).^2)));
 
   if v == prevv
     break;
   end
   prevv = v;
-
-  %fprintf('total intra-cluster variance: %f\n', v);
 end
