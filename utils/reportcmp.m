@@ -1,12 +1,11 @@
 function report(dir1, suffix1, dir2, suffix2)
 
-globals;
-pascal_init;
+conf = voc_config();
 
 count1 = 0;
 count2 = 0;
-for i=1:length(VOCopts.classes)
-  cls = VOCopts.classes{i};
+for i=1:length(conf.pascal.VOCopts.classes)
+  cls = conf.pascal.VOCopts.classes{i};
   try
     load([dir1 cls suffix1]);
     ap1 = ap;
