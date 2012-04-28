@@ -1,9 +1,29 @@
-function [A x1 y1 x2 y2 w h] = bboxpred_input(dets, boxes)
-% Prepare input for the bbox predictor from detections dets
-% and filter bounding boxes boxes.
+function [A, x1, y1, x2, y2, w, h] = bboxpred_input(dets, boxes)
+% Construct input for the bbox predictor from detections
+% and filter bounding boxes.
+%   [A, x1, y1, x2, y2, w, h] = bboxpred_input(dets, boxes)
 %
-% dets   detection window coordinates
-% boxes  coordinates for each filter placed in the detection
+%   If beta_x1 is a vector of vector of learned regression coefficients for
+%   predicting the new location of the x1 component of a bounding box,
+%   the new x1 is predicted as:
+%
+%     dx1 = A*beta_x1;
+%     x1 = x1 + w*dx1;
+%
+%   Computing x2, y1, and y2 are similar.
+%
+% Return values
+%   A       Each row is a feature vector (predictor variables)
+%   x1      Original detection window coordinates
+%   y1        ...
+%   x2        ...
+%   y2        ...
+%   w       Widths of original detection windows
+%   h       Heights of original detection windows
+%
+% Arguments
+%   dets   detection window coordinates
+%   boxes  coordinates for each filter placed in the detection
 
 % detection windows' coordinates
 x1 = dets(:,1);

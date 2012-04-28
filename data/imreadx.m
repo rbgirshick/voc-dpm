@@ -1,8 +1,12 @@
 function im = imreadx(ex)
-
 % Read a training example image.
+%   im = imreadx(ex)
 %
-% ex  an example returned by pascal_data.m
+% Return value
+%   im    The image specified by the example ex
+%
+% Argument
+%   ex    An example returned by pascal_data.m
 
 im = color(imread(ex.im));
 if ex.flip

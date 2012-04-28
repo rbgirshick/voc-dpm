@@ -1,4 +1,13 @@
 function map = getopts(in, valid_keys)
+% Convert a cell array of alternating (key, value) pairs into a map.
+%   map = getopts(in, valid_keys)
+%
+% Return value
+%   map         Map of (key, value) pairs from input in
+%
+% Arguments
+%   in          Cell array of alternating (key, value) pairs
+%   valid_keys  Valid keys that can be extracted from in
 
 map = containers.Map();
 

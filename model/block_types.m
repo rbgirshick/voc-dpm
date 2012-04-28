@@ -1,3 +1,4 @@
+% Symbols for the various types of parameter blocks in a model
 classdef block_types
   enumeration
     Filter,       % HOG filter

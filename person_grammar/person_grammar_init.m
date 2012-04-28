@@ -22,7 +22,7 @@ catch
 
   [pos, neg, impos] = pascal_data(cls, conf.pascal.year);
   % split data by aspect ratio into n groups
-  spos = split('person', pos, n);
+  spos = split(pos, n);
   spos = spos{3};
   cachesize = 24000;
 
@@ -30,12 +30,12 @@ catch
     load([cachedir 'person_model_full_person_2x_1_1_1']);
     load([cachedir 'person_model_full_person_2x_pos_inds']);
   catch
-    model = root_model(cls, spos, note, 'N', 8, [23 8]);
+    model = root_model(cls, spos, note, 8, [23 8]);
     % allow root detections in the first pyramid octave
     lbl = model.rules{model.start}(1).loc.blocklabel;
     model.blocks(lbl).w(:) = 0;
 
-    inds = lrsplit(model, spos, 3);
+    inds = lrsplit(model, spos);
     model = train(model, spos(inds), neg, true, true, 1, 1, ...
                   cachesize, 0.7, 0, false, 'full_person_2x_1');
     save([cachedir 'person_model_full_person_2x_pos_inds'], 'inds');
@@ -525,11 +525,11 @@ save([cachedir cls '_simple_grammar_occ_def'], 'model');
 %
 %[pos, neg, impos] = pascal_data(cls, true, VOCyear);
 %% split data by aspect ratio into n groups
-%spos = split('person', pos, n);
+%spos = split(pos, n);
 %spos = spos{3};
 %cachesize = 24000;
 %
-%model = root_model(cls, spos, note, 'N', 8, [23 8]);
+%model = root_model(cls, spos, note, 8, [23 8]);
 %try
 %  load([cachedir 'person_model_full_person_noLR_2x_1_1_1']);
 %catch
@@ -560,19 +560,19 @@ save([cachedir cls '_simple_grammar_occ_def'], 'model');
 %%r3 = imresize(r3, 2, 'bicubic');
 %
 %sz = size(r1);
-%m = root_model('person', [], '', 'N', 8, sz(1:2));
+%m = root_model('person', [], '', 8, sz(1:2));
 %m.filters(1).w = r1;
 %m = lr_root_model(m);
 %models{3} = m;
 %
 %sz = size(r2);
-%m = root_model('person', [], '', 'N', 8, sz(1:2));
+%m = root_model('person', [], '', 8, sz(1:2));
 %m.filters(1).w = r2;
 %m = lr_root_model(m);
 %models{2} = m;
 %
 %sz = size(r3);
-%m = root_model('person', [], '', 'N', 8, sz(1:2));
+%m = root_model('person', [], '', 8, sz(1:2));
 %m.filters(1).w = r3;
 %m = lr_root_model(m);
 %models{1} = m;

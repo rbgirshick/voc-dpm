@@ -1,5 +1,18 @@
 function conf = voc_config(varargin)
-% Set up configuration variables
+% Set up configuration variables.
+%   conf = voc_config(varargin)
+%
+%   Each variable is named by a path that identifies a field
+%   in the returned conf structure. For example, 'pascal.year'
+%   corresponds to conf.pascal.year. You can set configuration
+%   variables in 3 ways:
+%   1) File: directly editing values in this file
+%   2) Per-call: pass an override as an argument to this function
+%      E.g., conf = voc_config('pascal.year', '2011');
+%   3) Per-session: assign the global variable VOC_CONFIG_OVERRIDE
+%      to a function that returns a conf structure with specific
+%      overrides set. This method is persistent until VOC_CONFIG_OVERRIDE
+%      is cleared. See sample_voc_config_override.m for an example.
 
 %
 % ~~~~~~~~~~~~~~~~~~~~~~ BASIC SETUP ~~~~~~~~~~~~~~~~~~~~~~
@@ -12,7 +25,7 @@ BASE_DIR    = '/var/tmp/rbg';
 PASCAL_YEAR = '2007';
 
 % Models are automatically stored in BASE_DIR/PROJECT/PASCAL_YEAR/
-PROJECT     = 'rel5-dev/learn-loc-w';
+PROJECT     = 'rel5-dev/learn-loc-w-2';
 
 %
 % You probably don't need to change configuration settings below this line.

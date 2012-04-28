@@ -393,7 +393,7 @@ n = 3;
 
 [pos, neg, impos] = pascal_data(cls, conf.pascal.year);
 % split data by aspect ratio into n groups
-spos = split(cls, pos, n);
+spos = split(pos, n);
 side_pos = spos{1};
 angled_pos = spos{2};
 front_pos = spos{3};
@@ -402,12 +402,12 @@ try
   load([cachedir cls '_init_side']);
 catch
   note = 'side view';
-  model = root_model(cls, side_pos, note, 'N', 8, [8 21]);
+  model = root_model(cls, side_pos, note, 8, [8 21]);
   % allow root detections in the first pyramid octave
   lbl = model.rules{model.start}(1).loc.blocklabel;
   model.blocks(lbl).w(:) = 0;
 
-  inds = lrsplit(model, side_pos, 3);
+  inds = lrsplit(model, side_pos);
 
   model = train(model, side_pos(inds), neg, true, true, 1, 1, ...
                 cachesize, 0.7, 0, false, 'init_side_1');
@@ -422,12 +422,12 @@ try
   load([cachedir cls '_init_angled']);
 catch
   note = 'angled view';
-  model = root_model(cls, angled_pos, note, 'N', 8, [8 15]);
+  model = root_model(cls, angled_pos, note, 8, [8 15]);
   % allow root detections in the first pyramid octave
   lbl = model.rules{model.start}(1).loc.blocklabel;
   model.blocks(lbl).w(:) = 0;
 
-  inds = lrsplit(model, angled_pos, 3);
+  inds = lrsplit(model, angled_pos);
 
   model = train(model, angled_pos(inds), neg, true, true, 1, 1, ...
                 cachesize, 0.7, 0, false, 'init_angled_1');
@@ -443,12 +443,12 @@ try
   load([cachedir cls '_init_front']);
 catch
   note = 'front view';
-  model = root_model(cls, front_pos, note, 'N', 8, [8 9]);
+  model = root_model(cls, front_pos, note, 8, [8 9]);
   % allow root detections in the first pyramid octave
   lbl = model.rules{model.start}(1).loc.blocklabel;
   model.blocks(lbl).w(:) = 0;
 
-  inds = lrsplit(model, front_pos, 3);
+  inds = lrsplit(model, front_pos);
 
   model = train(model, front_pos(inds), neg, true, true, 1, 1, ...
                 cachesize, 0.7, 0, false, 'init_front_1');

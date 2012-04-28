@@ -1,10 +1,16 @@
 function [ap, newap] = bboxpred_rescore(name, testset, year, method)
-% Recompute score on testset using bounding box prediction.
+% Apply bounding box prediction to detections from a test dataset.
+%   [ap, newap] = bboxpred_rescore(name, testset, year, method)
 %
-% name     class name
-% testset  test set name
-% year     dataset year
-% method   regression method
+% Return values
+%   ap        AP score without bounding box prediction
+%   newap     AP score with bounding box prediction
+%
+% Arguments
+%   name      Object class
+%   testset   Test dataset name (e.g., 'val', 'test')
+%   year      Test dataset year (e.g., '2007', '2011')
+%   method    Regression method
 
 conf = voc_config('pascal.year', year);
 VOCopts = conf.pascal.VOCopts;
@@ -19,7 +25,7 @@ try
     bboxpred = model.bboxpred;
   end
 catch
-  model = bboxpred_train(name, year, method);
+  model = bboxpred_train(name, method);
   bboxpred = model.bboxpred;
 end
 

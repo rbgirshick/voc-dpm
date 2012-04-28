@@ -1,8 +1,8 @@
 function showboxes(im, boxes, out)
-
-% showboxes(im, boxes, out)
-% Draw bounding boxes on top of image.
-% If out is given, a pdf of the image is generated (requires export_fig).
+% Draw bounding boxes on top of an image.
+%   showboxes(im, boxes, out)
+%
+%   If out is given, a pdf of the image is generated (requires export_fig).
 
 if nargin > 2
   % different settings for producing pdfs

@@ -1,7 +1,19 @@
 function [ap, prec, recall] = pascal_eval(cls, boxes, testset, year, suffix)
-
-% ap = pascal_eval(cls, boxes, testset, suffix)
 % Score bounding boxes using the PASCAL development kit.
+%   [ap, prec, recall] = pascal_eval(cls, boxes, testset, suffix)
+%
+% Return values
+%   ap        Average precision score
+%   prec      Precision at each detection sorted from high to low confidence
+%   recall    Recall at each detection sorted from high to low confidence
+%
+% Arguments
+%   cls       Object class to evaluate
+%   boxes     Detection bounding boxes returned by pascal_test.m
+%   testset   Test set to evaluate against (e.g., 'val', 'test')
+%   year      Test set year to use  (e.g., '2007', '2011')
+%   suffix    Results are saved to a file named:
+%             [cls '_pr_' testset '_' suffix]
 
 conf = voc_config('pascal.year', year, ...
                   'eval.test_set', testset);

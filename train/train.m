@@ -1,21 +1,27 @@
 function model = train(model, pos, neg, warp, randneg, iter, ...
                        negiter, max_num_examples, fg_overlap, ...
                        num_fp, cont, tag, C)
-
-% model = train(model, pos, neg, warp, randneg, iter,
-%               negiter, maxsize, overlap, cont, C)
-% Train LSVM.
+% Train a model optimizing a WL-SSVM or LSVM.
+%   model = train(model, pos, neg, warp, randneg, iter,
+%                 negiter, max_num_examples, fg_overlap, 
+%                 num_fp, cont, tag, C)
 %
-% warp=1 uses warped positives
-% warp=0 uses latent positives
-% randneg=1 uses random negaties
-% randneg=0 uses hard negatives
-% iter is the number of training iterations
-% negiter is the number of data-mining steps within each training iteration
-% maxnum is the maximum number of negative examples to put in the training data file
-% overlap is the minimum overlap in latent positive search
-% cont=true we restart training from a previous run
-% C are the parameters for LSVM objective function
+% Return value
+%   model     The new model
+%
+% Arguments
+%   warp      1 => use warped positives
+%             0 => use latent positives
+%   randneg   1 => use random negaties
+%             0 => use hard negatives
+%   iter      The number of training iterations
+%   negiter   The number of data-mining steps within each training iteration
+%   max_num_examples  
+%             The maximum number of negative examples that the feature vector
+%             cache may hold
+%   overlap   The minimum overlap in latent positive search
+%   cont      True => restart training from a previous run
+%   C         Regularization/surrogate loss tradeoff parameter
 
 conf = voc_config();
 

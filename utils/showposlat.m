@@ -4,7 +4,7 @@ conf = voc_config();
 
 % get training data
 if nargin < 3
-  pos = pascal_data(model.class, true, model.year);
+  pos = pascal_data(model.class, model.year);
 end
 
 numpos = length(pos);

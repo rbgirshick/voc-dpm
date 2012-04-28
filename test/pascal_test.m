@@ -1,17 +1,27 @@
-function boxes1 = pascal_test(cls, model, testset, year, suffix)
-
-% boxes1 = pascal_test(cls, model, testset, year, suffix)
+function boxes1 = pascal_test(model, testset, year, suffix)
 % Compute bounding boxes in a test set.
-% boxes1 are detection windows and scores.
-
-% Now we also save the locations of each filter for rescoring
-% parts1 gives the locations for the detections in boxes1
-% (these are saved in the cache file, but not returned by the function)
+%   boxes1 = pascal_test(model, testset, year, suffix)
+%
+% Return value
+%   boxes1  Detection clipped to the image boundary. Cells are index by image
+%           in the order of the PASCAL ImageSet file for the testset.
+%           Each cell contains a matrix who's rows are detections. Each
+%           detection specifies a clipped subpixel bounding box and its score.
+% Arguments
+%   model   Model to test
+%   testset Dataset to test the model on (e.g., 'val', 'test')
+%   year    Dataset year to test the model on  (e.g., '2007', '2011')
+%   suffix  Results are saved to a file named:
+%           [model.class '_boxes_' testset '_' suffix]
+%
+%   We also save the bounding boxes of each filter (include root filters) 
+%   in parts1.
 
 conf = voc_config('pascal.year', year, ...
                   'eval.test_set', testset);
 VOCopts  = conf.pascal.VOCopts;
 cachedir = conf.paths.model_dir;
+cls = model.class;
 
 ids = textread(sprintf(VOCopts.imgsetpath, testset), '%s');
 
@@ -50,10 +60,14 @@ catch
 
       % Save filter boxes in parts
       if model.type == model_types.MixStar
+        % Use the structure of a mixture of star models 
+        % (with a fixed number of parts) to reduce the 
+        % size of the bounding box matrix
         boxes = reduceboxes(model, boxes);
         parts1{i} = boxes;
       else
-        % record unclipped detection window and all filter boxes
+        % We cannot apply reduceboxes to a general grammar model
+        % Record unclipped detection window and all filter boxes
         parts1{i} = cat(2, unclipped_dets, boxes);
       end
     else

@@ -1,11 +1,15 @@
-function model = bboxpred_train(name, year, method)
+function model = bboxpred_train(name, method)
 % Train a bounding box predictor.
+%   model = bboxpred_train(name, year, method)
 %
-% name    class name
-% year    dataset year
-% method  regression method (default is LS regression)
+% Return value
+%   model   Model with the bounding box predictor stored in model.bboxpred
+%
+% Arguments
+%   name    Object class
+%   method  Regression method (default is least squares regression)
 
-conf = voc_config('pascal.year', year);
+conf = voc_config();
 
 if nargin < 3
   method = 'default';
@@ -41,7 +45,7 @@ end
 function beta = getcoeffs(method, X, y)
 switch lower(method)
   case 'default'
-    % matlab's magic box of matrix inversion tricks
+    % Least squares regression
     beta = X\y;
   case 'minl2'
     % regularized LS regression

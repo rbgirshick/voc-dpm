@@ -1,6 +1,16 @@
 function [ap1, ap2] = trainval(cls)
-% Evaluates the detector for class cls on the trainval dataset.
-% This function is used to collect detections for context rescoring.
+% Evaluate the detector for class cls on the trainval dataset.
+%   [ap1, ap2] = trainval(cls)
+%
+%   This function is used to collect detections for context rescoring.
+%
+% Return values
+%   ap1   Score without bounding box prediction
+%   ap2   Score with bounding box prediction
+%
+% Argument
+%   cls   Class to evaluate 
+%         (if no class is specified all classes are evaluated)
 
 if nargin < 1
   % pass no arguments in order to run on all classes
@@ -23,6 +33,6 @@ VOCyear = conf.pascal.year;
 
 load([conf.paths.model_dir cls '_final']);
 model.thresh = min(conf.eval.max_thresh, model.thresh);
-boxes1 = pascal_test(cls, model, 'trainval', VOCyear, VOCyear);
+boxes1 = pascal_test(model, 'trainval', VOCyear, VOCyear);
 ap1 = pascal_eval(cls, boxes1, 'trainval', VOCyear, VOCyear);
 [ign, ap2] = bboxpred_rescore(cls, 'trainval', VOCyear);

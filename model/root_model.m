@@ -1,10 +1,22 @@
-function model = root_model(cls, pos, note, symmetry, sbin, sz)
-
-% model = initmodel(cls, pos, note, symmetry, sbin, sz)
-% Initialize model structure.
+function model = root_model(cls, pos, note, sbin, sz)
+% Initialize a root-only model structure.
+%   model = initmodel(cls, pos, note, symmetry, sbin, sz)
 %
-% If not supplied the dimensions of the model template are computed
-% from statistics in the postive examples.
+%   If sz is not supplied, the dimensions of the root filter are computed
+%   from statistics in the postive examples.
+%   
+%   By default the root filter is prevented from being placed in the bottom
+%   octave of the feature pyramid (where higher res. parts will eventually go).
+%
+% Return value
+%   model   A model with a single root filter
+%
+% Arguments
+%   cls     Object class
+%   pos     Positive examples to use for estimating filter size if sz not given
+%   note    Descriptive note to attach to the model
+%   sbin    Pixel size of the HOG feature cells (e.g., 8)
+%   sz      Size of the root filter
 
 conf = voc_config();
 
@@ -12,18 +24,14 @@ if nargin < 3
   note = '';
 end
 
-if nargin < 4
-  symmetry = 'N';
-end
-
 % size of HOG features
-if nargin < 5
+if nargin < 4
   model.sbin = conf.features.sbin;
 else
   model.sbin = sbin;
 end
 
-if nargin < 6
+if nargin < 5
   % pick mode of aspect ratios
   h = [pos(:).y2]' - [pos(:).y1]' + 1;
   w = [pos(:).x2]' - [pos(:).x1]' + 1;

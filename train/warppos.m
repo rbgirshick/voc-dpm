@@ -1,8 +1,15 @@
 function warped = warppos(model, pos)
-
-% warped = warppos(name, model, pos)
 % Warp positive examples to fit model dimensions.
-% Used for training root filters from positive bounding boxes.
+%   warped = warppos(model, pos)
+%
+%   Used for training root filters from positive bounding boxes.
+%
+% Return value
+%   warped  Cell array of images
+%
+% Arguments
+%   model   Root filter only model
+%   pos     Positive examples from pascal_data.m
 
 fi = model.symbols(model.rules{model.start}.rhs).filter;
 fsize = model.filters(fi).size;

@@ -1,9 +1,35 @@
 function [m, rule] = model_add_def_rule(m, lhs, rhs, varargin)
-
-% Add a deformation schema to the model:
-%  LHS(\omega) --f(\omega,\delta)--> RHS(\omega+\delta)
-%  where f(\omega,\delta) = offset_w + loc_w * loc_feat(\omega) 
-%                                    + def_w * def_feat(\delta)
+% Add a deformation schema (rule) to the model.
+%   [m, rule] = model_add_def_rule(m, lhs, rhs, varargin)
+%
+%   Deformation schemas have the form
+%
+%   LHS(\omega) --f(\omega,\delta)--> RHS(\omega+\delta)
+%   where f(\omega,\delta) = offset_w * offset_feat 
+%                            + loc_w * loc_feat(\omega) 
+%                            + def_w * def_feat(\delta)
+%
+% Return values
+%   m         Updated model
+%   rule      New rule added to the model
+%
+% Arguments
+%   m         Model to update
+%   lhs       Left-hand-side symbol for the rule
+%   rhs       Right-hand-side symbol for the rule
+%   varargin  (key, value) pairs that can specify the following:
+%   key                         value
+%   ---                         -----
+%   flip                        True or false (default)
+%   offset_w                    Offset/bias parameter value
+%   offset_blocklabel           model.blocks index
+%   def_w                       Deformation parameters values
+%   def_blocklabel              model.blocks index
+%   loc_w                       Location/scale parameters values
+%   loc_blocklabel              model.blocks index
+%   detection_window            Detection window size
+%   shift_detection_window      Detection window shift
+%   mirror_rule                 Rule structure to horizontally mirror
 
 valid_opts = {'flip', 'offset_w', 'offset_blocklabel', ...
               'def_w', 'def_blocklabel', ...

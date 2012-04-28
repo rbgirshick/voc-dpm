@@ -1,13 +1,22 @@
 function pyra = featpyramid(im, model, padx, pady)
-
-% pyra = featpyramid(im, model, padx, pady);
-% Compute feature pyramid.
+% Compute a feature pyramid.
+%   pyra = featpyramid(im, model, padx, pady)
 %
-% pyra.feat{i} is the i-th level of the feature pyramid.
-% pyra.scales{i} is the scaling factor used for the i-th level.
-% pyra.feat{i+interval} is computed at exactly half the resolution of feat{i}.
-% first octave halucinates higher resolution data.
-% padx,pady optionally pads each level of the feature pyramid
+% Return value
+%   pyra    Feature pyramid (see details below)
+%
+% Arguments
+%   im      Input image
+%   model   Model (for use in determining amount of 
+%           padding if pad{x,y} not given)
+%   padx    Amount of padding in the x direction (for each level)
+%   pady    Amount of padding in the y direction (for each level)
+%
+% Pyramid structure (basics)
+%   pyra.feat{i}    The i-th level of the feature pyramid
+%   pyra.feat{i+interval} 
+%                   Feature map computed at exactly half the 
+%                   resolution of pyra.feat{i}
 
 if nargin < 3
   [padx, pady] = getpadding(model);

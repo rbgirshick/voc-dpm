@@ -1,22 +1,26 @@
-function [A B] = lrsplit(model, pos, i)
-% Attempt to split examples in pos into a left facing cluster and a 
-% right facing cluster.
+function [A, B] = lrsplit(model, pos)
+% Orientation clustering.
+%   [A, B] = lrsplit(model, pos, i)
+% 
+%   Attempt to split examples in pos into a left-facing cluster and a 
+%   right-facing cluster.
 %
-% model  object model
-% pos    examples where i even and i-1 are flipped copies of each other
-% i      index for caching warped positives
+% Return values
+%   A     Cluster 1 indicies in pos 
+%   B     Cluster 2 indicies in pos
+%
+% Arguments
+%   model Object model
+%   pos   Examples from pascal_data.m
+%         (Assumes: even index i and odd index i-1 are flipped 
+%          copies of each other)
 
 conf = voc_config();
 
-try
-  load([conf.paths.model_dir model.class '_warped_' num2str(i) '_' model.year]);
-catch
-  warped = warppos(model, pos);
-  % useful for debugging:
-  % save([conf.paths.model_dir model.class '_warped_' num2str(i) '_' model.year]);
-end
+% Get warpped positives
+warped = warppos(model, pos);
 
-% cache features
+% Cache features
 fprintf('Caching features\n');
 numpos = length(warped);
 dim = numel(features(double(warped{1}), model.sbin));
@@ -27,6 +31,7 @@ for i = 1:numpos
   F(i,:) = reshape(features(double(warped{i}), model.sbin), [1 dim]);
 end
 
+% Run clustering algorithm with maxiter random starting points
 maxiter = 25;
 bestv = inf;
 A = [];
@@ -62,8 +67,8 @@ end
 function [A B v] = cluster(pos)
 numpos = size(pos,1);
 
-% pick seed example at random
-% we know that if k is even, then
+% Pick a seed example at random
+% We know that if k is even, then
 % k-1 is a flipped copy of k
 k = 2*ceil(rand(1)*floor(numpos/2));
 A = [k];
@@ -72,8 +77,8 @@ B = [k-1];
 Asum = pos(k,:);
 Bsum = pos(k-1,:);
 
-% go over data in a random order
-% greedily assign each example to the closest
+% Go over data in a random order
+% Greedily assign each example to the closest
 % cluster and its flipped copy to the other cluster
 inds = 2:2:numpos;
 inds = inds(randperm(length(inds)));
@@ -102,13 +107,13 @@ for i = inds
   end
 end
 
-% relax cluster
-% search for better local optima by swapping 
+% Local search
+% Search for better local optima by swapping 
 % a single example if advantageous
 maxiter = 10;
 prevv = inf;
 for j = 1:maxiter
-  % go over data in a random order
+  % Go over data in a random order
   inds = 1:length(A);
   inds = inds(randperm(length(inds)));
   for i = inds
@@ -120,7 +125,7 @@ for j = 1:maxiter
     dA = norm(f1 - (Asum-f1)./(length(A)-1));
     dB = norm(f1 - (Bsum-f2)./(length(B)-1));
 
-    % check if we should swap
+    % Check if we should swap
     if dB < dA
       A(i) = Bi;
       B(i) = Ai;
@@ -129,7 +134,7 @@ for j = 1:maxiter
     end
   end
 
-  % compute total intra-cluster variance
+  % Compute total intra-cluster variance
   Amu = Asum./length(A);
   Bmu = Bsum./length(B);
   v = sum(sum((bsxfun(@minus, pos(A,:), Amu).^2)));

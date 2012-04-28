@@ -1,7 +1,6 @@
 function im = HOGpicture(w, bs)
-
-% HOGpicture(w, bs)
 % Make picture of positive HOG weights.
+%   im = HOGpicture(w, bs)
 
 % construct a "glyph" for each orientaion
 bim1 = zeros(bs, bs);

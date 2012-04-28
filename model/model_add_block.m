@@ -1,15 +1,21 @@
 function [m, bl] = model_add_block(m, varargin);
-
 % Add a block of parameters to the model.
+%   [m, bl] = model_add_block(m, varargin)
 %
-% m            object model
-
-% reg_mult
-% learn
-% lower_bounds
-% shape
-% w
-% type
+% Return values
+%   m         Updated model
+%
+% Arguments
+%   m         Model to update
+%   varargin  (key, value) pairs that can specify the following:
+%   key             value
+%   ---             -----
+%   reg_mult        Block regularization cost
+%   learn           0 => parameters are not learned; 1 => they are learned
+%   lower_bounds    Lower-bound box contraints for each parameter in this block
+%   shape           Dimensions of this block (e.g., [6 6 32])
+%   w               Block parameter values
+%   type            Block type from the block_type enumeration
 
 valid_opts = {'reg_mult', 'learn', 'lower_bounds', 'shape', 'w', 'type'};
 opts = getopts(varargin, valid_opts);

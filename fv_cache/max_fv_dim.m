@@ -1,4 +1,18 @@
 function [dim, nblocks] = max_fv_dim(model)
+% FIXME BUG!  nblocks is not the max number of blocks!
+%
+% Each derivation is represented by a block sparse feature vector.
+% This function computes the max dimension of that feature vector over all
+% derivations. It also computes the maximum number of blocks used by any
+% derivation.
+%   [dim, nblocks] = max_fv_dim(model)
+%
+% Return values
+%   dim       Maximum feature vector dimension over all derivations
+%   nblocks   Maximum number of blocks used by any derivation
+%
+% Argument
+%   model     Object model
 
 model = filter_dims(model);
 

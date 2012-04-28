@@ -1,15 +1,35 @@
 function pascal(cls, n, note, dotrainval, testyear)
-
-% ap = pascal(cls, n, note)
-% Train and score a model with 2*n components.
-% note allows you to save a note with the trained model
-% example: note = 'testing FRHOG (FRobnicated HOG) features'
-% testyear allows you to test on a year other than VOCyear (set in globals.m)
+% Train and evaluate a model. 
+%   pascal(cls, n, note, dotrainval, testyear)
+%
+%   The model will be a mixture of n star models, each of which
+%   has 2 latent orientations.
+%
+% Arguments
+%   cls           Object class to train and evaluate
+%   n             Number of aspect ratio clusters to use
+%                 (The final model has 2*n components)
+%   note          Save a note in the model.note field that describes this model
+%   dotrainval    Also evaluate on the trainval dataset
+%                 This is used to collect training data for context rescoring
+%   testyear      Test set year (e.g., '2007', '2011')
 
 conf = voc_config();
 cachedir = conf.paths.model_dir;
 testset = conf.eval.test_set;
 
+% TODO: should save entire code used for this run
+% Take the code, zip it into an archive named by date
+% print the name of the code archive to the log file
+% add the code name to the training note
+timestamp = datestr(datevec(now()), 'dd.mmm.yyyy:HH.MM.SS');
+
+% Set the note to the training time if none is given
+if nargin < 3
+  note = timestamp;
+end
+
+% Don't evaluate trainval by default
 if nargin < 4
   dotrainval = false;
 end
@@ -19,38 +39,34 @@ if nargin < 5
   testyear = conf.pascal.year;
 end
 
-% TODO: should save entire code used for this run
-% Take the code, zip it into an archive named by date
-% print the name of the code archive to the log file
-% add the code name to the training note
-timestamp = datestr(datevec(now()), 'dd.mmm.yyyy:HH.MM.SS');
-
-% set the note to the training time if none is given
-if nargin < 3
-  note = timestamp;
-end
-
-% record a log of the training and test procedure
+% Record a log of the training and test procedure
 diary(conf.training.log([cls '-' timestamp]));
 
+% Train a model (and record how long it took)
 th = tic;
 model = pascal_train(cls, n, note);
 toc(th);
-% Free feature vector cache memory
+
+% Free the feature vector cache memory
 fv_cache('free');
 
-% lower threshold to get high recall
+% Lower threshold to get high recall
 model.thresh = min(conf.eval.max_thresh, model.thresh);
 model.interval = conf.eval.interval;
 
-boxes1 = pascal_test(cls, model, testset, testyear, testyear);
-ap1 = pascal_eval(cls, boxes1, testset, testyear, testyear);
-[ap1, ap2] = bboxpred_rescore(cls, testset, testyear);
+% Collect detections on the test set
+boxes = pascal_test(model, testset, testyear, testyear);
 
+% Evaluate the model without bounding box prediction
+ap1 = pascal_eval(cls, boxes, testset, testyear, testyear);
+fprintf('AP = %.4f (without bounding box prediction)\n', ap1)
+
+% Recompute AP after applying bounding box prediction
+[ap1, ap2] = bboxpred_rescore(cls, testset, testyear);
 fprintf('AP = %.4f (without bounding box prediction)\n', ap1)
 fprintf('AP = %.4f (with bounding box prediction)\n', ap2)
 
-% compute detections on the trainval dataset (used for context rescoring)
+% Compute detections on the trainval dataset (used for context rescoring)
 if dotrainval
   trainval(cls);
 end

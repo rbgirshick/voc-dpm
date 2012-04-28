@@ -1,7 +1,10 @@
 function visualizemodel(model, components, layers)
-
-% visualizemodel(model)
-% Visualize a model.
+% Visualize a mixture of star models.
+%   visualizemodel(model)
+%
+% Arguments
+%   model       Model to visualize
+%   components  Which components to draw
 
 clf;
 if nargin < 2

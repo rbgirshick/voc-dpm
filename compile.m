@@ -1,4 +1,18 @@
 function compile(opt, verb)
+% Build MEX source code.
+%   All compiled binaries are placed in the bin/ directory.
+%
+%   Windows users: Windows is not yet supported. You can likely 
+%   get the code to compile with some modifications, but please 
+%   do not email to ask for support.
+%
+% Arguments
+%   opt   Compile with optimizations (default: on)
+%   verb  Verbose output (default: off)
+
+if ispc
+  error('This code is not supported on Windows.');
+end
 
 if nargin < 1
   opt = true;
@@ -8,22 +22,27 @@ if nargin < 2
   verb = false;
 end
 
+% Build feature vector cache code
 fv_compile(opt, verb);
 
+% Start building the mex command
 mexcmd = 'mex -outdir bin';
 
+% Add verbosity if requested
 if verb
   mexcmd = [mexcmd ' -v'];
 end
 
+% Add optimizations if requested
 if opt
   mexcmd = [mexcmd ' -O'];
   mexcmd = [mexcmd ' CXXOPTIMFLAGS="-O3 -DNDEBUG"'];
   mexcmd = [mexcmd ' LDOPTIMFLAGS="-O3"'];
 else
-  mexcmd = cat(2, mexcmd, ' -g');
+  mexcmd = [mexcmd ' -g'];
 end
 
+% Turn all warnings on
 mexcmd = [mexcmd ' CXXFLAGS="\$CXXFLAGS -Wall"'];
 mexcmd = [mexcmd ' LDFLAGS="\$LDFLAGS -Wall"'];
 
@@ -34,22 +53,15 @@ eval([mexcmd ' gdetect/bounded_dt.cc']);
 eval([mexcmd ' gdetect/get_detection_trees.cc']);
 eval([mexcmd ' gdetect/compute_overlap.cc']);
 
-% use one of the following depending on your setup
-% 0 is fastest, 3 is slowest 
+% Convolution routine
+%   Use one of the following depending on your setup
+%   (0) is fastest, (2) is slowest 
 
 % 0) multithreaded convolution using SSE
 eval([mexcmd ' gdetect/fconvsse.cc -o fconv']);
 
-% 1) multithreaded convolution using blas
-%    WARNING: the blas version does not work with matlab >= 2010b 
-%    and Intel CPUs
-% mex -O fconvblasMT.cc -lmwblas -o fconv
+% 1) mulththreaded convolution without blas
+% eval([mexcmd ' gdetect/fconvMT.cc -o fconv']);
 
-% 2) mulththreaded convolution without blas
-% mex -O fconvMT.cc -o fconv
-
-% 3) convolution using blas
-% mex -O fconvblas.cc -lmwblas -o fconv
-
-% 4) basic convolution, very compatible
-% mex -O fconv.cc -o fconv
+% 2) basic convolution, very compatible
+% eval([mexcmd ' gdetect/fconv.cc -o fconv']);

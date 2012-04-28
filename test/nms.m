@@ -1,9 +1,20 @@
 function pick = nms(boxes, overlap)
-
-% pick = nms(boxes, overlap) 
 % Non-maximum suppression.
-% Greedily select high-scoring detections and skip detections
-% that are significantly covered by a previously selected detection.
+%   pick = nms(boxes, overlap) 
+% 
+%   Greedily select high-scoring detections and skip detections that are 
+%   significantly covered by a previously selected detection.
+%
+% Return value
+%   pick      Indices of locally maximal detections
+%
+% Arguments
+%   boxes     Detection bounding boxes (see pascal_test.m)
+%   overlap   Overlap threshold for suppression
+%             For a selected box Bi, all boxes Bj that are covered by 
+%             more than overlap are suppressed. Note that 'covered' is
+%             is |Bi \cap Bj| / |Bj|, not the PASCAL intersection over 
+%             union measure.
 
 if isempty(boxes)
   pick = [];

@@ -1,7 +1,17 @@
 function [dets, boxes, targets] = bboxpred_data(name)
 % Collect training data for bounding box prediction.
+%   [dets, boxes, targets] = bboxpred_data(name)
 %
-% name  class name
+% Return values
+%   dets      Predicted bounding boxes (clipped to the image)
+%             One cell percomponent
+%   boxes     All filter bounding boxes (unclipped)
+%             One cell percomponent
+%   targets   Ground-truth bounding boxes (clipped)
+%             One cell percomponent
+%
+% Argument
+%   name      Object class
 
 conf = voc_config();
 
@@ -11,7 +21,7 @@ catch
   % load final model for class
   load([conf.paths.model_dir name '_final']);
   % get training data
-  [pos,neg] = pascal_data(model.class, model.year);
+  pos = pascal_data(model.class, model.year);
 
   numpos = length(pos);
   model.interval = conf.training.interval_fg;
@@ -27,7 +37,7 @@ catch
     parb{i} = cell(1,nrules);
     part{i} = cell(1,nrules);
     fprintf('%s %s: bboxdata: %d/%d\n', procid(), name, i, numpos);
-    bbox = [pos(i).x1 pos(i).y1 pos(i).x2 pos(i).y2];
+    bbox = pos(i).boxes;
     % skip small examples
     if (bbox(3)-bbox(1)+1)*(bbox(4)-bbox(2)+1) < minsize
       continue;
@@ -38,7 +48,6 @@ catch
     [pyra, model_dp] = gdetect_pos_prepare(im, model, bbox, 0.7);
     [det, boxes] = gdetect_pos(pyra, model_dp, 1, ...
                                1, 0.7, [], 0.5);
-    %[det, boxes] = imgdetect(im, model, 0, bbox, 0.7);
     if ~isempty(det)
       % component index
       c = det(1,end-1);
@@ -47,7 +56,6 @@ catch
       pard{i}{c} = [pard{i}{c}; det(:,1:end-2)];
       parb{i}{c} = [parb{i}{c}; boxes(:,1:end-2)];
       part{i}{c} = [part{i}{c}; bbox];
-      %showboxes(im, box);
     end
   end
   dets = cell(1,nrules);

@@ -1,8 +1,21 @@
 function [dets, parts, I] = clipboxes(im, dets, parts)
-
-% [dets, parts, I] = clipboxes(im, dets, parts)
-% Clips detection windows to image boundary.
-% Removes detections that are outside of the image.
+% Clip detection windows to image the boundary.
+%   [dets, parts, I] = clipboxes(im, dets, parts)
+%
+%   Any detection that is entirely outside of the image (i.e., it is entirely
+%   inside the padded region of the feature pyramid) is removed.
+%
+% Return values
+%   dets    Set of detection bounding boxes after clipping 
+%           and (possibly) pruning
+%   parts   Set of filter bounding boxes after clipping and
+%           (possibly) pruning
+%   I       Indicies of pruned entries in the original dets and parts
+%
+% Arguments
+%   im      Input image
+%   dets    Detection bounding boxes (see pascal_test.m)
+%   parts   Filter bounding boxes (see pascal_test.m)
 
 if nargin < 3
   parts = [];

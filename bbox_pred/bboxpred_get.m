@@ -1,9 +1,15 @@
-function [bbox parts] = bboxpred_get(bboxpred, dets, boxes)
+function [bbox, parts] = bboxpred_get(bboxpred, dets, boxes)
 % Get predicted bounding boxes.
+%   [bbox, parts] = bboxpred_get(bboxpred, dets, boxes)
 %
-% bboxpred  saved bounding box prediction coefficients
-% dets      source detection windows
-% boxes     source filter bounding boxes
+% Return values
+%   bbox      Output detection windows
+%   parts     Output filter bounding boxes
+%
+% Arguments
+%   bboxpred  Bounding box prediction coefficients (see bboxpred_train.m)
+%   dets      Source detection windows
+%   boxes     Source filter bounding boxes
 
 bbox = [];
 parts = [];

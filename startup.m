@@ -1,5 +1,8 @@
-% Avoiding addpath(genpath('.')) because .git gets included
-% a large number of subdirectories, which makes startup slow
+% Prepares your matlab workspace for using voc-release5.
+
+% Avoiding addpath(genpath('.')) because .git includes
+% a VERY large number of subdirectories, which makes 
+% startup slow
 incl = {'rescore', 'bbox_pred', 'fv_cache', ...
         'bin', 'gdetect', 'utils', ...
         'car_grammar', 'person_grammar', ...

@@ -1,9 +1,18 @@
 function B = subarray(A, i1, i2, j1, j2, pad)
-
-% B = subarray(A, i1, i2, j1, j2, pad)
-% Extract subarray from array
-% pad with boundary values if pad = 1
-% pad with zeros if pad = 0
+% Extract a subarray from an array.
+%   B = subarray(A, i1, i2, j1, j2, pad)
+%
+% Return value
+%   B     Output subarray of A
+%
+% Arguments
+%   A     Input array
+%   i1    Start row (inclusive)
+%   i2    End row (incl.)
+%   j1    Start column (incl.)
+%   j2    End column (incl.)
+%   pad   true => pad with boundary values 
+%         false => pad with zeros
 
 dim = size(A);
 
