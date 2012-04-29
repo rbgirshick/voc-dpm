@@ -1,4 +1,27 @@
 function overlaps = compute_overlaps(pyra, model, boxes)
+% Compute intersection over union overlap between each detection window
+% in the model and each bounding box in boxes at every detection window
+% position in the input feature pyramid.
+%   overlaps = compute_overlaps(pyra, model, boxes)
+%
+% Return value
+%   overlaps    Array struct storing overlap values (more details below)               
+%
+% Arguments
+%   pyra
+%   model
+%   boxes
+%
+% The overlaps structure:
+%   The computed overlap values are organized into
+%     overlaps(c).box(b).o{l},
+%   where c is a top-level rule (i.e. component) index,
+%   b specifies the bounding box boxes(b,:), and
+%   l is a feature pyramid level.
+%   The value stored in overlaps(c).box(b).o{l} is a matrix
+%   with the same size as pyra.feat{l}. Each matrix entry
+%   is the intersection over union overlap between the detection
+%   window for component c and the bounding box boxes(b,:).
 
 num_comps = length(model.rules{model.start});
 num_boxes = size(boxes, 1);

@@ -1,6 +1,4 @@
 function [dim, nblocks] = max_fv_dim(model)
-% FIXME BUG!  nblocks is not the max number of blocks!
-%
 % Each derivation is represented by a block sparse feature vector.
 % This function computes the max dimension of that feature vector over all
 % derivations. It also computes the maximum number of blocks used by any
@@ -27,37 +25,43 @@ for s = L
   model = symbol_max_dim(model, s);
 end
 
+% Max feature vector length
 dim = model.symbols(model.start).max_dim;
-nblocks = length(unique(model.symbols(model.start).blocks));
+% Max number of blocks used
+nblocks = model.symbols(model.start).max_num;
 
 % done
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 function model = symbol_max_dim(model, s)
-
 [m, i] = max(cat(1, model.rules{s}(:).max_dim));
 model.symbols(s).max_dim = m;
-model.symbols(s).blocks = model.rules{s}(i).blocks;
+model.symbols(s).max_dim_blocks = model.rules{s}(i).max_dim_blocks;
+
+[m, i] = max(cat(1, model.rules{s}(:).max_num));
+model.symbols(s).max_num = m;
+model.symbols(s).max_num_blocks = model.rules{s}(i).max_num_blocks;
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% compute score pyramid for rule r
 function model = rule_max_dim(model, r)
+rbls = r.blocks(:);
 
-bls = r.blocks(:);
-dim = sum(cat(1, model.blocks(bls).dim));
+bls = unique([rbls; cat(1, model.symbols(r.rhs).max_dim_blocks)]);
+model.rules{r.lhs}(r.i).max_dim_blocks = bls;
+model.rules{r.lhs}(r.i).max_dim = sum(cat(1, model.blocks(bls).dim));
 
-model.rules{r.lhs}(r.i).max_dim = dim ...
-                                  + sum(cat(1, model.symbols(r.rhs).max_dim));
-model.rules{r.lhs}(r.i).blocks = [bls; cat(1, model.symbols(r.rhs).blocks)];
+bls = unique([rbls; cat(1, model.symbols(r.rhs).max_num_blocks)]);
+model.rules{r.lhs}(r.i).max_num_blocks = bls;
+model.rules{r.lhs}(r.i).max_num = length(bls);
 
 
 function model = filter_dims(model)
-
 for i = 1:model.numfilters
   sym = model.filters(i).symbol;
   bl = model.filters(i).blocklabel;
   model.symbols(sym).max_dim = model.blocks(bl).dim;
-  model.symbols(sym).blocks = bl;
+  model.symbols(sym).max_dim_blocks = bl;
+  model.symbols(sym).max_num = 1;
+  model.symbols(sym).max_num_blocks = bl;
 end

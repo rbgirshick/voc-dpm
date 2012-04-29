@@ -1,16 +1,23 @@
 function [boxes, count] = gdetect_write(pyra, model, boxes, trees, from_pos, ...
                                         dataid, maxsize, maxnum)
-
-% Write detections from gdetect to the feature vector cache.
+% Write detections from gdetect.m to the feature vector cache.
+%   [boxes, count] = gdetect_write(pyra, model, boxes, trees, from_pos, ...
+%                                  dataid, maxsize, maxnum)
 %
-% pyra     feature pyramid
-% model    object model
-% boxes    detection boxes
-% trees    detection parse trees from gdetect.m
-% label    +1 / -1 binary class label
-% id       id for use in long label (e.g., image number the detection is from)
-% maxsize  max cache size in bytes
-% maxnum   max number of feature vectors to write
+% Return values
+%   boxes
+%   count
+%
+% Arguments
+%   pyra        Feature pyramid
+%   model       Object model
+%   boxes       Detection boxes
+%   trees       Detection derivation trees from gdetect.m
+%   from_pos    True if the boxes come from a foreground example
+%               False if the boxes come from a background example
+%   dataid      Id for use in cache key (from pascal_data.m; see fv_cache.h)
+%   maxsize     Max cache size in bytes
+%   maxnum      Max number of feature vectors to write
 
 if nargin < 7
   maxsize = inf;
@@ -20,14 +27,9 @@ if nargin < 8
   maxnum = inf;
 end
 
-if size(boxes,1) > maxnum
-  boxes(maxnum+1:end, :) = [];
-  trees(maxnum+1:end) = [];
-end
-
 count = 0;
 if ~isempty(boxes)
-  count = writefeatures(pyra, model, trees, from_pos, dataid, maxsize);
+  count = writefeatures(pyra, model, trees, from_pos, dataid, maxsize, maxnum);
   % truncate boxes
   boxes(count+1:end,:) = [];
 end
@@ -35,15 +37,9 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % writes feature vectors for the detections in trees
-function count = writefeatures(pyra, model, trees, from_pos, dataid, maxsize)
-% pyra     feature pyramid
-% model    object model
-% trees    detection parse trees from gdetect.m
-% label    +1 / -1 binary class label
-% id       id for use in long label (e.g., image number the detection is from)
-% maxsize  max cache size in bytes
-
-% indexes into info from get_detection_trees.cc
+function count = writefeatures(pyra, model, trees, from_pos, ...
+                               dataid, maxsize, maxnum)
+% indexes into derivation tree matrix from get_detection_trees.cc
 N_PARENT      = 1;
 N_IS_LEAF     = 2;
 N_SYMBOL      = 3;
@@ -78,7 +74,7 @@ for i = 1:model.numblocks
 end
 
 count = 0;
-for d = 1:length(trees)
+for d = 1:min(maxnum, length(trees))
   r = trees{d}(N_RULE_INDEX, 1);
   x = trees{d}(N_X, 1);
   y = trees{d}(N_Y, 1);

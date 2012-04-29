@@ -1,8 +1,13 @@
 function m = model_create(cls, note)
-% Create an object model.
+% Create an empty object model.
+%   m = model_create(cls, note)
 %
-% cls   object class (e.g., 'bicycle')
-% note  a useful note (e.g., 'testing new features X, Y, and Z')
+% Return value
+%   m       Object model
+%
+% Arguments
+%   cls     Object class (e.g., 'bicycle')
+%   note    A descriptive note (e.g., 'testing new features X, Y, and Z')
 
 conf = voc_config();
 
@@ -25,7 +30,8 @@ m.minsize       = [inf inf];          % size of the smallest detection window
 m.interval      = conf.eval.interval; % # levels in each feature pyramid octave
 m.sbin          = conf.features.sbin; % pixel size of the HOG cells
 m.thresh        = 0;                  % detection threshold
-m.features      = conf.features;
-m.features.bias = conf.training.bias_feature;  % feature value for bias/offset parameters
-m.type          = model_types.MixStar;
-m.blocks        = [];
+m.type          = model_types.MixStar;% default type is mixture of star models
+m.blocks        = [];                 % struct array to store block data
+m.features      = conf.features;      % info about image features
+m.features.bias = conf.training.bias_feature; % feature value for bias/offset 
+                                              % parameters

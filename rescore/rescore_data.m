@@ -1,5 +1,4 @@
 function [boxes, parts, X] = rescore_data(dataset)
-
 % Compute feature vectors for context rescoring.
 
 conf = voc_config();

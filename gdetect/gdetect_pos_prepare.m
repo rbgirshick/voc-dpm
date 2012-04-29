@@ -1,4 +1,19 @@
 function [pyra, model_dp] = gdetect_pos_prepare(im, model, boxes, fg_overlap)
+% Prepare a set of foreground examples in the same image for processing
+% with gdetect_pos.m.
+%   [pyra, model_dp] = gdetect_pos_prepare(im, model, boxes, fg_overlap)
+%
+% Return values
+%   pyra          Feature pyramid for image im
+%   model_dp      Model augmented with dynamic programming tables
+%
+% Arguments
+%   im            Foreground image with one or more foreground examples
+%   model         Object model
+%   boxes         Foreground example bounding boxes from foreground image im
+%   fg_overlap    Amount of overlap required between a belief 
+%                 and a foreground example
+
 
 % get feature pyramid
 pyra = featpyramid(im, model);

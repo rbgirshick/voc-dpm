@@ -1,10 +1,15 @@
 function pfilters = mkpartfilters(filter, psize, num, scale)
 % Make part filters from a source filter.
+%   pfilters = mkpartfilters(filter, psize, num, scale)
 %
-% filter  source filter
-% psize   size for parts
-% num     number of parts to make
-% scale   number of octave shifts
+% Return value
+%   pfilters    Part filters
+%
+% Arguments
+%   filter      Source filter to make part filters from
+%   psize       Part filter size
+%   num         Number of parts to make
+%   scale       Number of octave shifts (>= 0)
 
 if nargin < 4
   scale = 1;

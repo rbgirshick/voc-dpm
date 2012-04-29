@@ -1,7 +1,12 @@
 function model = model_merge(models)
-
-% model = mergemodels(models)
-% Merge a set of models into a single mixture model.
+% Merge a cell array of models into a single mixture model.
+%   model = mergemodels(models)
+%
+% Return value
+%   model     Mixture model
+%
+% Argument
+%   models    Cell array of models
 
 model = models{1};
 

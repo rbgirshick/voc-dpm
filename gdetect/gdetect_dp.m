@@ -1,7 +1,19 @@
 function model = gdetect_dp(pyra, model)
-% Compute dynamic programming tables used for finding detections
-% pyra       feature pyramid structure returned by featpyramid.m
-% model      object model
+% Compute dynamic programming tables used for finding detections.
+%   model = gdetect_dp(pyra, model)
+%
+%   This function implements the dynamic programming algorithm for
+%   computing high-scoring derivations using an Object Detection Grammar.
+%   It is assumed that the detection grammar is an Isolated Deformation
+%   Grammar and therefore contains only structural schemas and deformation
+%   schemas.
+%
+% Return value
+%   model   Object model augmented to store the dynamic programming tables
+%
+% Arguments
+%   pyra    Feature pyramid returned by featpyramid.m
+%   model   Object model
 
 % cache filter response
 model = filter_responses(model, pyra);
@@ -87,10 +99,7 @@ for j = 1:length(r.rhs)
   startx = 1+ax-virtpadx;
   % score table to shift and down sample
   s = model.symbols(r.rhs(j)).score;
-  % starting level
-  %startlevel = model.interval*ds + 1;
-  startlevel = 1;
-  for i = startlevel:length(s)
+  for i = 1:length(s)
     level = i - model.interval*ds;
     if level >= 1
       % ending points

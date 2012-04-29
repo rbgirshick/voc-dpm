@@ -1,12 +1,16 @@
 function [L, V] = model_sort(m, i, L, V)
-% Perform topological sort of the non-terminal symbols in m's grammar.
+% Topological sort of the nonterminal symbols in m's grammar.
+%   [L, V] = model_sort(m, i, L, V)
 %
-% m  object model
-% 
-% internal use:
-% i  current symbol
-% L  post order accumulation of symbols
-% V  symbol visitation state
+% Return values
+%   L   Symbols visited in post order
+%   V   (internal use) Symbol visitation status
+%
+% Arguments
+%   m   Object model
+%   i   (internal use) Current symbol
+%   L   (internal use) Symbols visited thus far in post order
+%   V   (internal use) Symbol visitation status thus far
 
 % initialize depth-first search at start symbol
 if nargin < 2
@@ -24,7 +28,7 @@ end
 V(i) = 1;
 for r = 1:length(m.rules{i})
   for s = m.rules{i}(r).rhs
-    % recurse if s is a non-terminal and not already visited
+    % recurse if s is a nonterminal and not already visited
     if m.symbols(s).type == 'N' && V(s) < 2
       [L, V] = model_sort(m, s, L, V);
     end

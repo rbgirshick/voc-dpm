@@ -1,19 +1,24 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% returns all levels if latent is false
-% otherwise, only returns the levels that we can actual use
-% for latent detections
 function do_levels = validate_levels(model, pyra, boxes, overlap)
-% model    object model
-% pyra     feature pyramid
-% boxes    ground truth bounding boxes
-% overlap  overlap threshold
+% Determine which feature pyramid levels permit high overlap between
+% the model and any of the input boxes.
+%   do_levels = validate_levels(model, pyra, boxes, overlap)
+%
+% Return value
+%   do_levels   Boolean array indicating on which feature pyramid levels 
+%               we need to compute convolutions
+%
+% Arguments
+%   model       Object model
+%   pyra        Feature pyramid
+%   boxes       Ground truth bounding boxes
+%   overlap     Overlap threshold
 
 num_boxes = size(boxes,1);
-do_levels = false(length(pyra.feat), 1);
+do_levels = false(pyra.num_levels, 1);
 % for each pyramid level
 %  for each box
 %   for each component (in test overlap)
-for l = 1:length(pyra.feat)
+for l = 1:pyra.num_levels
   for b = 1:num_boxes
     if testoverlap(l, model, pyra, boxes(b,:), overlap)
       do_levels(l) = true;

@@ -1,28 +1,49 @@
 function [dets, boxes, trees] = gdetect_pos(pyra, model, count, ...
                                             fg_box, fg_overlap, ...
                                             bg_boxes, max_bg_overlap)
-
-% Get detections on a foreground example.
-% Workflow:
-%  gdetect_pos_prepare (once per foreground image I) 
-%   -> gdetect_pos (once per foreground example in I)
+% Compute belief and loss adjusted detections for a foreground example.
+%   [dets, boxes, trees] = gdetect_pos(pyra, model, count, ...
+%                                      fg_box, fg_overlap, ...
+%                                      bg_boxes, max_bg_overlap)
+%
+%   This function computes the belief s* for a foreground example (x,y):
+%     s* = \argmax_{s \in S(x)} w \dot \psi(x,s) - L_output(y,s)
+%   The loss function L_output(y,s) is 0 if y and s have overlap with fg_box
+%   > fg_overlap, and is +inf otherwise.
+%
+%   If count > 1, then this function also computes up to conf.training.wlssvm_M
+%   loss adjusted detections that violate the margin:
+%     \argmax_{s \in S(x)} w \dot \psi(x,s) + L_margin(y,s)
+%   The set of valid outputs S(x) is defined (here and above) to be all 
+%   detection windows that have at least 0.1 overlap with fg_box and no 
+%   more than max_bg_overlap with any bg_boxes.
+%
+%   Workflow:
+%   Call gdetect_pos_prepare once per foreground image I,
+%   then call gdetect_pos once per foreground bounding box in I
 % 
-% model           model 
+% Return values (see gdetect.m)
+%   Important note: by convention the first entry in dets, boxes, and trees
+%   is the belief for this foreground example. Any following detections
+%   are loss adjusted detections for use with WL-SSVM.
+%
+% Arguments
+%   model           Object model 
 %                   (augmented with DP tables from gdetect_dp.m)
-% pyra            feature pyramid 
+%   pyra            Feature pyramid 
 %                   (augmented with overlaps from gdetect_pos_prepare.m)
-% fg_box          selected foreground bounding box *index*
-% fg_overlap      required overlap with fg_box
-% bg_boxes        *indices* of non-selected bounding boxes in image
-% max_bg_overlap  maximum allowed amount of overlap with bg bounding boxes
+%   fg_box          Selected foreground bounding box index
+%   fg_overlap      Required overlap between fg_box and the returned belief
+%                   Implements L_output(y,s) in the WL-SSVM
+%   bg_boxes        Indices of non-selected bounding boxes in image
+%   max_bg_overlap  Maximum allowed amount of overlap with bg bounding boxes
+%                   Implements S(x) in WL-SSVM
 
-% get the non-loss adjusted detection (termed the "belief")
-modelp = apply_constraints(model, pyra, fg_box, fg_overlap);
+% Get the non-loss adjusted detection (termed the "belief")
+modelp = apply_L_output(model, pyra, fg_box, fg_overlap);
 [dets, boxes, trees] = gdetect_parse(modelp, pyra, -100, 1);
 
-% TODO: sanity check that the overlap requirement was met
-
-% get (count-1) more loss-adjusted detections
+% Get (count-1) more loss-adjusted detections
 if count > 1 && ~isempty(dets)
   max_score = dets(1, end);
   modelp = apply_loss_adjustment(model, pyra, fg_box, ...
@@ -47,8 +68,6 @@ if count > 1 && ~isempty(dets)
       boxes = cat(1, boxes, la_boxes);
       trees = cat(1, trees, la_trees);
     end
-
-    % TODO: sanity check that all boxes don't overlap bg_boxes too much
   end
 end
 
@@ -89,8 +108,9 @@ model.symbols(model.start).score = score;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% apply constraints to dynamic programming tables and recompute scores
-function model = apply_constraints(model, pyra, fg_box, overlap)
+% Apply L_output to dynamic programming tables and recompute
+% the top scoring detection
+function model = apply_L_output(model, pyra, fg_box, overlap)
 % model           model (augmented with DP tables from gdetect_dp.m)
 % pyra            feature pyramid
 % fg_box          selected foreground bounding box index

@@ -1,23 +1,36 @@
 function model = loss_pyramid(h_loss_func, pyra, model, fg_box, ...
                               bg_boxes, min_fg_overlap, max_bg_overlap)
-% h_loss_func     handle to loss function
-% model           model 
+% Computes a pyramid of loss function values for each top-level
+% rule in the grammar.
+%   model = loss_pyramid(h_loss_func, pyra, model, fg_box, ...
+%                        bg_boxes, min_fg_overlap, max_bg_overlap)
+%
+%   These loss values are used for computing the loss adjusted inference:
+%     \max_{s \in S(x)} w \dot \psi(x,s) + L_margin(y,s)
+%   The set of valid outputs S(x) is enforced by making L(y,s) = -inf for
+%   some values of s, which prevents them from being selected in the 
+%   maximization.
+%
+% Return value
+%   model           Model augmented to store the computed loss pyramids
+%
+% Arguments
+%   h_loss_func     Handle to loss function
+%   model           Model 
 %                   (augmented with DP tables from gdetect_dp.m)
-% pyra            feature pyramid 
+%   pyra            Feature pyramid
 %                   (augmented with overlaps from gdetect_pos_prepare.m)
-% fg_box          selected foreground bounding box index
-% bg_boxes        indices of non-selected bounding boxes in image
-% min_fg_overlap  minimum required amount of overlap with fg box
-% max_bg_overlap  maximum allowed amount of overlap with bg bounding boxes
+%   fg_box          Selected foreground bounding box index
+%   bg_boxes        Indices of non-selected bounding boxes in image
+%   min_fg_overlap  Minimum required amount of overlap with fg box
+%   max_bg_overlap  Maximum allowed amount of overlap with bg bounding boxes
 
 num_bg_boxes = length(bg_boxes);
 
 % For each model component
 for comp = 1:length(model.rules{model.start})
-  detwin = model.rules{model.start}(comp).detwindow;
-  numlevels = length(model.rules{model.start}(comp).score);
   % For each feature pyramid level
-  for level = 1:numlevels
+  for level = 1:pyra.num_levels
     if pyra.valid_levels(level)
       % Assign loss for root locations based on the selected foreground box
       o = pyra.overlaps(comp).box(fg_box).o{level};

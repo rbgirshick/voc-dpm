@@ -1,17 +1,14 @@
-function [dets, boxes, trees] = imgdetect(input, model, thresh)
-
-% Wrapper that computes detections in the input image.
+function [dets, boxes, trees] = imgdetect(im, model, thresh)
+% Wrapper around gdetect.m that computes detections in an image.
+%   [dets, boxes, trees] = imgdetect(im, model, thresh)
 %
-% input    input image
-% model    object model
-% thresh   detection score threshold
-% bbox     ground truth bounding box
-% overlap  overlap requirement
+% Return values (see gdetect.m)
+%
+% Arguments
+%   im        Input image
+%   model     Model to use for detection
+%   thresh    Detection threshold (scores must be > thresh)
 
-% we assume color images
-input = color(input);
-
-% get the feature pyramid
-pyra = featpyramid(input, model);
-
+im = color(im);
+pyra = featpyramid(im, model);
 [dets, boxes, trees] = gdetect(pyra, model, thresh);

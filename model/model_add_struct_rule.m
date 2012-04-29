@@ -1,13 +1,37 @@
 function [m, rule] = model_add_struct_rule(m, lhs, rhs, anchors, varargin)
-
-% Add a structural schema to the model:
-%  LHS(\omega) --f(\omega)--> RHS_1(\omega+anchors_1) ... RHS_N(\omega+anchors_N),
-%  where f(\omega) = offset_w + loc_w * loc_feat(\omega)
+% Add a structural schema (rule) to the model.
+%   [m, rule] = model_add_struct_rule(m, lhs, rhs, anchors, varargin)
 %
-% m          object model
-% lhs        left hand side rule symbol
-% rhs        right hand side rule symbols
-% anchors
+%   Structural schemas have the form
+%
+%   LHS(\omega) --f(\omega)--> { RHS_1(\omega+anchors_1), ...,
+%                                RHS_N(\omega+anchors_N) },
+%   where f(\omega) = offset_w * offset_feat 
+%                     + loc_w * loc_feat(\omega)
+%
+% Return values
+%   m         Updated model
+%   rule      New rule added to the model
+%
+% Arguments
+%   m         Model to update
+%   lhs       Left-hand-side symbol for the rule
+%   rhs       Right-hand-side symbol for the rule
+%   anchors   Cell array of anchor positions
+%             Each anchor is a tripple [x y l] that specifies
+%             the offset from lhs
+%             The scale offset l is in units of octaves
+%             The locaton offsets x,y are the units at the offset scale
+%   varargin  (key, value) pairs that can specify the following:
+%   key                         value
+%   ---                         -----
+%   offset_w                    Offset/bias parameter value
+%   offset_blocklabel           model.blocks index
+%   loc_w                       Location/scale parameters values
+%   loc_blocklabel              model.blocks index
+%   detection_window            Detection window size
+%   shift_detection_window      Detection window shift
+%   mirror_rule                 Rule structure to horizontally mirror
 
 valid_opts = {'offset_w', 'offset_blocklabel', ...
               'loc_w', 'loc_blocklabel', ...
