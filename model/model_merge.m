@@ -28,7 +28,6 @@ for i = 2:length(models)
   % merge symbols
   for j = 1:m.numsymbols
     m.symbols(j).filter = m.symbols(j).filter + numf;
-    m.symbols(j).i = m.symbols(j).i + nums;
   end
   model.symbols = [model.symbols m.symbols];
 

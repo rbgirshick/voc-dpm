@@ -1,5 +1,4 @@
 function o = boxoverlap(a, b)
-
 % Compute the symmetric intersection over union overlap between a set of
 % bounding boxes in a and a single bounding box in b.
 %

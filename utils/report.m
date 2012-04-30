@@ -1,6 +1,11 @@
-function reportsingle(dir1, suffix1, showcls, do_auc_ap)
+function report(dir1, suffix1, showcls, do_auc_ap)
+% Print scores for all classes.
 
 conf = voc_config();
+
+if nargin < 3
+  showcls = true;
+end
 
 if nargin < 4
   do_auc_ap = false;
@@ -46,10 +51,11 @@ if do_auc_ap
   a2 = nanmean(score2);
 end
 if showcls
+  fprintf('%s\n', repmat('-', [1 12]));
   if do_auc_ap
-    fprintf('%12s %.3f %.3f\n', 'average', a1, a2);
+    fprintf('%12s %.3f %.3f\n', 'mAP', a1, a2);
   else
-    fprintf('%12s %.3f\n', 'average', a1);
+    fprintf('%12s %.3f\n', 'mAP', a1);
   end
 else
   if do_auc_ap

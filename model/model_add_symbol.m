@@ -1,11 +1,16 @@
-function [m, i] = model_add_symbol(m, type)
-% Add a symbol to the model.
+function [m, S] = model_add_symbol(m, type)
+% Add a symbol to the grammar model.
+%   [m, i] = model_add_symbol(m, type)
 %
-% m     object model
-% type  'N'onterminal or 'T'erminal
+% Return values
+%   m       Updated object model
+%   S       Symbol
+%
+% Arguments
+%   m       Object model
+%   type    'N'onterminal or 'T'erminal
 
 % new symbol for terminal associated with filter f
-i = m.numsymbols + 1;
-m.numsymbols = i;
-m.symbols(i).type = type;
-m.symbols(i).i = i;
+S = m.numsymbols + 1;
+m.numsymbols = S;
+m.symbols(S).type = type;

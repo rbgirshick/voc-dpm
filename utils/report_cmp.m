@@ -1,4 +1,5 @@
-function report(dir1, suffix1, dir2, suffix2)
+function report_cmp(dir1, suffix1, dir2, suffix2)
+% Compare two different result sets.
 
 conf = voc_config();
 
@@ -24,12 +25,11 @@ count1 = sum(score1 > 0);
 count2 = sum(score2 > 0);
 a1 = sum(score1)/count1;
 a2 = sum(score2)/count2;
-fprintf('   ------------------------------\n');
-fprintf('%12s %.3f -> %.3f\tdiff = %6.3f\n', 'average', a1, a2, a2-a1);
+fprintf('%s\n', repmat('-', [1 12]));
+fprintf('%12s %.3f -> %.3f\tdiff = %6.3f\n', 'mAP', a1, a2, a2-a1);
 
 % remove missing data points
-%score1(score1 == 0) = [];
-%score2(score2 == 0) = [];
-%fprintf('Computing p-value...');
-%p = rndtest(score1, score2);
-%fprintf('\nProbability that difference is due to chance: p = %.4f\n', p);
+score1(score1 == 0) = [];
+score2(score2 == 0) = [];
+p = rndtest(score1', score2');
+fprintf('\nRandomized paired t-test: p value = %.4f\n', p);

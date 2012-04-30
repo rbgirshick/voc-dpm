@@ -1,4 +1,5 @@
 function s = procid()
+% Returns a string identifying the process.
 
 d = pwd();
 i = strfind(d, '/');

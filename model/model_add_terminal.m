@@ -1,10 +1,21 @@
 function [m, symbol, filterind] = model_add_terminal(m, varargin)
-% Add a filter to the model.  Automatically allocates a new block if blocklabel is empty.
+% Add a filter to the model.  
+%   [m, symbol, filterind] = model_add_terminal(m, varargin)
 %
-% m           object model
-% w           filter weights
-% blocklabel  block to use for the filter weights
-% flip        is this filter vertically flipped
+% Return values
+%   m         Updated model
+%   symbol    Newly created terminal symbol 
+%   filterind Index of the newly created filter associated with the terminal
+%
+% Arguments
+%   m         Model to update
+%   varargin  (key, value) pairs that can specify the following:
+%   key                         value
+%   ---                         -----
+%   w                           Filter coefficients
+%   flip                        True or false (default)
+%   blocklabel                  model.blocks index
+%   mirror_terminal             Terminal symbol to horizontally mirror
 
 valid_opts = {'w', 'blocklabel', 'flip', 'mirror_terminal'};
 opts = getopts(varargin, valid_opts);

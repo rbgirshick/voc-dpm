@@ -1,6 +1,12 @@
 function [m, N] = model_add_nonterminal(m)
-% Add a nonterminal symbol to the model.
+% Add a nonterminal symbol to the grammar model.
+%   [m, N] = model_add_nonterminal(m)
 %
-% m  object model
+% Return values
+%   m   Updated object model
+%   N   Nonterminal symbol
+%
+% Argument
+%   m   Object model
 
 [m, N] = model_add_symbol(m, 'N');

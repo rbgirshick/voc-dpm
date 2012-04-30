@@ -1,19 +1,25 @@
 function b = reduceboxes(model, boxes)
 % Eliminate columns for filters that are not used.
-% E.g., [0 0 0 0 10 20 110 120] -> [10 20 110 120]
-% Index end-1 is the component label and index end is the 
-% detection score.
+%   b = reduceboxes(model, boxes)
 %
-% model  object model
-% boxes  filter boxes returned by gdetect.m
+%   E.g., [0 0 0 0 10 20 110 120] -> [10 20 110 120]
+%   Index end-1 is the component label and index end is the 
+%   detection score.
+%
+%   This function assumes that model is a mixture model where
+%   each component always places exactly the same number of filters.
+%
+% Return value
+%   b       Filter bounding boxes with unused filter columns removed
+% Arguments
+%   model   Object model
+%   boxes   Filter bounding boxes
 
 % Only reduce boxes for mixtures of star models
 if model.type ~= model_types.MixStar
   b = boxes;
   return;
 end
-
-assert(model.type == model_types.MixStar);
 
 % n = #filters per component (assuming all components have
 % the same number of parts)

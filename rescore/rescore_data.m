@@ -1,5 +1,28 @@
 function [boxes, parts, X] = rescore_data(dataset)
 % Compute feature vectors for context rescoring.
+%   [boxes, parts, X] = rescore_data(dataset)
+%
+%   Only the 50,000 top-scoring detection windows are used. The remaining
+%   detections are discarded.
+%
+% Return values
+%   boxes     The top-scoring detection windows
+%   parts     The filter bounding boxes for the top-scoring detections
+%   X         Feature vectors (see below)
+%
+% Argument
+%   dataset   Dataset to use (e.g., 'trainval', 'test')
+%
+% X
+%   Entry M = X{c,i} is an N_c,i x 25 dimensional matrix, where N_c,i is the 
+%   if the number of detections for class c in the i-th image in the dataset.
+%   Row M(j,:) is a context feature vector that describes the j-th detection.
+%   The first entry is the score of the j-th detection (passed through a fixed
+%   sigmoid). Entries 2-5 are the normalized detection window coordinates. The
+%   remaining entries 6-25 are the max detection scores (passed through the 
+%   same fixed sigmoid) for the each of the 20 PASCAL classes. If there are no
+%   detections for a class in the image, that class is assigned the max score
+%   -1.1.
 
 conf = voc_config();
 cachedir = conf.paths.model_dir;
@@ -28,10 +51,7 @@ try
 catch
   boxes = cell(numcls, 1);
   parts = cell(numcls, 1);
-  %models = cell(numcls, 1);
   for i = 1:numcls
-      %load([cachedir VOCopts.classes{i} '_final']);
-      %models{i} = model;
     load([cachedir VOCopts.classes{i} '_boxes_' dataset '_bboxpred_' VOCyear]);
     boxes{i} = boxes1;
     parts{i} = parts1;
@@ -60,10 +80,8 @@ catch
   for i = 1:numids
     for j = 1:numcls
       if isempty(boxes{j}{i})
-        %maxes(j) = models{j}.thresh;
         maxes(j) = -1.1;
       else
-        %maxes(j) = max(models{j}.thresh, max(boxes{j}{i}(:,end)));
         maxes(j) = max(-1.1, max(boxes{j}{i}(:,end)));
       end
     end

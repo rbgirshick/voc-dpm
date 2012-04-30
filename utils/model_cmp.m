@@ -1,7 +1,7 @@
-function t = modelcmp(m1, m2)
+function t = model_cmp(m1, m2)
 
-[v1 b1 map1] = model2blocks(m1);
-[v2 b2 map2] = model2blocks(m2);
+[v1, b1, map1] = model2blocks(m1);
+[v2, b2, map2] = model2blocks(m2);
 
 e = sum(abs(v1-v2));
 if e > 0
