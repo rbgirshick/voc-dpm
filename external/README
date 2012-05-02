@@ -1,6 +1,21 @@
 External code
 -------------
 
-1) minConf 
-Downloaded from http://www.di.ens.fr/~mschmidt/Software/minConf.html 
+1) minConf by Mark Schmidt
+
+Used as an L-BFGS optimization blackbox for solving convex slave problems.
+Our convex slave problems are not smooth, but L-BFGS seems to work well
+with the subgradients of our objective. Box contraints are used to prevent
+quadratic deformation parameters from becomes too small (or negative).
+
+Downloaded: http://www.di.ens.fr/~mschmidt/Software/minConf.html 
 on Jan 23, 2012.
+
+Modifications: none
+
+2) LIBSVM by Chih-Chung Chang and Chih-Jen Lin
+
+Download: http://www.csie.ntu.edu.tw/~cjlin/libsvm/
+on May 2, 2012.
+
+Modifications: no changes to source; removed unneeded directories and files.

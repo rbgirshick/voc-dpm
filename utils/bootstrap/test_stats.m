@@ -14,13 +14,12 @@ try
   load([cachedir cls '_' testset '_bootstrap_data']);
 catch
   load([cachedir cls '_boxes_' testset '_' year]);
-  boxes = boxes1;
   ids = textread(sprintf(VOCopts.imgsetpath, testset), '%s');
 
   % write out detections in PASCAL format and score
   fid = fopen(sprintf(VOCopts.detrespath, 'comp3', cls), 'w');
   for i = 1:length(ids);
-    bbox = boxes{i};
+    bbox = bs{i};
     for j = 1:size(bbox,1)
       fprintf(fid, '%s %f %d %d %d %d\n', ids{i}, bbox(j,end), bbox(j,1:4));
     end

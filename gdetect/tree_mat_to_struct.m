@@ -1,6 +1,16 @@
 function s = tree_mat_to_struct(m)
+% Convert a tree matrix returned by get_detection_trees() into a struct.
+%   s = tree_mat_to_struct(m)
+%
+% Return value
+%   s   Array struct with one entry per symbol (column in m)
+%
+% Argument
+%   m   Tree matrix from get_detection_trees()
+%       Each column comes from a symbol in a derivation tree
+%       Each row corresponds to a field (N_* below)
 
-% indexes into info from get_detection_trees.cc
+% Indexes into tree from get_detection_trees.cc
 N_PARENT      = 1;
 N_IS_LEAF     = 2;
 N_SYMBOL      = 3;

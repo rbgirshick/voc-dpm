@@ -9,10 +9,10 @@ test('000061.jpg', model);
 load('VOC2007/bicycle_final');
 test('000084.jpg', model);
 
-function test(name, model)
+function test(imname, model)
 cls = model.class;
 % load and display image
-im = imread(name);
+im = imread(imname);
 clf;
 image(im);
 axis equal; 
@@ -28,16 +28,16 @@ disp('press any key to continue'); pause;
 disp('continuing...');
 
 % detect objects
-[dets, boxes] = imgdetect(im, model, -0.3);
-top = nms(dets, 0.5);
+[ds, bs] = imgdetect(im, model, -0.3);
+top = nms(ds, 0.5);
 clf;
-showboxes(im, reduceboxes(model, boxes(top,:)));
+showboxes(im, reduceboxes(model, bs(top,:)));
 disp('detections');
 disp('press any key to continue'); pause;
 disp('continuing...');
 
 % get bounding boxes
-bbox = bboxpred_get(model.bboxpred, dets, reduceboxes(model, boxes));
+bbox = bboxpred_get(model.bboxpred, ds, reduceboxes(model, bs));
 bbox = clipboxes(im, bbox);
 top = nms(bbox, 0.5);
 clf;
