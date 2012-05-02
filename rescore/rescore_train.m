@@ -45,6 +45,8 @@ for c = cls_inds
     Y(I) = [];
     X(I,:) = [];
     % Train the rescoring SVM
+    % equivalent for LIBSVM: 
+    % model = svmtrain(Y, X, '-s 0 -t 1 -g 1 -r 1 -d 3 -c 1 -w1 2 -e 0.001 -m 500');
     model = svmlearn(X, Y, ...
                      '-t 1 -d 3 -r 1.0 -s 1.0 -j 2 -c 1.0 -e 0.001 -n 5 -m 500');
     save([cachedir cls '_rescore_classifier'], 'model');

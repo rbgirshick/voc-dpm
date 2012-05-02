@@ -34,6 +34,7 @@ catch
   num_ids = length(ids);
   ds_out = cell(1, num_ids);
   bs_out = cell(1, num_ids);
+  th = tic();
   parfor i = 1:num_ids;
     fprintf('%s: testing: %s %s, %d/%d\n', cls, testset, year, ...
             i, num_ids);
@@ -78,8 +79,10 @@ catch
       bs_out{i} = [];
     end
   end
+  th = toc(th);
   ds = ds_out;
   bs = bs_out;
   save([cachedir cls '_boxes_' testset '_' suffix], ...
-       'ds', 'bs');
+       'ds', 'bs', 'th');
+  fprintf('Testing took %.4f seconds\n', th);
 end

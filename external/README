@@ -11,7 +11,7 @@ quadratic deformation parameters from becomes too small (or negative).
 Downloaded: http://www.di.ens.fr/~mschmidt/Software/minConf.html 
 on Jan 23, 2012.
 
-Modifications: none
+Modifications: no changes to source; removed some unneeded files.
 
 2) LIBSVM by Chih-Chung Chang and Chih-Jen Lin
 

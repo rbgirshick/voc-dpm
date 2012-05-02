@@ -102,9 +102,9 @@ catch
   % Add parts to each mixture component
   for i = 1:2:2*n
     % Top-level rule for this component
-    ruleind   = i;
+    ruleind = i;
     % Top-level rule for this component's mirror image
-    partner   = i+1;
+    partner = i+1;
     % Filter to interoplate parts from
     filterind = i;
     model = model_add_parts(model, model.start, ruleind, ...

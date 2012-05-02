@@ -35,3 +35,9 @@ m.blocks        = [];                 % struct array to store block data
 m.features      = conf.features;      % info about image features
 m.features.bias = conf.training.bias_feature; % feature value for bias/offset 
                                               % parameters
+
+% Various training and testing stats
+m.stats.slave_problem_time = [];  % time spent in slave problem optimization
+m.stats.data_mining_time   = [];  % time spent in data mining
+m.stats.pos_latent_time    = [];  % time spent in inference on positives
+m.stats.filter_usage       = [];  % foreground training instances / filter

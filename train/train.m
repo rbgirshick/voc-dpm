@@ -52,8 +52,6 @@ end
 numpos = length(cat(1,pos(:).dataids));
 max_num_examples = max(numpos*10, max_num_examples+numpos);
 bytelimit = conf.training.cache_byte_limit;
-% optimize with LBFGS by default
-lbfgs = true;
 
 negpos = 0;     % last position in data mining
 
@@ -110,8 +108,11 @@ for t = 1:iter
       fusage = num_examples_added;
       component_usage = num_examples_added;
     else
+      th = tic();
       [num_entries_added, num_examples_added, fusage, component_usage, scores] ...
           = poslatent(t, iter, model, pos, fg_overlap, num_fp);
+      th = toc(th);
+      model.stats.pos_latent_time = [model.stats.pos_latent_time; th];
 
       % compute hinge loss on foreground examples after relabeling
       hinge = max(0, 1-scores);
@@ -120,6 +121,8 @@ for t = 1:iter
         fprintf('positive loss before: %f, after: %f, ratio: %f\n', ...
                 pos_loss(tt,1), pos_loss(tt,2), pos_loss(tt,2)/pos_loss(tt,1));
       end
+      fprintf('Foreground latent estimation took %.4f seconds\n', th);
+
       if t > 1 && pos_loss(t,2)*0.99999 > pos_loss(t,1)
         fprintf('warning: pos loss went up\n');
         keyboard;
@@ -135,7 +138,7 @@ for t = 1:iter
     num_examples = num_examples + num_examples_added;
 
     % save positive filter usage statistics
-    model.fusage = fusage;
+    model.stats.filter_usage = fusage;
     fprintf('\nFilter usage stats:\n');
     for i = 1:model.numfilters
       fprintf('  filter %d got %d/%d (%.2f%%) examples\n', ...
@@ -159,7 +162,7 @@ for t = 1:iter
   for tneg = 1:negiter
     fprintf('%s iter: %d/%d, neg iter %d/%d\n', ...
             procid(), t, iter, tneg, negiter);
-       
+
     if datamine
       % add new negatives
       if randneg
@@ -169,10 +172,13 @@ for t = 1:iter
         num_examples = num_examples + num_examples_added;
         fusage = num_examples_added;
       else
+        th = tic();
         [num_entries_added, num_examples_added, ...
          negpos, fusage, scores, complete] ...
             = neghard(tneg, negiter, model, neg, bytelimit, ...
                       negpos, max_num_examples-num_examples);
+        th = toc(th);
+        model.stats.data_mining_time = [model.stats.data_mining_time; th];
         num_entries = num_entries + num_entries_added;
         num_examples = num_examples + num_examples_added;
         hinge = max(0, 1+scores);
@@ -185,6 +191,7 @@ for t = 1:iter
           fprintf('obj on cache: %f, obj on full: %f, ratio %f\n', ...
                   cache_val, full_val, full_val/cache_val);
         end
+        fprintf('Data mining took %.4f seconds\n', th);
 
         if tneg > 1 && complete
           cache_val = cache(tneg-1,4);
@@ -211,180 +218,221 @@ for t = 1:iter
       datamine = true;
     end
 
+    % We close and reopen the pool because long-running labs tend to consume
+    % a large amount of memory due to fragementation.
     pool_size = close_parallel_pool();
     
-    % learn model
-    logtag = [model.class '_' tag '_' num2str(t) '_' num2str(tneg)];
-    [blocks, lb, rm, lm, cmps] = fv_model_args(model);
-    fv_cache('set_model', blocks, lb, rm, lm, cmps, C);
+    %{{{ Optimize the convex slave problem
+      % Set the current model in the fv_cache
+      [blocks, lb, rm, lm, cmps] = fv_model_args(model);
+      fv_cache('set_model', blocks, lb, rm, lm, cmps, C);
 
-    if lbfgs
-      % optimize with LBFGS
-      options = conf.training.lbfgs.options;
-
+      % Set up the objective function evaluation/gradient oracle
+      obj_func = @(x) fv_obj_func(x, 2*pool_size);
+      % Vectorize the model parameters and get the box constraints
       w = cat(1, blocks{:});
       lb = cat(1, lb{:});
       ub = inf*ones(size(lb));
-      obj_func = @(w) fv_obj_func(w, 2*pool_size);
 
+      % Prepare the training examples residing in the cache for optimization
       fv_cache('ex_prepare');
+      % Optimize the objective function on the cache with L-BFGS
       th = tic;
-      w = minConf_TMP(obj_func, w, lb, ub, options);
-      toc(th);
-      [nl, pl, rt] = fv_cache('obj_val');
-      info = info_to_struct(fv_cache('info'));
-      fv_cache('ex_free');
+      w = minConf_TMP(obj_func, w, lb, ub, conf.training.lbfgs.options);
+      th = toc(th);
+      fprintf('Parameters optimized in %.4f seconds\n', th);
+      model.stats.slave_problem_time = [model.stats.slave_problem_time; th];
 
+      % Update the model with the its parameters
       base = 1;
       for i = 1:model.numblocks
-        blocks{i} = w(base:base+model.blocks(i).dim-1);
+        model.blocks(i).w = w(base:base+model.blocks(i).dim-1);
         base = base + model.blocks(i).dim;
       end
-    else
-%      % optimize with SGD
-%      [nl, pl, rt, status] = fv_cache('sgd', cachedir, logtag);
-%      if status ~= 0
-%        fprintf('parameter learning interrupted\n');
-%        keyboard;
-%      end
-%      blocks = fv_cache('get_model');
-    end
 
-    model = model_update_blocks(model, blocks);
-    cache(tneg,:) = [nl pl rt nl+pl+rt];
-    for tt = 1:tneg
-      fprintf('cache objective, neg: %f, pos: %f, reg: %f, total: %f\n', ...
-              cache(tt,1), cache(tt,2), cache(tt,3), cache(tt,4));
-    end
-   
-    % Compute threshold for high recall of foreground examples
-    F = find((info.is_belief == 1)&(info.is_zero == 0)&(info.is_unique == 1));
-    pos_vals = sort(info.scores(F));
-    model.thresh = pos_vals(ceil(length(pos_vals)*0.05));
+      % Read the (decomposed) objective function value out of the cache
+      [nl, pl, rt] = fv_cache('obj_val');
+      info = info_to_struct(fv_cache('info'));
+      % Free memory used to build example set
+      fv_cache('ex_free');
 
-    % Save model in progress
-    model_name = [model.class '_model_' tag '_' ...
-                  num2str(t) '_' num2str(tneg)];
-    save([conf.paths.model_dir model_name], 'model');
-    fprintf('Finished training %s (C = %.4f)\n', model_name, C);
+      % Compute threshold for high recall of foreground examples
+      P = find((info.is_belief == 1)&(info.is_zero == 0)&(info.is_unique == 1));
+      pos_vals = sort(info.scores(P));
+      model.thresh = pos_vals(ceil(length(pos_vals)*0.05));
 
-    % While data mining, keep everything that is not data mined in the cache
-    P = find((info.is_mined == 0)&(info.is_unique == 1));
+      % Save the intermediate model for debugging / inspection
+      model_name = [model.class '_model_' tag '_' ...
+                    num2str(t) '_' num2str(tneg)];
+      save([conf.paths.model_dir model_name], 'model');
 
-    % -------------------------------------------------------------
-    % Cache policy
-    % TODO: document
-    % -------------------------------------------------------------
-
-    % -------------------------------------------------------------
-    % U: all unique, non-belief entires that are data mined
-    % -------------------------------------------------------------
-
-    U = find((info.is_mined == 1)&(info.is_unique == 1)&(info.is_belief == 0));
-    % get margins for selected entries (i : example index; j : example entry)
-    %   margin_ij = belief_score_i - (non_belief_score_ij + non_belief_loss_ij)
-    %   margin_ij > 0 => easy non_belief_ij is easy
-    %   margin_ij <= 0 => non_belief_ij is a support vector
-    V = info.margins(U);
-    % compute the number of support vector entries
-    % we're conservative in classifying things as support vectors 
-    % (0.0001 instead of 0)
-    num_sv = length(find(V <= 0.0001));
-    % reorder indexes from highest score (i.e., largest margin violator) 
-    % to lowest score
-    [~, S] = sort(V);
-    U = U(S);
-    %fprintf('num support vectors: %d (entries)\n', num_sv);
-
-    % -------------------------------------------------------------
-    % Compute portion of U to keep based on the cache byte limit
-    % -------------------------------------------------------------
-
-    % number of bytes of cache occupied by entries that are not mined
-    not_mined_bytes = sum(info.byte_size(P));
-    % how much of the cache remains for mined entries
-    capacity = round((bytelimit - not_mined_bytes) / 2);
-    fprintf('cache byte limit: %d\nnot-mined size: %d\ncapacity: %d\n', ...
-            bytelimit, not_mined_bytes, capacity);
-    cumulative_bytes = cumsum(info.byte_size(U));
-    num_keep_byte_limit = find(cumulative_bytes >= capacity, 1, 'first');
-    if isempty(num_keep_byte_limit)
-      num_keep_byte_limit = length(cumulative_bytes);
-    end
-    %fprintf('bytes kept: %d\nspace left: %d\n', ...
-    %        cumulative_bytes(num_keep_byte_limit), ...
-    %        bytelimit - not_mined_bytes - cumulative_bytes(num_keep_byte_limit));
-    [~, num_keep_examples_byte_limit] = info_stats(info, U(1:num_keep_byte_limit));
-    fprintf('num keep: %d (entries) %d (examples) based on max byte limit\n', ...
-            num_keep_byte_limit, num_keep_examples_byte_limit);
-
-    % -------------------------------------------------------------
-    % Compute portion of U to keep based on the max example limit
-    % -------------------------------------------------------------
-
-    % binary search for number of entries to keep
-    [~, num_examples_not_mined] = info_stats(info, P);
-    capacity = round((max_num_examples - num_examples_not_mined) / 2);
-    num_keep_lo = 1;
-    num_keep_hi = length(U);
-    while num_keep_hi > num_keep_lo
-      mid = num_keep_lo + floor((num_keep_hi - num_keep_lo) / 2);
-      [~, num_mined_examples] = info_stats(info, U(1:mid));
-      if num_mined_examples > capacity
-        num_keep_hi = mid - 1;
-      else
-        num_keep_lo = mid + 1;
+      % Output history of the objective function value on the cache
+      cache(tneg,:) = [nl pl rt nl+pl+rt];
+      for tt = 1:tneg
+        fprintf('Cache objective: bg: %.6f, fg: %.6f, reg: %.6f, total: %.6f\n', ...
+                cache(tt,1), cache(tt,2), cache(tt,3), cache(tt,4));
       end
-    end
-    num_keep_count_limit = num_keep_hi;
-    [~, num_keep_examples_count_limit] = info_stats(info, U(1:num_keep_count_limit));
-    fprintf('num keep: %d (entries) %d (examples) based on max num examples\n', ...
-            num_keep_count_limit, num_keep_examples_count_limit);
+      fprintf('Finished training %s (C = %.4f)\n', model_name, C);
+    %}}}
 
-    % number to keep is the minimum of those two...
-    num_keep = min(num_keep_byte_limit, num_keep_count_limit);
+    %{{{ Maintain the feature vector cache
+      % -------------------------------------------------------------
+      % Cache policy
+      %
+      % The feature vectors in the cache are divided into two types:
+      % mined and not mined. Feature vectors that are not data mined
+      % must remain in the cache (if they are removed, the data
+      % mining process will not add them again). In the diagram below, 
+      % these feature vectors are represented as the segment of the 
+      % cache labeled P.
+      %
+      %          +-------------------------+
+      % fv cache |--P--|  D mining space   | 
+      %          +-------------------------+
+      %          |<-- M1 max # examples -->|
+      %          |<-- M2 max byte limit -->|
+      %
+      % The feature vectors that are mined need to be maintained. In
+      % particular, we need to shrink the cache by removing easy
+      % feature vectors so that there's room to grow the cache by 
+      % adding hard ones. It's advantageous to keep more than just
+      % the easy examples in the cache. In practice, we aim to keep
+      % the data mining space D half full. The cache has a max size 
+      % defined by two limits: 1) a byte limit; 2) an example count
+      % limit. Note that a single example may correspond to many
+      % feature vectors. The available cache space is A = |D| =
+      % min(M1,M2)-|P|. We maintain the following cache invariants:
+      %  1) Keep all support vectors in the cache
+      %  2) Keep the data mining space D half full (if possible)
+      % These invariants are maintained by the code below, which 
+      % unfortunately is somewhat complex. Keep this picture in
+      % mind as we construct the sets of feature vectors P and N.
+      %
+      %          +-------------------------+
+      % fv cache |--P--|----N----|         |
+      %          +-------------------------+
+      %
+      % -------------------------------------------------------------
 
-    % ...but, ensure that all support vectors stay in the cache
-    num_keep = max(num_sv, num_keep);
-    N = U(1:num_keep);
+      % -------------------------------------------------------------
+      % P: all unique entires that are not data mined
+      % These are feature vectors arising from the foreground images.
+      % We want to keep all of them in the cache because we are not
+      % data mining these examples.
+      % -------------------------------------------------------------
+      P = find((info.is_mined == 0)&(info.is_unique == 1));
 
-    % -------------------------------------------------------------
-    % Find beliefs that belong to examples in N
-    % -------------------------------------------------------------
+      % -------------------------------------------------------------
+      % U: all unique, nonbelief entires that are data mined
+      % These correspond to nonzero feature vectors mined from 
+      % background images.
+      % -------------------------------------------------------------
+      U = find((info.is_mined == 1)&(info.is_unique == 1)&(info.is_belief == 0));
+      % Get margins for elements of U (i: example index; j: example entry)
+      % Let
+      %   margin_ij  = belief_score_i - (non_belief_score_ij + non_belief_loss_ij)
+      % Note that
+      %   margin_ij  > 0 => easy non_belief_ij is "easy"
+      %   margin_ij <= 0 => non_belief_ij is a support vector
+      V = info.margins(U);
+      % Compute the number of support vectors in U
+      % (We're conservative in classifying things as support vectors:
+      %  0.0001 instead of 0.)
+      num_sv = length(find(V <= 0.0001));
+      % Sort U from the largest margin violator to the smallest
+      [~, S] = sort(V);
+      U = U(S);
 
-    % N does not contain any beliefs yet, so now we need to find the zero 
-    % beliefs that match the entries in N and include them in the cache
-    ukeys = unique([info.dataid(N) info.scale(N) info.x(N) info.y(N)], 'rows');
-    ukeys = [ones(size(ukeys,1),1) ukeys];
-    bkeys = [info.is_belief info.dataid info.scale info.x info.y];
-    [~, B] = intersect(bkeys, ukeys, 'rows');
-    % sanity check
-    assert(length(unique(B)) == length(B));
-    N = [N; B];
+      % -------------------------------------------------------------
+      % Compute the portion of U to keep based on the cache byte limit
+      % -------------------------------------------------------------
 
-    I = sort([P; N]);
-    fv_cache('shrink', int32(I));
-    % update cache counts
-    [num_entries, num_examples] = info_stats(info, I);
+      % Bytes of cache occupied by entries that are not mined
+      not_mined_bytes = sum(info.byte_size(P));
+      % How much of the cache can be used for data mining
+      capacity = round((bytelimit - not_mined_bytes) / 2);
+      fprintf('cache byte limit: %d\nnot-mined size: %d\ncapacity: %d\n', ...
+              bytelimit, not_mined_bytes, capacity);
+      cumulative_bytes = cumsum(info.byte_size(U));
+      num_keep_byte_limit = find(cumulative_bytes >= capacity, 1, 'first');
+      if isempty(num_keep_byte_limit)
+        num_keep_byte_limit = length(cumulative_bytes);
+      end
+      [~, num_keep_examples_byte_limit] = info_stats(info, U(1:num_keep_byte_limit));
+      fprintf('num keep: %d (entries) %d (examples) based on max byte limit\n', ...
+              num_keep_byte_limit, num_keep_examples_byte_limit);
 
-    % print out some stats about the updated cache
-    [cached_pos_entries, cached_pos_examples] = info_stats(info, P);
-    [cached_neg_entries, cached_neg_examples] = info_stats(info, N);
-    fprintf('cached %d (%d) positive and %d (%d) negative examples (entries)\n', ...
-            cached_pos_examples, cached_pos_entries, ...
-            cached_neg_examples, cached_neg_entries);    
+      % -------------------------------------------------------------
+      % Compute the portion of U to keep based on the max example limit
+      % -------------------------------------------------------------
 
-    % count number of support vectors
-    I = find((info.is_belief == 0)&(info.is_mined == 0)& ...
-             (info.is_unique == 1)&(info.margins < 0.000001));
-    num_sv = size(unique([info.dataid(I) info.scale(I) info.x(I) info.y(I)], 'rows'), 1);
-    fprintf('%d foreground support vectors\n', num_sv);
-    I = find((info.is_belief == 0)&(info.is_mined == 1)& ...
-             (info.is_unique == 1)&(info.margins < 0.000001));
-    num_sv = size(unique([info.dataid(I) info.scale(I) info.x(I) info.y(I)], 'rows'), 1);
-    fprintf('%d background support vectors\n', num_sv);
+      % Binary search for number of entries to keep
+      [~, num_examples_not_mined] = info_stats(info, P);
+      capacity = round((max_num_examples - num_examples_not_mined) / 2);
+      num_keep_lo = 1;
+      num_keep_hi = length(U);
+      while num_keep_hi > num_keep_lo
+        mid = num_keep_lo + floor((num_keep_hi - num_keep_lo) / 2);
+        [~, num_mined_examples] = info_stats(info, U(1:mid));
+        if num_mined_examples > capacity
+          num_keep_hi = mid - 1;
+        else
+          num_keep_lo = mid + 1;
+        end
+      end
+      num_keep_count_limit = num_keep_hi;
+      [~, num_keep_examples_count_limit] = info_stats(info, U(1:num_keep_count_limit));
+      fprintf('num keep: %d (entries) %d (examples) based on max num examples\n', ...
+              num_keep_count_limit, num_keep_examples_count_limit);
+
+      % Number to keep is the minimum of those two...
+      num_keep = min(num_keep_byte_limit, num_keep_count_limit);
+
+      % ... but, ensure that all support vectors stay in the cache
+      % otherwise data mining cannot converge
+      num_keep = max(num_sv, num_keep);
+      N = U(1:num_keep);
+
+      % -------------------------------------------------------------
+      % Find beliefs that belong to examples in N
+      % -------------------------------------------------------------
+
+      % N does not contain any beliefs yet, so now we need to find the zero 
+      % beliefs that match the entries in N and include them in the cache
+      nkeys = unique([info.dataid(N) info.scale(N) info.x(N) info.y(N)], 'rows');
+      nkeys = [ones(size(nkeys,1),1) nkeys];
+      ikeys = [info.is_belief info.dataid info.scale info.x info.y];
+      [~, B] = intersect(ikeys, nkeys, 'rows');
+      % Sanity check
+      assert(length(unique(B)) == length(B));
+      N = [N; B];
+
+      % Keep P \cup N in the cache
+      I = sort([P; N]);
+      fv_cache('shrink', int32(I));
+      % Update cache counts
+      [num_entries, num_examples] = info_stats(info, I);
+
+      % Print some cache statistics
+      [cached_pos_entries, cached_pos_examples] = info_stats(info, P);
+      [cached_neg_entries, cached_neg_examples] = info_stats(info, N);
+      fprintf('cached %d (%d) positive and %d (%d) negative examples (entries)\n', ...
+              cached_pos_examples, cached_pos_entries, ...
+              cached_neg_examples, cached_neg_entries);    
+
+      % Count number of support vectors
+      I = find((info.is_belief == 0)&(info.is_mined == 0)& ...
+               (info.is_unique == 1)&(info.margins < 0.000001));
+      num_sv = size(unique([info.dataid(I) info.scale(I) info.x(I) info.y(I)], 'rows'), 1);
+      fprintf('%d foreground support vectors\n', num_sv);
+      I = find((info.is_belief == 0)&(info.is_mined == 1)& ...
+               (info.is_unique == 1)&(info.margins < 0.000001));
+      num_sv = size(unique([info.dataid(I) info.scale(I) info.x(I) info.y(I)], 'rows'), 1);
+      fprintf('%d background support vectors\n', num_sv);
+    %}}}
 
     % Reopen parallel pool (if applicable)
+    % See comment above the call to close_parallel_pool()
     reopen_parallel_pool(pool_size);
   end
 end

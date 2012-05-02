@@ -43,6 +43,7 @@ for c = cls_inds
   fprintf('%d/%d %s ', c, numcls, VOCopts.classes{c});
   for i = 1:numids
     if ~isempty(X{c,i})
+      % [predict_label_L, accuracy_L, dec_values_L] = svmpredict(ones(size(X{c,i},1), 1), X{c,i}, model);
       [ignore, s] = svmclassify(X{c,i}, ones(size(X{c,i},1), 1), model);
       ds_all{c}{i}(:,end) = s;
       bs_all{c}{i}(:,end) = s;
