@@ -1,17 +1,17 @@
-function [boxes, count] = gdetect_write(pyra, model, boxes, trees, from_pos, ...
-                                        dataid, maxsize, maxnum)
+function [bs, count] = gdetect_write(pyra, model, bs, trees, from_pos, ...
+                                     dataid, maxsize, maxnum)
 % Write detections from gdetect.m to the feature vector cache.
-%   [boxes, count] = gdetect_write(pyra, model, boxes, trees, from_pos, ...
-%                                  dataid, maxsize, maxnum)
+%   [bs, count] = gdetect_write(pyra, model, bs, trees, from_pos, ...
+%                               dataid, maxsize, maxnum)
 %
 % Return values
-%   boxes
+%   bs
 %   count
 %
 % Arguments
 %   pyra        Feature pyramid
 %   model       Object model
-%   boxes       Detection boxes
+%   bs          Detection boxes
 %   trees       Detection derivation trees from gdetect.m
 %   from_pos    True if the boxes come from a foreground example
 %               False if the boxes come from a background example
@@ -28,10 +28,10 @@ if nargin < 8
 end
 
 count = 0;
-if ~isempty(boxes)
+if ~isempty(bs)
   count = writefeatures(pyra, model, trees, from_pos, dataid, maxsize, maxnum);
   % truncate boxes
-  boxes(count+1:end,:) = [];
+  bs(count+1:end,:) = [];
 end
 
 
@@ -39,22 +39,6 @@ end
 % writes feature vectors for the detections in trees
 function count = writefeatures(pyra, model, trees, from_pos, ...
                                dataid, maxsize, maxnum)
-% indexes into derivation tree matrix from get_detection_trees.cc
-N_PARENT      = 1;
-N_IS_LEAF     = 2;
-N_SYMBOL      = 3;
-N_RULE_INDEX  = 4;
-N_RHS_INDEX   = 5;
-N_X           = 6;
-N_Y           = 7;
-N_L           = 8;
-N_DS          = 9;
-N_DX          = 10;
-N_DY          = 11;
-N_SCORE       = 12;
-N_LOSS        = 13;
-N_SZ          = 14;
-
 if from_pos
   is_belief = 1;
 else
@@ -75,36 +59,31 @@ end
 
 count = 0;
 for d = 1:min(maxnum, length(trees))
-  r = trees{d}(N_RULE_INDEX, 1);
-  x = trees{d}(N_X, 1);
-  y = trees{d}(N_Y, 1);
-  l = trees{d}(N_L, 1);
+  t = tree_mat_to_struct(trees{d});
   ex = [];
-  ex.key = [dataid; l; x; y];
+  ex.key = [dataid; t(1).l; t(1).x; t(1).y];
   ex.blocks(model.numblocks).f = [];
-  ex.loss = trees{d}(N_LOSS, 1);
+  ex.loss = t(1).loss;
 
-  for j = 1:size(trees{d}, 2)
-    sym = trees{d}(N_SYMBOL, j);
+  for j = 1:length(t)
+    sym = t(j).symbol;
     if model.symbols(sym).type == 'T'
       fi = model.symbols(sym).filter;
       bl = model.filters(fi).blocklabel;
       if write_block(bl)
-        ex = addfilterfeat(model, ex,                 ...
-                           trees{d}(N_X, j),          ...
-                           trees{d}(N_Y, j),          ...
-                           pyra.padx, pyra.pady,      ...
-                           trees{d}(N_DS, j),         ...
-                           fi,                        ...
-                           pyra.feat{trees{d}(N_L, j)});
+        ex = addfilterfeat(model, ex,             ...
+                           t(j).x, t(j).y,        ...
+                           pyra.padx, pyra.pady,  ...
+                           t(j).ds, fi,           ...
+                           pyra.feat{t(j).l});
       end
     else
-      ruleind = trees{d}(N_RULE_INDEX, j);
+      ruleind = t(j).rule_index;
       if model.rules{sym}(ruleind).type == 'D'
         bl = model.rules{sym}(ruleind).def.blocklabel;
         if write_block(bl)
-          dx = trees{d}(N_DX, j);
-          dy = trees{d}(N_DY, j);
+          dx = t(j).dx;
+          dy = t(j).dy;
           def = [-(dx^2); -dx; -(dy^2); -dy];
           if model.rules{sym}(ruleind).def.flip
             def(2) = -def(2);
@@ -128,7 +107,7 @@ for d = 1:min(maxnum, length(trees))
       % location/scale features
       bl = model.rules{sym}(ruleind).loc.blocklabel;
       if write_block(bl)
-        l = trees{d}(N_L, j);
+        l = t(j).l;
         if isempty(ex.blocks(bl).f)
           ex.blocks(bl).f = loc_f(:,l);
         else

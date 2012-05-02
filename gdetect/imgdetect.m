@@ -1,6 +1,6 @@
-function [dets, boxes, trees] = imgdetect(im, model, thresh)
+function [ds, bs, trees] = imgdetect(im, model, thresh)
 % Wrapper around gdetect.m that computes detections in an image.
-%   [dets, boxes, trees] = imgdetect(im, model, thresh)
+%   [ds, bs, trees] = imgdetect(im, model, thresh)
 %
 % Return values (see gdetect.m)
 %
@@ -11,4 +11,4 @@ function [dets, boxes, trees] = imgdetect(im, model, thresh)
 
 im = color(im);
 pyra = featpyramid(im, model);
-[dets, boxes, trees] = gdetect(pyra, model, thresh);
+[ds, bs, trees] = gdetect(pyra, model, thresh);

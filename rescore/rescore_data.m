@@ -1,13 +1,13 @@
-function [boxes, parts, X] = rescore_data(dataset)
+function [ds_all, bs_all, X] = rescore_data(dataset)
 % Compute feature vectors for context rescoring.
-%   [boxes, parts, X] = rescore_data(dataset)
+%   [ds_all, bs_all, X] = rescore_data(dataset)
 %
 %   Only the 50,000 top-scoring detection windows are used. The remaining
 %   detections are discarded.
 %
 % Return values
-%   boxes     The top-scoring detection windows
-%   parts     The filter bounding boxes for the top-scoring detections
+%   ds_all    The top-scoring detection windows
+%   bs_all    The filter bounding boxes for the top-scoring detections
 %   X         Feature vectors (see below)
 %
 % Argument
@@ -37,7 +37,7 @@ try
   load([cachedir 'sizes_' dataset '_' VOCyear])
 catch
   sizes = cell(numids,1);
-  for i = 1:numids;
+  for i = 1:numids
     name = sprintf(VOCopts.imgpath, ids{i});
     im = imread(name);
     sizes{i} = size(im);
@@ -49,26 +49,27 @@ end
 try
   load([cachedir 'rescore_data_' dataset '_' VOCyear]);
 catch
-  boxes = cell(numcls, 1);
-  parts = cell(numcls, 1);
-  for i = 1:numcls
-    load([cachedir VOCopts.classes{i} '_boxes_' dataset '_bboxpred_' VOCyear]);
-    boxes{i} = boxes1;
-    parts{i} = parts1;
+  ds_all = cell(numcls, 1);
+  bs_all = cell(numcls, 1);
+  for c = 1:numcls
+    % Load bbox predicted detections (loads vars ds, bs)
+    load([cachedir VOCopts.classes{c} '_boxes_' dataset '_bboxpred_' VOCyear]);
+    ds_all{c} = ds;
+    bs_all{c} = bs;
   end
   
-  for j = 1:numcls
-    data = cell2mat(boxes{j});
+  for c = 1:numcls
+    data = cell2mat(ds_all{c});
     % keep only highest scoring detections
     if size(data,1) > 50000
       s = data(:,end);
       s = sort(s);
       v = s(end-50000+1);
       for i = 1:numids;    
-        if ~isempty(boxes{j}{i})
-          I = find(boxes{j}{i}(:,end) >= v);
-          boxes{j}{i} = boxes{j}{i}(I,:);
-          parts{j}{i} = parts{j}{i}(I,:);
+        if ~isempty(ds_all{c}{i})
+          I = find(ds_all{c}{i}(:,end) >= v);
+          ds_all{c}{i} = ds_all{c}{i}(I,:);
+          bs_all{c}{i} = bs_all{c}{i}(I,:);
         end
       end
     end
@@ -78,35 +79,38 @@ catch
   X = cell(numcls, numids);
   maxes = zeros(1, numcls);
   for i = 1:numids
-    for j = 1:numcls
-      if isempty(boxes{j}{i})
-        maxes(j) = -1.1;
+    for c = 1:numcls
+      if isempty(ds_all{c}{i})
+        maxes(c) = -1.1;
       else
-        maxes(j) = max(-1.1, max(boxes{j}{i}(:,end)));
+        maxes(c) = max(-1.1, max(ds_all{c}{i}(:,end)));
       end
     end
     maxes = 1 ./ (1 + exp(-1.5*maxes));
     
-    s = sizes{i};    
-    base = [zeros(1,5) maxes];
-    for j = 1:numcls
-      bbox = boxes{j}{i};        
-      if ~isempty(bbox) 
-        n = size(bbox,1);
-        x = repmat(base, [n, 1]);
-        score = bbox(:,end);
+    % Image size
+    s = sizes{i};
+    % Context feature vector template
+    % Image context (entries 6:25) is the same for each detection
+    tpt = [0 0 0 0 0 maxes];
+    for c = 1:numcls
+      ds = ds_all{c}{i};
+      if ~isempty(ds) 
+        n = size(ds, 1);
+        x = repmat(tpt, [n, 1]);
+        score = ds(:,end);
         x(:,1) = 1 ./ (1 + exp(-1.5*score));
-        x(:,2:5) = boxes{j}{i}(:,1:4);
+        x(:,2:5) = ds(:,1:4);
+        % Normalize detection window coordinates
         x(:,2) = x(:,2) / s(2);
         x(:,3) = x(:,3) / s(1);
         x(:,4) = x(:,4) / s(2);
         x(:,5) = x(:,5) / s(1);        
-        X{j,i} = x;
+        X{c,i} = x;
       end
     end
-    
   end
 
   save([cachedir 'rescore_data_' dataset '_' VOCyear], 'X', ...
-       'boxes', 'parts');  
+       'ds_all', 'bs_all');  
 end

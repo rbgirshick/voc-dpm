@@ -1,6 +1,6 @@
-function b = reduceboxes(model, boxes)
+function b = reduceboxes(model, bs)
 % Eliminate columns for filters that are not used.
-%   b = reduceboxes(model, boxes)
+%   b = reduceboxes(model, bs)
 %
 %   E.g., [0 0 0 0 10 20 110 120] -> [10 20 110 120]
 %   Index end-1 is the component label and index end is the 
@@ -13,11 +13,11 @@ function b = reduceboxes(model, boxes)
 %   b       Filter bounding boxes with unused filter columns removed
 % Arguments
 %   model   Object model
-%   boxes   Filter bounding boxes
+%   bs      Filter bounding boxes
 
 % Only reduce boxes for mixtures of star models
 if model.type ~= model_types.MixStar
-  b = boxes;
+  b = bs;
   return;
 end
 
@@ -26,15 +26,15 @@ end
 n = length(model.rules{model.start}(1).rhs);
 % n*4+2 := 4 coordinates per boxes plus the component index 
 % and score
-b = zeros(size(boxes, 1), n*4+2);
-maxc = max(boxes(:,end-1));
+b = zeros(size(bs, 1), n*4+2);
+maxc = max(bs(:,end-1));
 for i = 1:maxc
   % process boxes for component i
-  I = find(boxes(:,end-1) == i);
-  tmp = boxes(I,:);
+  I = find(bs(:,end-1) == i);
+  tmp = bs(I,:);
   del = [];
   % find unused filters
-  for j = 1:4:size(boxes, 2)-2
+  for j = 1:4:size(bs, 2)-2
     % count # of non-zero coordinates
     s = sum(sum(tmp(:,j:j+3)~=0));
     % the filter was not used if all coordinates are zero

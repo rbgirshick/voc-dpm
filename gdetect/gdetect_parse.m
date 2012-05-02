@@ -1,7 +1,7 @@
-function [dets, boxes, trees] = gdetect_parse(model, pyra, thresh, max_num)
+function [ds, bs, trees] = gdetect_parse(model, pyra, thresh, max_num)
 % Compute the set of detections from the dynamic programming tables stored
 % in model.
-%   [dets, boxes, trees] = gdetect_parse(model, pyra, thresh, max_num)
+%   [ds, bs, trees] = gdetect_parse(model, pyra, thresh, max_num)
 %
 %   This function identifies the highest scoring placements of the grammar's
 %   start symbol. It then traces back through the dynamic programming tables
@@ -50,5 +50,5 @@ if isfield(model.rules{model.start}, 'loss')
 end
 
 % Compute detection windows, filter bounding boxes, and derivation trees
-[dets, boxes, trees] = get_detection_trees(model, pyra.padx, pyra.pady, ...
+[ds, bs, trees] = get_detection_trees(model, pyra.padx, pyra.pady, ...
                                            pyra.scales, X, Y, L, S, get_loss);

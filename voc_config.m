@@ -138,7 +138,7 @@ conf.training.log = @(x) sprintf([conf.paths.model_dir '%s.log'], x);
 
 conf = cv(conf, 'training.cache_example_limit', 24000);
 conf = cv(conf, 'training.num_negatives_small', 200);
-conf = cv(conf, 'training.num_negatives_large', inf);
+conf = cv(conf, 'training.num_negatives_large', 2000);
 conf = cv(conf, 'training.wlssvm_M', 0);
 conf = cv(conf, 'training.fg_overlap', 0.7);
 

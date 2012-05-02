@@ -38,8 +38,10 @@ fg_overlap       = conf.training.fg_overlap;
 % All data mining iterations use this subset, except in a final
 % round of data mining where the model is exposed to all negative
 % images
-neg_small = neg(randperm(length(neg)));
-neg_small = neg_small(1:conf.training.num_negatives_small);
+num_neg   = length(neg);
+neg_perm  = neg(randperm(num_neg));
+neg_small = neg_perm(1:min(num_neg, conf.training.num_negatives_small));
+neg_large = neg_perm(1:min(num_neg, conf.training.num_negatives_large));
 
 % Train one asymmetric root filter for each aspect ratio group
 % using warped positives and random negatives
@@ -53,7 +55,7 @@ catch
     % left vs. right facing instances
     inds = lrsplit(models{i}, spos{i});
     % Train asymmetric root filter on one of these groups
-    models{i} = train(models{i}, spos{i}(inds), neg, true, true, 1, 1, ...
+    models{i} = train(models{i}, spos{i}(inds), neg_large, true, true, 1, 1, ...
                       max_num_examples, fg_overlap, 0, false, ...
                       ['lrsplit1_' num2str(i)]);
   end
@@ -118,7 +120,7 @@ catch
   model = train(model, impos, neg_small, false, false, 8, 10, ...
                 max_num_examples, fg_overlap, num_fp, false, 'parts_1');
   % Finish training by data mining on all of the negative images
-  model = train(model, impos, neg, false, false, 1, 5, ...
+  model = train(model, impos, neg_large, false, false, 1, 5, ...
                 max_num_examples, fg_overlap, num_fp, true, 'parts_2');
   save([cachedir cls '_parts'], 'model');
 end

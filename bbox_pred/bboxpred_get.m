@@ -1,25 +1,25 @@
-function [bbox, parts] = bboxpred_get(bboxpred, dets, boxes)
+function [ds_pred, bs_pred] = bboxpred_get(bboxpred, ds, bs)
 % Get predicted bounding boxes.
-%   [bbox, parts] = bboxpred_get(bboxpred, dets, boxes)
+%   [bbox, bs_out] = bboxpred_get(bboxpred, ds, bs)
 %
 % Return values
-%   bbox      Output detection windows
-%   parts     Output filter bounding boxes
+%   ds_pred   Output detection windows
+%   bs_pred   Output filter bounding boxes
 %
 % Arguments
 %   bboxpred  Bounding box prediction coefficients (see bboxpred_train.m)
-%   dets      Source detection windows
-%   boxes     Source filter bounding boxes
+%   ds        Source detection windows
+%   bs        Source filter bounding boxes
 
-bbox = [];
-parts = [];
+ds_pred = [];
+bs_pred = [];
 % number of components
-maxc = max(boxes(:,end-1));
+maxc = max(bs(:,end-1));
 for c = 1:maxc
   % limit boxes to just component c
-  cinds = find(boxes(:,end-1) == c);
-  b = boxes(cinds,:);
-  d = dets(cinds,:);
+  cinds = find(bs(:,end-1) == c);
+  b = bs(cinds,:);
+  d = ds(cinds,:);
   if isempty(b)
     continue;
   end
@@ -37,6 +37,6 @@ for c = 1:maxc
          x2 + (w.*dx2) ...
          y2 + (h.*dy2) ...
          b(:, end)];
-  bbox = [bbox; tmp];
-  parts = [parts; b];
+  ds_pred = [ds_pred; tmp];
+  bs_pred = [bs_pred; b];
 end

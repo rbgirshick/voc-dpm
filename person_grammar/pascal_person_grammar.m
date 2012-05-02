@@ -40,8 +40,8 @@ fv_cache('free');
 model.thresh = min(conf.eval.max_thresh, model.thresh);
 model.interval = conf.eval.interval;
 
-boxes1 = pascal_test(model, testset, testyear, testyear);
-ap1 = pascal_eval(cls, boxes1, testset, testyear, testyear);
+ds = pascal_test(model, testset, testyear, testyear);
+ap1 = pascal_eval(cls, ds, testset, testyear, testyear);
 %[ap1, ap2] = bboxpred_rescore(cls, testset, testyear);
 
 fprintf('AP = %.4f (without bounding box prediction)\n', ap1)

@@ -3,6 +3,7 @@ function f = vis_derived_filter(model, tree)
 conf = voc_config();
 
 % indexes into info from get_detection_trees.cc
+% replace with tree_mat_to_struct
 N_PARENT      = 1;
 N_IS_LEAF     = 2;
 N_SYMBOL      = 3;

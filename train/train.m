@@ -659,17 +659,17 @@ num_entries = length(I);
 
 
 % collect filter usage statistics
-function u = getfusage(boxes)
-numfilters = floor(size(boxes, 2)/4);
+function u = getfusage(bs)
+numfilters = floor(size(bs, 2)/4);
 u = zeros(numfilters, 1);
-nboxes = size(boxes,1);
+nbs = size(bs,1);
 for i = 1:numfilters
-  x1 = boxes(:,1+(i-1)*4);
-  y1 = boxes(:,2+(i-1)*4);
-  x2 = boxes(:,3+(i-1)*4);
-  y2 = boxes(:,4+(i-1)*4);
+  x1 = bs(:,1+(i-1)*4);
+  y1 = bs(:,2+(i-1)*4);
+  x2 = bs(:,3+(i-1)*4);
+  y2 = bs(:,4+(i-1)*4);
   ndel = sum((x1 == 0) .* (x2 == 0) .* (y1 == 0) .* (y2 == 0));
-  u(i) = nboxes - ndel;
+  u(i) = nbs - ndel;
 end
 
 

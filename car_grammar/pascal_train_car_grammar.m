@@ -19,9 +19,11 @@ max_num_examples = conf.training.cache_example_limit;
 num_fp           = conf.training.wlssvm_M;
 fg_overlap       = conf.training.fg_overlap;
 
-% Small subset of negative images
-neg_small = neg(randperm(length(neg)));
-neg_small = neg_small(1:conf.training.num_negatives_small);
+% Small and large subsets of negative images
+num_neg   = length(neg);
+neg_perm  = neg(randperm(num_neg));
+neg_small = neg_perm(1:min(num_neg, conf.training.num_negatives_small));
+neg_large = neg_perm(1:min(num_neg, conf.training.num_negatives_large));
 
 model = car_grammar_init();
 
@@ -31,7 +33,7 @@ catch
   seed_rand();
   model = train(model, impos, neg_small, false, false, 8, 20, ...
                 max_num_examples, fg_overlap, num_fp, false, 'star');
-  model = train(model, impos, neg, false, false, 1, 5, ...
+  model = train(model, impos, neg_large, false, false, 1, 5, ...
                 max_num_examples, fg_overlap, num_fp, true, 'star_2');
 
   save([cachedir cls '_star'], 'model');

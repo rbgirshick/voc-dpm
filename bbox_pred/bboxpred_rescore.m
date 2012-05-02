@@ -19,29 +19,29 @@ if nargin < 4
   method = 'default';
 end
 
-try
-  load([conf.paths.model_dir name '_final']);
-  if ~isempty(model.bboxpred)
-    bboxpred = model.bboxpred;
-  end
-catch
+% Get or train the bbox predictor
+load([conf.paths.model_dir name '_final']);
+if ~isfield(model, 'bboxpred')
   model = bboxpred_train(name, method);
-  bboxpred = model.bboxpred;
 end
+bboxpred = model.bboxpred;
 
-% load test boxes (loads vars: boxes1, parts1)
+% Load original detections (loads vars ds, bs)
 load([conf.paths.model_dir name '_boxes_' testset '_' year]);
 
 ids = textread(sprintf(VOCopts.imgsetpath, testset), '%s');
-newboxes = cell(length(parts1),1);
-newparts = cell(length(parts1),1);
-for i = 1:length(parts1)
+num_ids = length(ids);
+ds_out = cell(1, num_ids);
+bs_out = cell(1, num_ids);
+for i = 1:num_ids
   tic_toc_print('%s %s: bbox rescoring %s: %d/%d\n', ...
-                procid(), name, testset, i, length(parts1));
-  if isempty(parts1{i})
+                procid(), name, testset, i, num_ids);
+  if isempty(bs{i})
     continue;
   end
-  [bbox parts] = bboxpred_get(bboxpred, boxes1{i}, parts1{i});
+  % Get predicted detection windows
+  % Note: the order of ds is not preserved in ds_pred
+  [ds_pred bs_pred] = bboxpred_get(bboxpred, ds{i}, bs{i});
   if strcmp('inriaperson', name)
     % INRIA uses a mixutre of PNGs and JPGs, so we need to use the annotation
     % to locate the image.  The annotation is not generally available for PASCAL
@@ -51,19 +51,26 @@ for i = 1:length(parts1)
   else
     im = imread(sprintf(VOCopts.imgpath, ids{i}));  
   end
-  % clip to image boundary and apply NMS
-  [bbox parts] = clipboxes(im, bbox, parts);
-  I = nms(bbox, 0.5);
-  newboxes{i} = bbox(I,:);
-  newparts{i} = parts(I,:);
+  % Clip to image boundary and re-apply NMS
+  [ds_pred bs_pred] = clipboxes(im, ds_pred, bs_pred);
+  I = nms(ds_pred, 0.5);
+  % Output detections and boxes
+  ds_out{i} = ds_pred(I,:);
+  bs_out{i} = bs_pred(I,:);
 end
-
-% save modified boxes
-boxes1 = newboxes;
-parts1 = newparts;
-save([conf.paths.model_dir name '_boxes_' testset '_bboxpred_' year], ...
-     'boxes1', 'parts1');
 
 % load old ap
 load([conf.paths.model_dir name '_pr_' testset '_' year]);
-newap = pascal_eval(name, newboxes, testset, year, ['bboxpred_' method '_' year]);
+if strcmp(method, 'default')
+  method_str = '';
+else
+  method_str = method;
+end
+newap = pascal_eval(name, ds_out, testset, year, ...
+                    ['bboxpred_' method_str '_' year]);
+
+% save modified boxes
+ds = ds_out;
+bs = bs_out;
+save([conf.paths.model_dir name '_boxes_' testset '_bboxpred_' year], ...
+     'ds', 'bs');

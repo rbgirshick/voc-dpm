@@ -1,14 +1,14 @@
-function labels = rescore_labels(cls, boxes, trainset)
+function labels = rescore_labels(cls, ds, trainset)
 % Get classification training labels for training the context rescoring
 % classifier.
-%   labels = rescore_labels(cls, boxes, trainset)
+%   labels = rescore_labels(cls, ds, trainset)
 %
 % Return value
 %   labels      Binary labels {-1,+1} for each detection in boxes
 %
 % Arguments
 %   cls         Object class
-%   boxes       Detections
+%   ds          Detections
 %   trainset    Training dataset
 
 conf = voc_config();
@@ -25,21 +25,21 @@ catch
 
   L = 0;
   for i = 1:length(gtids)
-    L = L + size(boxes{i},1);
+    L = L + size(ds{i},1);
   end
   
   detections = zeros(L,7);
   I = 1;
   for i = 1:length(gtids)
-    if ~isempty(boxes{i})
-      l = size(boxes{i},1);
+    if ~isempty(ds{i})
+      l = size(ds{i},1);
       % Detection scores
-      detections(I:I+l-1,1) = boxes{i}(:,end);
+      detections(I:I+l-1,1) = ds{i}(:,end);
       % Detection windows
-      detections(I:I+l-1,2:5) = boxes{i}(:,1:4);
+      detections(I:I+l-1,2:5) = ds{i}(:,1:4);
       % The image (i) the detections came from
       detections(I:I+l-1,6) = i;      
-      % The index in boxes{i} for each detection
+      % The index in ds{i} for each detection
       detections(I:I+l-1,7) = 1:l;      
       labels{i} = zeros(l,1);    
       I = I+l;

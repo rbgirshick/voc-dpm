@@ -1,6 +1,6 @@
-function [ap, prec, recall] = pascal_eval(cls, boxes, testset, year, suffix)
-% Score bounding boxes using the PASCAL development kit.
-%   [ap, prec, recall] = pascal_eval(cls, boxes, testset, suffix)
+function [ap, prec, recall] = pascal_eval(cls, ds, testset, year, suffix)
+% Score detections using the PASCAL development kit.
+%   [ap, prec, recall] = pascal_eval(cls, ds, testset, suffix)
 %
 % Return values
 %   ap        Average precision score
@@ -9,7 +9,7 @@ function [ap, prec, recall] = pascal_eval(cls, boxes, testset, year, suffix)
 %
 % Arguments
 %   cls       Object class to evaluate
-%   boxes     Detection bounding boxes returned by pascal_test.m
+%   ds        Detection windows returned by pascal_test.m
 %   testset   Test set to evaluate against (e.g., 'val', 'test')
 %   year      Test set year to use  (e.g., '2007', '2011')
 %   suffix    Results are saved to a file named:
@@ -25,13 +25,12 @@ ids = textread(sprintf(VOCopts.imgsetpath, testset), '%s');
 % write out detections in PASCAL format and score
 fid = fopen(sprintf(VOCopts.detrespath, 'comp3', cls), 'w');
 for i = 1:length(ids);
-  bbox = boxes{i};
+  bbox = ds{i};
   for j = 1:size(bbox,1)
     fprintf(fid, '%s %f %d %d %d %d\n', ids{i}, bbox(j,end), bbox(j,1:4));
   end
 end
 fclose(fid);
-
 
 recall = [];
 prec = [];

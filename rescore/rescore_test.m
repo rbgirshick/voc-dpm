@@ -24,7 +24,7 @@ end
 
 % Get detections, filter bounding boxes, and context feature vectors
 % to be rescored
-[boxes, parts, X] = rescore_data(dataset);
+[ds_all, bs_all, X] = rescore_data(dataset);
 
 ids = textread(sprintf(VOCopts.imgsetpath, dataset), '%s');
 numids = length(ids);
@@ -38,20 +38,20 @@ else
   cls_inds = 1:numcls;
 end
 
-for j = cls_inds
-  load([cachedir VOCopts.classes{j} '_rescore_classifier']);
-  fprintf('%d/%d %s ', j, numcls, VOCopts.classes{j});
+for c = cls_inds
+  load([cachedir VOCopts.classes{c} '_rescore_classifier']);
+  fprintf('%d/%d %s ', c, numcls, VOCopts.classes{c});
   for i = 1:numids
-    if ~isempty(X{j,i})
-      [ignore, s] = svmclassify(X{j,i}, ones(size(X{j,i},1), 1), model);
-      boxes{j}{i}(:,end) = s;
-      parts{j}{i}(:,end) = s;
+    if ~isempty(X{c,i})
+      [ignore, s] = svmclassify(X{c,i}, ones(size(X{c,i},1), 1), model);
+      ds_all{c}{i}(:,end) = s;
+      bs_all{c}{i}(:,end) = s;
     end
   end
-  ap = pascal_eval(VOCopts.classes{j}, boxes{j}, dataset, VOCyear, ...
+  ap = pascal_eval(VOCopts.classes{c}, ds_all{c}, dataset, VOCyear, ...
                    ['rescore_' VOCyear]);
   fprintf(' %.3f\n', ap);
 end
 
-save([cachedir 'rescore_boxes_' dataset '_' VOCyear], 'boxes', 'parts');
+save([cachedir 'rescore_boxes_' dataset '_' VOCyear], 'ds_all', 'bs_all');
 fprintf('average = %f\n', sum(ap)/numcls);

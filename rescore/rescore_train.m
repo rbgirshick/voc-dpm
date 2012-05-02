@@ -15,7 +15,7 @@ VOCopts  = conf.pascal.VOCopts;
 dataset  = conf.training.train_set_fg;
 
 % Get training data
-[boxes, parts, XX] = rescore_data(dataset);
+[ds_all, bs_all, XX] = rescore_data(dataset);
 
 numcls = length(VOCopts.classes);
 if ~isempty(cls)
@@ -31,14 +31,14 @@ for c = cls_inds
     load([cachedir cls '_rescore_classifier']);
   catch
     % Get labels for the training data for class cls
-    YY = rescore_labels(cls, boxes{c}, dataset);
+    YY = rescore_labels(cls, ds_all{c}, dataset);
     X = [];
     Y = [];
     % Collect training feature vectors and labels into a 
     % single matrix and vector
-    for j = 1:size(XX,2)
-      X = [X; XX{c,j}];
-      Y = [Y; YY{j}];
+    for i = 1:size(XX,2)
+      X = [X; XX{c,i}];
+      Y = [Y; YY{i}];
     end
     % Remove "don't care" examples
     I = find(Y == 0);

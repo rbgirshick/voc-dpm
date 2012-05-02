@@ -1,11 +1,11 @@
-function [dets, boxes, targets] = bboxpred_data(name)
+function [ds_all, bs_all, targets] = bboxpred_data(name)
 % Collect training data for bounding box prediction.
-%   [dets, boxes, targets] = bboxpred_data(name)
+%   [ds, bs, targets] = bboxpred_data(name)
 %
 % Return values
-%   dets      Predicted bounding boxes (clipped to the image)
+%   ds_all    Predicted bounding boxes (clipped to the image)
 %             One cell percomponent
-%   boxes     All filter bounding boxes (unclipped)
+%   bs_all    All filter bounding boxes (unclipped)
 %             One cell percomponent
 %   targets   Ground-truth bounding boxes (clipped)
 %             One cell percomponent
@@ -46,28 +46,28 @@ catch
     im = imreadx(pos(i));
     [im, bbox] = croppos(im, bbox);
     [pyra, model_dp] = gdetect_pos_prepare(im, model, bbox, 0.7);
-    [det, boxes] = gdetect_pos(pyra, model_dp, 1, ...
-                               1, 0.7, [], 0.5);
-    if ~isempty(det)
+    [ds, bs] = gdetect_pos(pyra, model_dp, 1, ...
+                            1, 0.7, [], 0.5);
+    if ~isempty(ds)
       % component index
-      c = det(1,end-1);
-      boxes = reduceboxes(model, boxes);
-      det = clipboxes(im, det);
-      pard{i}{c} = [pard{i}{c}; det(:,1:end-2)];
-      parb{i}{c} = [parb{i}{c}; boxes(:,1:end-2)];
+      c = ds(1,end-1);
+      bs = reduceboxes(model, bs);
+      ds = clipboxes(im, ds);
+      pard{i}{c} = [pard{i}{c}; ds(:,1:end-2)];
+      parb{i}{c} = [parb{i}{c}; bs(:,1:end-2)];
       part{i}{c} = [part{i}{c}; bbox];
     end
   end
-  dets = cell(1,nrules);
-  boxes = cell(1,nrules);
+  ds_all = cell(1,nrules);
+  bs_all = cell(1,nrules);
   targets = cell(1,nrules);
   for i = 1:numpos
     for c = 1:nrules
-      dets{c} = [dets{c}; pard{i}{c}];
-      boxes{c} = [boxes{c}; parb{i}{c}];
+      ds_all{c} = [ds_all{c}; pard{i}{c}];
+      bs_all{c} = [bs_all{c}; parb{i}{c}];
       targets{c} = [targets{c}; part{i}{c}];
     end
   end
   save([conf.paths.model_dir name '_bboxdata'], ...
-       'dets', 'boxes', 'targets');
+       'ds_all', 'bs_all', 'targets');
 end
