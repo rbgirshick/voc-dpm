@@ -80,7 +80,7 @@ for d = 1:min(maxnum, length(trees))
   y = trees{d}(N_Y, 1);
   l = trees{d}(N_L, 1);
   ex = [];
-  ex.key = [0; dataid; l; x; y];
+  ex.key = [dataid; l; x; y];
   ex.blocks(model.numblocks).f = [];
   ex.loss = trees{d}(N_LOSS, 1);
 
@@ -189,9 +189,9 @@ function status = exwrite(ex, from_pos, is_belief, maxsize)
 if from_pos
   loss = ex.loss;
   is_mined = 0;
-  ex.key(3) = 0; % remove scale
-  ex.key(4) = 0; % remove x position
-  ex.key(5) = 0; % remove y position
+  ex.key(2) = 0; % remove scale
+  ex.key(3) = 0; % remove x position
+  ex.key(4) = 0; % remove y position
 else
   loss = 1;
   is_mined = 1;

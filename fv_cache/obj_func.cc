@@ -8,26 +8,25 @@ using namespace std;
 
 /** -----------------------------------------------------------------
  ** Softmax parameters
- **  softmax(x_1,...,x_i) = 1/beta * log[sum_i[exp(x_i)^beta]]
+ **  softmax(x_1,...,x_i) = 1/beta * log[sum_i[exp(beta*x_i)]]
  **/
 static const double beta = 1000.0;
 static const double inv_beta = 1.0 / beta;
 
+// Indexes for the objective function value on background examples, 
+// foreground examples, and the regularization term
+enum { OBJ_VAL_BG = 0, OBJ_VAL_FG, OBJ_VAL_RG, OBJ_VAL_LEN };
+
 /** -----------------------------------------------------------------
  ** Compute the value of the object function on the cache
  **/
-//  out[0] : loss on negative examples
-//  out[1] : loss on positive examples
-//  out[2] : regularization term's value
-void obj_val(double out[3], ex_cache &E, model &M) {
-  // FIXME: merge with gradient()
-  //  - make gradient return out[3] so this function can be removed
-  //    local reference
+void obj_val(double out[OBJ_VAL_LEN], ex_cache &E, model &M) {
+  // TODO: consider merging with gradient()
   double **w = M.w;
 
-  out[0] = 0.0; // background examples (from neg)
-  out[1] = 0.0; // foreground examples (from pos)
-  out[2] = 0.0; // regularization
+  out[OBJ_VAL_BG] = 0.0; // background examples (from neg)
+  out[OBJ_VAL_FG] = 0.0; // foreground examples (from pos)
+  out[OBJ_VAL_RG] = 0.0; // regularization
 
   if (M.reg_type == model::REG_L2) {
     // compute ||w||^2
@@ -35,9 +34,9 @@ void obj_val(double out[3], ex_cache &E, model &M) {
       const double *wb = w[b];
       double reg_mult  = M.reg_mult[b];
       for (int k = 0; k < M.block_sizes[b]; k++)
-        out[2] += wb[k] * wb[k] * reg_mult;
+        out[OBJ_VAL_RG] += wb[k] * wb[k] * reg_mult;
     }
-    out[2] *= 0.5;
+    out[OBJ_VAL_RG] *= 0.5;
   } else if (M.reg_type == model::REG_MAX) {
     // Compute softmax regularization cost
     double hnrms2[M.num_components];
@@ -74,7 +73,7 @@ void obj_val(double out[3], ex_cache &E, model &M) {
       Z += a;
     }
 
-    out[2] = max_hnrm2 + inv_beta * log(Z);
+    out[OBJ_VAL_RG] = max_hnrm2 + inv_beta * log(Z);
   }
 
   for (ex_iter i = E.begin(), i_end = E.end(); i != i_end; ++i) {
@@ -82,7 +81,7 @@ void obj_val(double out[3], ex_cache &E, model &M) {
     fv_iter belief_I = i->begin;
     double V = -INFINITY;
     double belief_score = 0;
-    int subset = 1;
+    int subset = OBJ_VAL_FG;
     for (fv_iter m = i->begin; m != i->end; ++m) {
       double score = M.score_fv(*m);
 
@@ -90,7 +89,7 @@ void obj_val(double out[3], ex_cache &E, model &M) {
         belief_score = score;
         belief_I = m;
         if (m->is_zero)
-          subset = 0;
+          subset = OBJ_VAL_BG;
       }
       
       score += m->loss;
@@ -104,6 +103,9 @@ void obj_val(double out[3], ex_cache &E, model &M) {
 }
 
 
+/** -----------------------------------------------------------------
+ ** Compute score and margin for each feature vector.
+ */
 void compute_info(const ex_cache &E, fv_cache &F, const model &M) {
   const int num_examples = E.size();
 
@@ -128,6 +130,10 @@ void compute_info(const ex_cache &E, fv_cache &F, const model &M) {
 }
 
 
+/** -----------------------------------------------------------------
+ ** Update the gradient by adding to it the subgradient from one
+ ** example.
+ */
 static inline void update_gradient(const model &M, const fv_iter I, 
                                    double **grad_blocks, double mult) {
   // short circuit if the feat vector is zero
@@ -149,6 +155,10 @@ static inline void update_gradient(const model &M, const fv_iter I,
 }
 
 
+/** -----------------------------------------------------------------
+ ** Compute the gradient and value of the objective function at the
+ ** point M.w.
+ */
 void gradient(double *obj_val_out, double *grad, const int dim, 
               ex_cache &E, const model &M, int num_threads) {
   // Gradient per thread

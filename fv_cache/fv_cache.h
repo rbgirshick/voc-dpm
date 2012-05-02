@@ -38,8 +38,7 @@ extern bool INTERRUPTED;
  **/
 struct fv {
   // Feature vector key fields  
-  enum { KEY_LABEL = 0,   // LABEL is no longer used
-         KEY_DATA_ID,     // Source image id
+  enum { KEY_DATA_ID = 0, // Source image id
          KEY_X,           // x location
          KEY_Y,           // y location
          KEY_SCALE,       // scale
@@ -199,9 +198,9 @@ struct fv {
    ** Print cache key and other information
    **/
   void print() {
-    mexPrintf("label: %d  dataid: %d  x: %d  y: %d  "
+    mexPrintf("dataid: %d  x: %d  y: %d  "
               "scale: %d  &feat: %x  uniq: %d\n", 
-              key[KEY_LABEL], key[KEY_DATA_ID], key[KEY_X], key[KEY_Y], 
+              key[KEY_DATA_ID], key[KEY_X], key[KEY_Y], 
               key[KEY_SCALE], feat, is_unique);
   }
 

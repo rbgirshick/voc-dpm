@@ -1,7 +1,7 @@
 function [blocks, lower_bounds, reg_mult, learn_mult, comps] ...
   = fv_model_args(model)
-% fv_model_args(model) returns the arguments (<args>) needed by the 
-% fv_cache('set_model', <args>)
+% fv_model_args(model) returns the arguments (ARGS) needed by the call
+% fv_cache('set_model', ARGS).
 %   [blocks, lower_bounds, reg_mult, learn_mult, comps] = fv_model_args(model)
 %
 % Return values

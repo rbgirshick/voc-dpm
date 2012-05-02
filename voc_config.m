@@ -25,7 +25,7 @@ BASE_DIR    = '/var/tmp/rbg';
 PASCAL_YEAR = '2007';
 
 % Models are automatically stored in BASE_DIR/PROJECT/PASCAL_YEAR/
-PROJECT     = 'rel5-dev/learn-loc-w-4';
+PROJECT     = 'rel5-dev/learn-loc-w-5';
 
 %
 % You probably don't need to change configuration settings below this line.
@@ -103,9 +103,10 @@ conf = cv(conf, 'single_byte_size', 4);
 % Configure the PASCAL VOC dataset year
 conf = cv(conf, 'pascal.year', PASCAL_YEAR);
 
-% Directory with PASCAL VOC development kit and dataset
+%% Directory with PASCAL VOC development kit and dataset
 conf = cv(conf, 'pascal.dev_kit', [conf.paths.base_dir '/VOC' ...
                                    conf.pascal.year '/VOCdevkit/']);
+%conf = cv(conf, 'pascal.dev_kit', [conf.paths.base_dir '/INRIA/VOCdevkit/']);
 
 % VOCinit brings VOCopts into scope                  
 conf.pascal.VOCopts = get_voc_opts(conf);

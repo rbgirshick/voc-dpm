@@ -418,7 +418,7 @@ for i = 1:numpos
   % get example
   im = warped{i};
   feat = features(double(im), model.sbin);
-  key = [0 i 0 0 0];
+  key = [i 0 0 0];
   bls = [obl; fbl] - 1;
   feat = [model.features.bias; feat(:)];
   fv_cache('add', int32(key), int32(bls), single(feat), ...
@@ -480,8 +480,8 @@ for i = 1:batchsize:numpos
       fg_box = b;
       bg_boxes = 1:num_boxes;
       bg_boxes(b) = [];
-      [det, bs, trees] = gdetect_pos(data(k).pyra, model_dp, 1+num_fp, ...
-                                     fg_box, fg_overlap, bg_boxes, 0.5);
+      [ds, bs, trees] = gdetect_pos(data(k).pyra, model_dp, 1+num_fp, ...
+                                    fg_box, fg_overlap, bg_boxes, 0.5);
       data(k).boxdata{b}.bs = bs;
       data(k).boxdata{b}.trees = trees;
       if ~isempty(bs)
@@ -542,7 +542,7 @@ for i = 1:batchsize:numneg
             procid(), model.class, t, negiter, i+k-1, numneg, j);
     im = color(imreadx(neg(j)));
     pyra = featpyramid(im, model);
-    [dets, bs, trees] = gdetect(pyra, model, -1.002, det_limit);
+    [ds, bs, trees] = gdetect(pyra, model, -1.002, det_limit);
     data{k}.bs = bs;
     data{k}.pyra = pyra;
     data{k}.trees = trees;
@@ -552,7 +552,7 @@ for i = 1:batchsize:numneg
     j = inds(i+k-1);
     dataid = neg(j).dataid;
     bs = gdetect_write(data{k}.pyra, model, data{k}.bs, data{k}.trees, ...
-                      false, dataid, maxsize, max_num_examples-num_examples);
+                       false, dataid, maxsize, max_num_examples-num_examples);
     if ~isempty(bs)
       fusage = fusage + getfusage(bs);
       scores = [scores; bs(:,end)];
@@ -603,7 +603,7 @@ for i = 1:numneg
       y = random('unid', size(feat,1)-rsize(1)+1);
       f = feat(y:y+rsize(1)-1, x:x+rsize(2)-1,:);
       dataid = (i-1)*rndneg+j + 100000; % assumes < 100K foreground examples
-      key = [0 dataid 0 0 0];
+      key = [dataid 0 0 0];
       bls = [obl; fbl] - 1;
       f = [model.features.bias; f(:)];
       fv_cache('add', int32(key), int32(bls), single(f), ...
@@ -619,20 +619,18 @@ end
 
 
 function info = info_to_struct(in)
-I_LABEL     = 1;
-I_SCORE     = 2;
-I_IS_UNIQUE = 3;
-I_DATAID    = 4;
-I_X         = 5;
-I_Y         = 6;
-I_SCALE     = 7;
-I_BYTE_SIZE = 8;
-I_MARGIN    = 9;
-I_IS_BELIEF = 10;
-I_IS_ZERO   = 11;
-I_IS_MINED  = 12;
+I_SCORE     = 1;
+I_IS_UNIQUE = 2;
+I_DATAID    = 3;
+I_X         = 4;
+I_Y         = 5;
+I_SCALE     = 6;
+I_BYTE_SIZE = 7;
+I_MARGIN    = 8;
+I_IS_BELIEF = 9;
+I_IS_ZERO   = 10;
+I_IS_MINED  = 11;
 
-info.labels       = in(:, I_LABEL);
 info.scores       = in(:, I_SCORE);
 info.is_unique    = in(:, I_IS_UNIQUE);
 info.dataid       = in(:, I_DATAID);

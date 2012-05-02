@@ -9,6 +9,11 @@
 
 using namespace std;
 
+/** -----------------------------------------------------------------
+ ** Define fv_cache static members
+ ** Memory pools for feature vectors (feat_pool) and block label 
+ ** lists (block_label_pool)
+ **/
 mempool<float> fv::feat_pool;
 mempool<int> fv::block_label_pool;
 
@@ -107,8 +112,6 @@ static void build_ex_cache() {
   { // Sort cache entries
     mexPrintf("Sorting cache entries...");
     sort(F.begin(), F.end(), fv::cmp_weak);
-    //Dprintf("\n");
-    //print_fv_cache();
     mexPrintf("done\n");
     mexPrintf("Cache holds %d feature vectors\n", F.size());
   }
@@ -122,8 +125,6 @@ static void build_ex_cache() {
       cur++;
     }
   }
-
-  //print_fv_cache();
 
   { // Remove duplicates
     mexPrintf("Removing duplicates...");
@@ -139,17 +140,13 @@ static void build_ex_cache() {
     mexPrintf("Cache holds %d feature vectors\n", F.size());
   }
 
-  //Dprintf("Foo!\n");
-  //for (fv_iter i = F.begin(); i != F.end(); ++i)
-  //  i->print();
-  //Dprintf("Bar!\n");
-
   { // Construct example cache index
     mexPrintf("Building example cache...");
     ex e;
+    e.begin = F.begin();
+    // State information for margin-bound pruning
     e.hist = 0;
     e.margin_bound = -1;
-    e.begin = F.begin();
     e.max_nonbelief_norm = (e.begin->is_belief) ? 0 : e.begin->norm;
     e.belief_norm = (e.begin->is_belief) ? e.begin->norm : 0;
     for (fv_iter i = e.begin+1; i != F.end(); ++i) {
@@ -173,16 +170,6 @@ static void build_ex_cache() {
   }
 
   gctx.cache_is_built = true;
-
-//  Dprintf("Printing example cache\n");
-//  for (unsigned int i = 0; i < E.size(); i++) {
-//    ex e = E[i];
-//    mexPrintf("Example %d has %d fv\n", i, e.num);
-//    for (fv_iter i = e.begin; i != e.end; i++) {
-//      mexPrintf("\t");
-//      i->print();
-//    }
-//  }
 }
 
 
@@ -191,9 +178,6 @@ static void build_ex_cache() {
  ** example cache, and model.
  **/
 static void free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-  //checkM(nrhs == 1, "Expected 0 inputs");
-  //checkM(nlhs == 0, "Expected 0 ouputs");
-
   for (fv_iter i = gctx.F.begin(), i_end = gctx.F.end(); i != i_end; ++i)
     gctx.byte_size -= i->free();
 
@@ -219,7 +203,7 @@ static void init_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
   // prhs[3]    max number of blocks
 
   checkM(nrhs == 4, "Expected 3 inputs");
-  checkM(nlhs == 0, "Expected 0 ouputs");
+  checkM(nlhs == 0, "Expected 0 outputs");
 
   // Free existing cache
   free_handler(nlhs, plhs, nrhs, prhs);
@@ -257,7 +241,7 @@ static void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs
   //  plhs[0]   current fv cache size in bytes or -1 if no memory left
   
   checkM(nrhs == 7, "Expected 6 inputs");
-  checkM(nlhs >= 0, "Expected >= 0 ouputs");
+  checkM(nlhs >= 0, "Expected >= 0 outputs");
 
   const int *key          = (int *)mxGetPr(prhs[1]);
   const mxArray *mx_bls   = prhs[2];
@@ -289,7 +273,7 @@ static void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs
  **/
 static void print_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   checkM(nrhs == 1, "Expected 0 inputs");
-  checkM(nlhs == 0, "Expected 0 ouputs");
+  checkM(nlhs == 0, "Expected 0 outputs");
 
   print_fv_cache();
 }
@@ -304,7 +288,7 @@ static void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *p
   // prhs[1]    list of entry indicies to save (must be sort small to large)
 
   checkM(nrhs == 2, "Expected 1 inputs");
-  checkM(nlhs == 0, "Expected 0 ouputs");
+  checkM(nlhs == 0, "Expected 0 outputs");
 
   fv_cache &F = gctx.F;
 
@@ -347,13 +331,12 @@ static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray 
   //  prhs[2]   number of threads
 
   checkM(nrhs == 3, "Expected 2 inputs");
+  checkM(nlhs == 2, "Expected 2 outputs");
 
   // Check preconditions
   check(gctx.cache_is_built);
   check(gctx.model_is_set);
 
-  bool compute_grad = (nlhs > 1);
-  
   model &M          = gctx.M;
   double **w        = M.w;
   mxArray *mx_grad  = NULL;
@@ -362,7 +345,7 @@ static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray 
 
   const mxArray *mx_cur_w = prhs[1];
   const double *cur_w     = (const double *)mxGetPr(mx_cur_w);
-  int num_threads   = (int)mxGetScalar(prhs[2]);
+  int num_threads         = (int)mxGetScalar(prhs[2]);
 
   num_threads = max(1, num_threads);
   omp_set_num_threads(num_threads);
@@ -403,22 +386,17 @@ static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray 
     }
   }
 
-  if (compute_grad) {
-    mx_grad = mxCreateNumericArray(1, &dim, mxDOUBLE_CLASS, mxREAL);
-    grad = mxGetPr(mx_grad);
-  }
+  mx_grad = mxCreateNumericArray(1, &dim, mxDOUBLE_CLASS, mxREAL);
+  grad = mxGetPr(mx_grad);
 
-  // FIXME: not checking is compute_grad in gradient()
   gradient(&obj_val, grad, dim, gctx.E, M, num_threads);
   
-  if (nlhs > 0)
-    plhs[0] = mxCreateDoubleScalar(obj_val);
-  
-  if (compute_grad)
-    plhs[1] = mx_grad;
+  plhs[0] = mxCreateDoubleScalar(obj_val);
+  plhs[1] = mx_grad;
 }
 
 
+// DEPRECATED SGD code
 ///** -----------------------------------------------------------------
 // ** Optimize the model using stochastic subgradient descent.
 // **/
@@ -452,13 +430,13 @@ static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray 
  **/
 static void info_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   checkM(nrhs == 1, "Expected 0 inputs");
-  checkM(nlhs == 1, "Expected 1 ouputs");
+  checkM(nlhs == 1, "Expected 1 outputs");
 
   check(gctx.model_is_set);
   check(gctx.cache_is_built);
 
   // Info fields
-  enum { LABEL = 0, SCORE, UNIQUE, DATA_ID, X, Y, SCALE, BYTE_SIZE, 
+  enum { SCORE = 0, UNIQUE, DATA_ID, X, Y, SCALE, BYTE_SIZE, 
          MARGIN, BELIEF, ZERO, MINED, NUM };
 
   int dims[]       = { gctx.F.size(), NUM };
@@ -469,7 +447,6 @@ static void info_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
   compute_info(gctx.E, gctx.F, gctx.M);
 
   for (fv_iter i = gctx.F.begin(), i_end = gctx.F.end(); i != i_end; ++i) {
-    *(info + dims[0]*LABEL)     = i->key[fv::KEY_LABEL];
     *(info + dims[0]*SCORE)     = i->score;
     *(info + dims[0]*UNIQUE)    = i->is_unique;
     *(info + dims[0]*DATA_ID)   = i->key[fv::KEY_DATA_ID];
@@ -494,7 +471,7 @@ static void info_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
  **/
 static void get_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   checkM(nrhs == 1, "Expected 0 inputs");
-  checkM(nlhs == 1, "Expected 1 ouputs");
+  checkM(nlhs == 1, "Expected 1 outputs");
 
   check(gctx.model_is_set);
 
@@ -528,7 +505,7 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
   // prhs[8]    any value => quiet mode
 
   checkM(nrhs >= 7, "Expected >= 6 inputs");
-  checkM(nlhs == 0, "Expected 0 ouputs");
+  checkM(nlhs == 0, "Expected 0 outputs");
 
   model &M = gctx.M;
   
@@ -630,7 +607,7 @@ static void byte_size_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
   //  plhs[0]   current fv cache size in bytes
 
   checkM(nrhs == 1, "Expected 0 inputs");
-  checkM(nlhs == 1, "Expected 1 ouputs");
+  checkM(nlhs == 1, "Expected 1 outputs");
 
   plhs[0] = mxCreateDoubleScalar(gctx.byte_size);
 }
@@ -658,7 +635,7 @@ static void obj_val_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *
  **/
 static void ex_prepare_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   checkM(nrhs == 1, "Expected 0 inputs");
-  checkM(nlhs == 0, "Expected 0 ouputs");
+  checkM(nlhs == 0, "Expected 0 outputs");
 
   build_ex_cache();
 }
@@ -669,7 +646,7 @@ static void ex_prepare_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArra
  **/
 static void ex_free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   checkM(nrhs == 1, "Expected 0 inputs");
-  checkM(nlhs == 0, "Expected 0 ouputs");
+  checkM(nlhs == 0, "Expected 0 outputs");
 
   free_ex_cache();
 }
@@ -681,7 +658,7 @@ static void ex_free_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *
  **/
 static void unlock_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   checkM(nrhs == 1, "Expected 0 inputs");
-  checkM(nlhs == 0, "Expected 0 ouputs");
+  checkM(nlhs == 0, "Expected 0 outputs");
 
   if (mexIsLocked() == 1)
     mexUnlock();
@@ -693,7 +670,7 @@ static void unlock_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *p
  **/
 static void save_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   checkM(nrhs == 2, "Expected 1 inputs");
-  checkM(nlhs == 0, "Expected 0 ouputs");
+  checkM(nlhs == 0, "Expected 0 outputs");
 
   char *filename = mxArrayToString(prhs[1]);
   ofstream out(filename, ios::binary | ios::trunc);
@@ -715,7 +692,7 @@ static void save_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
  **/
 static void load_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   checkM(nrhs == 2, "Expected 1 inputs");
-  checkM(nlhs == 0, "Expected 0 ouputs");
+  checkM(nlhs == 0, "Expected 0 outputs");
 
   char *filename = mxArrayToString(prhs[1]);
   ifstream in(filename, ios::binary);

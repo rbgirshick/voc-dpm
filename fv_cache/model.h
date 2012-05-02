@@ -12,7 +12,8 @@ using namespace std;
  ** This struct conflates three logically separate components
  **  - Block-sparse representation of feature vectors and parameters
  **  - Objective function (WL-SSVM)
- **  - Optimization algorithm to solve the objective function (SGD)
+ **  - Optimization algorithm to solve the objective function 
+ **    (e.g., L-BFGS, SGD)
  **
  ** These pieces could be factored in order to define a more generic
  ** framework where different objective functions could be defined
