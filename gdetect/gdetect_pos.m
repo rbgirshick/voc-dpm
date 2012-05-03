@@ -53,7 +53,7 @@ if count > 1 && ~isempty(ds)
   % close to being support vectors -- it's important because we 
   % typically won't data mine over the positives)
   [la_ds, la_bs, la_trees] = gdetect_parse(modelp, pyra, ...
-                                                max_score-0.01, count-1);
+                                           max_score-0.01, count-1);
   if ~isempty(la_ds)
     % make sure this doesn't include a duplicate of the belief
     dup = find((la_ds(:,1) == ds(1,1))&(la_ds(:,2) == ds(1,2))& ...

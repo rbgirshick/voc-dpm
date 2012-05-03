@@ -51,4 +51,4 @@ end
 
 % Compute detection windows, filter bounding boxes, and derivation trees
 [ds, bs, trees] = get_detection_trees(model, pyra.padx, pyra.pady, ...
-                                           pyra.scales, X, Y, L, S, get_loss);
+                                      pyra.scales, X, Y, L, S, get_loss);

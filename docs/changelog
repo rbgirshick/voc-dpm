@@ -1,6 +1,56 @@
+voc-release5
+---
+The main highlights in this release:
+
+* Weak-label structural SVM (wl-ssvm)
+	The Learning code has been generalized to support both lsvm and
+	wl-ssvm. By default lsvm is used for training mixture models
+	and wl-ssvm is used for training the person grammar model from [1].
+
+* Person grammar model [1]
+	The person grammar model from [1] is implemented in the person_grammar
+	directory.
+
+* Optimization improvements
+	The stochastic subgradient descent solver (learn.cc) has been replaced
+	by L-BFGS (using Mark Schmidt's minConf package). The learning and 
+	feature vector cache code has been completely rewritten from scratch.
+	Notably, the feature vector cache is now stored in memory and not as
+	a large file on disk. The memory requirements are slightly higher than
+	before, but your disk will thank you.
+
+* Code cleanup, reorganization, and speed improvements
+	The grammar API has been simplified and streamlined. The code has been
+	organized into subsystems. Training models is faster. For reference,
+	a PASCAL VOC 2007 bicycle model can be trained in 2 hours on a 4-year-old
+	quad-core machine (using 'matlabpool open 8').
+
+* Scale prior
+	Grammar productions now have learnable "scale prior" parameters that
+	help calibrate detection scores at different scales. In conjunction with 
+	this, the feature pyramid code supports adding an extra octave of HOG 
+	features computed on 2x2 pixel cells (off by default).
+	
+* Bug fixes
+	Several bug from voc-release4.01 (mostly involving memory usage) have
+	been fixed.
+
+* New configuration system
+	The globals.m configuration file has been replaced by voc_config.m.
+	This permits overriding configurations by setting a global variable.
+	Such configuration overriding makes it easy to test different config
+	options on different machines from the same code directory.
+
+
 voc-release4.01 (11/23/11)
 ---
 Fixed a runtime performance bug when using fconvblas.cc as the convolution
 routine with MATLAB >= 2010b on Intel CPUs.
 
 The default convolution routine now uses SSE optimized code (fconvsse.cc).
+
+
+[1] Object Detection with Grammar Models.
+		R. Girshick, P. Felzenszwalb, D. McAllester.
+		In Neural Information Processing Systems (NIPS) 2011.
+		http://people.cs.uchicago.edu/~rbg/papers/grammar-nips11.pdf
