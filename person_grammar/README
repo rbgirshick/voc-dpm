@@ -1,0 +1,5 @@
+This code trains and tests the person grammar model described in:
+  Object Detection with Grammar Models.
+  R. Girshick, P. Felzenszwalb, D. McAllester.
+  In Neural Information Processing Systems (NIPS) 2011.
+  http://people.cs.uchicago.edu/~rbg/papers/grammar-nips11.pdf
