@@ -62,12 +62,12 @@ end
 % load old ap
 load([conf.paths.model_dir name '_pr_' testset '_' year]);
 if strcmp(method, 'default')
-  method_str = '';
+  method_str = '_';
 else
-  method_str = method;
+  method_str = ['_' method '_'];
 end
 newap = pascal_eval(name, ds_out, testset, year, ...
-                    ['bboxpred_' method_str '_' year]);
+                    ['bboxpred' method_str year]);
 
 % save modified boxes
 ds = ds_out;

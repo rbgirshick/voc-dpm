@@ -41,7 +41,7 @@ fg_overlap       = conf.training.fg_overlap;
 num_neg   = length(neg);
 neg_perm  = neg(randperm(num_neg));
 neg_small = neg_perm(1:min(num_neg, conf.training.num_negatives_small));
-neg_large = neg_perm(1:min(num_neg, conf.training.num_negatives_large));
+neg_large = neg; % use all of the negative images
 
 % Train one asymmetric root filter for each aspect ratio group
 % using warped positives and random negatives
