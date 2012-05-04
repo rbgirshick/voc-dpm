@@ -1,8 +1,5 @@
 function visualize_simple_grammar_model_def(model, comps, direction)
 
-% visualizemodel(model)
-% Visualize a model.
-
 clf;
 
 if nargin < 3

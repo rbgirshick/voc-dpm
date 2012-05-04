@@ -28,11 +28,13 @@ fg_overlap       = conf.training.fg_overlap;
 num_neg   = length(neg);
 neg_perm  = neg(randperm(num_neg));
 neg_small = neg_perm(1:min(num_neg, conf.training.num_negatives_small));
-neg_large = neg_perm(1:min(num_neg, conf.training.num_negatives_large));
+neg_large = neg;
 
+% Initialize the model filters and structure
 model = person_grammar_init();
 model.note = note;
 
+% Train without subparts
 try 
   load([cachedir cls '_star']);
 catch
@@ -42,7 +44,7 @@ catch
   save([cachedir cls '_star'], 'model');
 end
 
-
+% Continue training with parts
 try 
   load([cachedir cls '_parts']);
 catch
@@ -51,13 +53,8 @@ catch
   syms = model.rules{model.start}(6).rhs;
   model = add_head_parts(model, syms(1), 3, [8 8], [5 5], 1);   % X
   model = add_slab_parts(model, syms(2), 2, [6 8], [3 4], 0.1); % Y1
-%% Add more sub parts
-%  model = add_slab_parts(model, syms(3), 2, [6 8], [3 4], 0.1); % Y2
-%  model = add_slab_parts(model, syms(4), 2, [6 8], [3 4], 0.1); % Y3
-%  model = add_slab_parts(model, syms(5), 2, [6 8], [3 4], 0.1); % Y4
-%  model = add_slab_parts(model, syms(6), 2, [4 8], [2 4], 0.1); % Y5
-%  osym = model.rules{model.start}(1).rhs(2);
-%  model = add_slab_parts(model, osym, 2, [8 8], [4 4]);         % O
+  % Adding more subparts makes training and testing slow and does
+  % not improve performance
 
   model = train(model, impos, neg_small, false, false, 8, 20, ...
                 max_num_examples, fg_overlap, num_fp, false, 'parts_1');
