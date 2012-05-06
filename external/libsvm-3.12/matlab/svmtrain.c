@@ -17,7 +17,10 @@ typedef int mwIndex;
 #define Malloc(type,n) (type *)malloc((n)*sizeof(type))
 
 void print_null(const char *s) {}
-void print_string_matlab(const char *s) {mexPrintf(s);}
+void print_string_matlab(const char *s) {
+  mexPrintf(s);
+  mexEvalString("drawnow");
+}
 
 void exit_with_help()
 {

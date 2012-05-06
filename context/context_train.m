@@ -1,21 +1,22 @@
-function rescore_train(cls)
+function context_train(train_set, train_year, cls)
 % Train context rescoring SVMs.
-%   rescore_train(cls)
+%   context_train(train_set, train_year, cls)
 %
 % Argument
-%   cls   Object class to train (trains all if not specified)
+%   train_set     Training dataset
+%   train_year    Training dataset year
+%   cls           Object class to train (trains all if not specified)
 
-if nargin < 1
+conf = voc_config('pascal.year', train_year);
+cachedir = conf.paths.model_dir;
+VOCopts  = conf.pascal.VOCopts;
+
+if nargin < 3
   cls = [];
 end
 
-conf = voc_config();
-cachedir = conf.paths.model_dir;
-VOCopts  = conf.pascal.VOCopts;
-dataset  = conf.training.train_set_fg;
-
 % Get training data
-[ds_all, bs_all, XX] = rescore_data(dataset);
+[ds_all, bs_all, XX] = context_data(train_set, train_year);
 
 numcls = length(VOCopts.classes);
 if ~isempty(cls)
@@ -26,12 +27,12 @@ end
 
 for c = cls_inds
   cls = VOCopts.classes{c};
-  fprintf('\nTraining rescoring classifier: %d/%d\n', c, numcls);
+  fprintf('Training context rescoring classifier for %s\n', cls);
   try
-    load([cachedir cls '_rescore_classifier']);
+    load([cachedir cls '_context_classifier']);
   catch
     % Get labels for the training data for class cls
-    YY = rescore_labels(cls, ds_all{c}, dataset);
+    YY = context_labels(cls, ds_all{c}, train_set, train_year);
     X = [];
     Y = [];
     % Collect training feature vectors and labels into a 
@@ -45,10 +46,7 @@ for c = cls_inds
     Y(I) = [];
     X(I,:) = [];
     % Train the rescoring SVM
-    % equivalent for LIBSVM: 
-    % model = svmtrain(Y, X, '-s 0 -t 1 -g 1 -r 1 -d 3 -c 1 -w1 2 -e 0.001 -m 500');
-    model = svmlearn(X, Y, ...
-                     '-t 1 -d 3 -r 1.0 -s 1.0 -j 2 -c 1.0 -e 0.001 -n 5 -m 500');
-    save([cachedir cls '_rescore_classifier'], 'model');
+    model = svmtrain(Y, X, '-s 0 -t 1 -g 1 -r 1 -d 3 -c 1 -w1 2 -e 0.001 -m 500');
+    save([cachedir cls '_context_classifier'], 'model');
   end
 end

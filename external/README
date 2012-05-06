@@ -18,4 +18,8 @@ Modifications: no changes to source; removed some unneeded files.
 Download: http://www.csie.ntu.edu.tw/~cjlin/libsvm/
 on May 2, 2012.
 
-Modifications: no changes to source; removed unneeded directories and files.
+Modifications:
+  - removed unneeded directories and files.
+  - matlab/svmpredict.c: remove mexPrintf of accuracy
+  - matlab/svmtrain.c: print_string_matlab now executes a drawNow to 
+    flush the print buffer

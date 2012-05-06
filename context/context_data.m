@@ -1,6 +1,6 @@
-function [ds_all, bs_all, X] = rescore_data(dataset)
+function [ds_all, bs_all, X] = context_data(dataset, year)
 % Compute feature vectors for context rescoring.
-%   [ds_all, bs_all, X] = rescore_data(dataset)
+%   [ds_all, bs_all, X] = context_data(dataset)
 %
 %   Only the 50,000 top-scoring detection windows are used. The remaining
 %   detections are discarded.
@@ -24,7 +24,7 @@ function [ds_all, bs_all, X] = rescore_data(dataset)
 %   detections for a class in the image, that class is assigned the max score
 %   -1.1.
 
-conf = voc_config();
+conf = voc_config('pascal.year', year);
 cachedir = conf.paths.model_dir;
 VOCopts  = conf.pascal.VOCopts;
 
@@ -34,32 +34,34 @@ numcls = length(VOCopts.classes);
 
 % get dimensions of each image in the dataset
 try
-  load([cachedir 'sizes_' dataset '_' VOCyear])
+  load([cachedir 'sizes_' dataset '_' year])
 catch
   sizes = cell(numids,1);
   for i = 1:numids
+    tic_toc_print('caching image sizes: %d/%d\n', i, numids);
     name = sprintf(VOCopts.imgpath, ids{i});
     im = imread(name);
     sizes{i} = size(im);
   end
-  save([cachedir 'sizes_' dataset '_' VOCyear], 'sizes');
+  save([cachedir 'sizes_' dataset '_' year], 'sizes');
 end
 
-% generate the rescoring data
+% generate the context data
 try
-  load([cachedir 'rescore_data_' dataset '_' VOCyear]);
+  load([cachedir 'context_data_' dataset '_' year]);
 catch
+  fprintf('Constructing context features (this will take a little while)...');
   ds_all = cell(numcls, 1);
   bs_all = cell(numcls, 1);
   for c = 1:numcls
     % Load bbox predicted detections (loads vars ds, bs)
-    load([cachedir VOCopts.classes{c} '_boxes_' dataset '_bboxpred_' VOCyear]);
+    load([cachedir VOCopts.classes{c} '_boxes_' dataset '_bboxpred_' year]);
     ds_all{c} = ds;
     bs_all{c} = bs;
   end
   
   for c = 1:numcls
-    data = cell2mat(ds_all{c});
+    data = cell2mat(ds_all{c}');
     % keep only highest scoring detections
     if size(data,1) > 50000
       s = data(:,end);
@@ -111,6 +113,7 @@ catch
     end
   end
 
-  save([cachedir 'rescore_data_' dataset '_' VOCyear], 'X', ...
+  save([cachedir 'context_data_' dataset '_' year], 'X', ...
        'ds_all', 'bs_all');  
+  fprintf('done!\n');
 end

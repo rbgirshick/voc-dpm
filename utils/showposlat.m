@@ -8,7 +8,7 @@ if nargin < 3
 end
 
 numpos = length(pos);
-model.interval = conf.training.interval;
+model.interval = conf.training.interval_fg;
 pixels = model.minsize * model.sbin / 2;
 minsize = prod(pixels);
 if nargin < 2

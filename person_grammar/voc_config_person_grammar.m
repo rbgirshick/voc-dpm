@@ -1,7 +1,7 @@
 function conf = voc_config_person_grammar()
 % Set up configuration variables
 
-conf.pascal.year                   = '2007';
+conf.pascal.year                   = '2011';
 conf.project                       = 'rel5-dev/rc1-person-grammar';
  
 conf.training.train_set_fg         = 'trainval';

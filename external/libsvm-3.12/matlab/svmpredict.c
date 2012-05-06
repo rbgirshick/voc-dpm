@@ -221,9 +221,9 @@ void predict(mxArray *plhs[], const mxArray *prhs[], struct svm_model *model, co
 			((total*sumpp-sump*sump)*(total*sumtt-sumt*sumt))
 			);
 	}
-	else
-		mexPrintf("Accuracy = %g%% (%d/%d) (classification)\n",
-			(double)correct/total*100,correct,total);
+//	else
+//		mexPrintf("Accuracy = %g%% (%d/%d) (classification)\n",
+//			(double)correct/total*100,correct,total);
 
 	// return accuracy, mean squared error, squared correlation coefficient
 	plhs[1] = mxCreateDoubleMatrix(3, 1, mxREAL);
