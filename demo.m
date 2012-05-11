@@ -1,4 +1,5 @@
 function demo()
+startup;
 
 load('VOC2007/car_final');
 test('000034.jpg', model);
@@ -22,7 +23,7 @@ disp('press any key to continue'); pause;
 disp('continuing...');
 
 % load and display model
-visualizemodel(model, 1:2:length(model.rules{model.start}));
+%visualizemodel(model, 1:2:length(model.rules{model.start}));
 disp([cls ' model visualization']);
 disp('press any key to continue'); pause;
 disp('continuing...');

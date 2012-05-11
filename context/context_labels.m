@@ -19,7 +19,7 @@ VOCopts  = conf.pascal.VOCopts;
 try
   load([cachedir cls '_context_labels_' train_set '_' train_year]);
 catch
-  fprintf('Constructing training labels (this will take a little while)...');
+  fprintf('Constructing training labels (this will take a little while)...\n');
   [gt, npos] = get_ground_truth(cls, train_set, train_year);
   [gtids, t] = textread(sprintf(VOCopts.imgsetpath, train_set),'%s %d');
   

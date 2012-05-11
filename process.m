@@ -14,7 +14,6 @@ function [ds, bs] = process(im, model, thresh)
 %   model     Object model
 %   thresh    Detection threshold
 
-
 if nargin < 3
   thresh = model.thresh
 end

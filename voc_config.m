@@ -22,7 +22,7 @@ function conf = voc_config(varargin)
 BASE_DIR    = '/var/tmp/rbg';
 
 % PASCAL dataset year
-PASCAL_YEAR = '2007';
+PASCAL_YEAR = '2010';
 
 % Models are automatically stored in BASE_DIR/PROJECT/PASCAL_YEAR/
 PROJECT     = 'rel5-dev/rc2';
