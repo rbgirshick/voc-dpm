@@ -1,0 +1,180 @@
+Information
+===========
+
+Project webpage: http://people.cs.uchicago.edu/~rbg/star-cascade/
+
+This is an implementation of our star-cascade algorithm for object
+detection with deformable part models. This algorithm is described in
+[1]. See [2] for more general information about our object detection
+system.
+
+By building cascade detectors for our deformable part models we obtain
+an average detection time speedup of roughly 14x on the PASCAL 2007
+dataset with almost no effect on AP scores. By allowing for a reduction
+in recall (i.e., increasing the global detection threshold), we can
+obtain speedup factors as high as 40x for some classes with almost
+loss in precision. (All timing comparisons are between single-threaded
+implementations of both algorithms.)
+
+This package contains object detection and cascade threshold learning
+code. It also contains pre-computed statistics needed to select
+thresholds for the models included in the release of our object detection
+system. These statistics were computed on the PASCAL 2006, 2007, 2009,
+and INRIA Person datasets. In each case, the statistics were computed on
+the same data that the detectors were trained on. In principle, thresholds
+selected from this data could be too aggressive due to over-fitting,
+however we have not observed this problem in practice.
+
+The system is implemented in MATLAB, with a few helper functions written
+in C++ for efficiency reasons. The software was tested on several versions
+of Linux and Mac OS X using MATLAB versions R2009b and R2010a. There
+may be compatibility issues with other versions of MATLAB and with
+other platforms.
+
+For questions concerning the code please contact Ross Girshick at
+<rbg AT cs DOT uchicago DOT edu>.
+
+
+References
+==========
+
+[1] P. Felzenszwalb, R. Girshick, D. McAllester.  
+Cascade Object Detection with Deformable Part Models.
+To appear in the Proceedings of the IEEE CVPR 2010.
+
+[2] P. Felzenszwalb, R. Girshick, D. McAllester, D. Ramanan.  Object
+Detection with Discriminatively Trained Part Based Models.
+To appear in the IEEE Transactions on Pattern Analysis and Machine 
+Intelligence.
+
+
+Installation
+============
+
+0. This package is an add-on for our object detection system, which can
+   be downloaded at http://people.cs.uchicago.edu/~pff/latent/.  You must
+   install that system first in order to use the cascade code.
+
+1. Extract the source code and compile the C++ MEX files.
+
+   After downloading the source package, extract it inside your
+   voc-release4 directory.
+
+     $ tar zxvf voc-release4-star-cascade.tgz
+
+   The code will be unpacked into its own directory named 'star-cascade'.
+   Switch to that directory, compile the code, and switch back to the
+   voc-release4 directory.
+
+     $ cd star-cascade
+     $ make
+     $ cd ..
+
+
+2. Edit globals.m.
+
+   Add the following two lines to the end of globals.m in your
+   voc-release4 installation.
+
+     % directory for cascade algorithm data
+     cscdir = [pwd() '/star-cascade/data/'];
+
+
+3. Start matlab.
+
+   Start matlab inside your voc-release4 directory.  To use the cascade
+   code you will need to add it to your path with the following matlab
+   command.
+
+     >> addpath star-cascade;
+
+   Now run to see a demonstration of cascade detection.
+
+     >> cascade_demo
+
+   Fin.
+
+
+Basic Usage
+===========
+
+The function cascade_model() takes a model and produces a new model
+for use with the cascade detection algorithm.  The new model has cascade
+thresholds that are trained on score statistics.  Score statistics for the
+models included in the voc-release4 distribution have been pre-computed
+and are included in this download.
+
+  csc_model = cascade_model(model, data_year, pca, global_thresh);
+
+An example.
+
+  % load the PASCAL 2007 bicycle model into the variable 'model'
+  load('VOC2007/bicycle_final');
+
+  % produce a cascade model trained on the 2007 dataset
+  % using 5 dimensional PCA filters and a global detection
+  % threshold of -1.
+  csc_model = cascade_model(model, '2007', 5, -1);
+
+  % compute the feature pyramid for image im
+  pyra = featpyramid(im, csc_model);
+
+  % get cascade detections
+  [dets, boxes] = cascade_detect(pyra, csc_model, csc_model.thresh);
+
+
+Source Code Overview
+====================
+
+Cascade Detection
+---
+cascade_detect.m      Matlab function for cascade detection.
+cascade.cc            C++ star-cascade implementation & MEX interface.
+model.{cc,h}          C++ representation of cascade models.
+timer.h               Simple timer for profiling.
+Makefile              Makefile for building the MEX code.
+cascade-2pass.cc      Experimental version not described in the paper
+                      that is about 1.25-1.75x faster.
+
+Threshold Training
+---
+cascade_model.m       Trains thresholds from positive examples.
+cascade_data.m        Function for generating score statistics.
+writescores.m         Write score statistics to a file.
+readscorestats.m      Reads a score statistics file.
+data/                 Directory containing score statistic files.
+
+Performance evaluation
+---
+cascade_demo.m        Demo script.
+cascade_test.m        Find detections in a test set using a cascade model.
+compare_runtime.m     Compare runtime performance of DP and cascade algorithms.
+                      (See the README note in this file before using.)
+cascade_thresh.m      Find a detection threshold from a PR curve.
+
+Helper functions & data
+---
+pca.mat               PCA coefficients from PCA of HOG features.
+pca_of_hog.m          Function used to generate pca.mat.
+project.m             Computes PCA projection of a filter or feature map.
+projectmodel.m        Computes PCA projection of a model.
+projectpyramid.m      Computes PCA projection of a feature pyramid.
+gdetectvalid.m        Modified version of gdetect.m used by cascade_data.m.
+grammar2simple.m      Converts a grammar model to a simpler star-model format.
+
+data directory
+---
+This directory is populated with files containing score statistics.  The
+files are named with the schema:
+  <model_class>_<model_year>_cascade_data_det_<data_year>.inf
+  <model_class>_<model_year>_cascade_data_pca0_<data_year>.inf
+  <model_class>_<model_year>_cascade_data_pca5_<data_year>.inf
+
+That is, each file contains score statistics for the object category
+<model_class> that were trained using data from the <model_year>
+PASCAL dataset with score statistics computed using the <data_year>
+PASCAL dataset.  Files with 'pca0' use the full filters and files with
+'pca5' use PCA filters projected onto the first 5 principle components.
+
+This release includes score statistics for PASCAL 2006, 2007, 2009 and
+INRIA where model_year == data_year.
