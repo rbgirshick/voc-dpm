@@ -44,12 +44,6 @@ for d = 1:length(trees)
       scores(bl,d) = scores(bl,d) + model.blocks(bl).w' * loc_f(:,l);
     end
   end
-  % Commented out because this check is not meaningful when passing in 
-  % PCA features and filters
-  %if abs(sum(scores(:,i)) - info(DET_VAL, model.start, i)) > 1e-10
-  %  fprintf('%f ~= %f\n', sum(scores(:,i)), info(DET_VAL, model.start, i));
-  %  error('wrong score');
-  %end
 end
 
 scores = [sum(scores); scores];

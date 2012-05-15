@@ -251,7 +251,7 @@ static void init(const mxArray *prhs[]) {
     DYAM[p] = new int[LOFFDT[MODEL->numlevels]];
   }
   inittimer->toc();
-  inittimer->mexPrintTimer();
+  //inittimer->mexPrintTimer();
 }
 
 // free global data
@@ -408,7 +408,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }     // end loop over pyramid levels
   }         // end loop over components
   searchtimer->toc();
-  searchtimer->mexPrintTimer();
+  //searchtimer->mexPrintTimer();
 
   // width calculation:
   //  4 = detection window x1,y1,x2,y2

@@ -24,6 +24,8 @@ end
 
 % Build feature vector cache code
 fv_compile(opt, verb);
+% Build the star-cascade code
+cascade_compile(opt, verb);
 
 % Start building the mex command
 mexcmd = 'mex -outdir bin';
@@ -59,9 +61,13 @@ eval([mexcmd ' gdetect/compute_overlap.cc']);
 
 % 0) multithreaded convolution using SSE
 eval([mexcmd ' gdetect/fconvsse.cc -o fconv']);
-
-% 1) mulththreaded convolution without blas
-% eval([mexcmd ' gdetect/fconvMT.cc -o fconv']);
-
+% 1) multithreaded convolution
+%eval([mexcmd ' gdetect/fconv_var_dim_MT.cc -o fconv']);
 % 2) basic convolution, very compatible
-% eval([mexcmd ' gdetect/fconv.cc -o fconv']);
+%eval([mexcmd ' gdetect/fconv_var_dim.cc -o fconv']);
+
+% Convolution routine that can handle feature dimenions other than 32
+% 0) multithreaded convolution
+eval([mexcmd ' gdetect/fconv_var_dim_MT.cc -o fconv_var_dim']);
+% 1) single-threaded convolution
+% eval([mexcmd ' gdetect/fconv_var_dim.cc -o fconv_var_dim']);

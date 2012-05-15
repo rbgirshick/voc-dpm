@@ -9,16 +9,19 @@ VOC_CONFIG_OVERRIDE = @voc_config_csc;
 % function, you will be comparing a multi-threaded version of the
 % DP algorithm to a single-threaded version of the cascade algorithm.
 
-load('VOC2007/car_final');
-test('000034.jpg', model);
+%load('VOC2007/car_final');
+%model.features.extra_octave = true;
+%test('000034.jpg', model);
 %fprintf('\nPress any key to continue with demo'); pause; fprintf('...ok\n\n');
 %
 %load('INRIA/inriaperson_final');
+%load('VOC2007/person_final');
+%model.features.extra_octave = true;
 %test('000061.jpg', model);
 %fprintf('\nPress any key to continue with demo'); pause; fprintf('...ok\n\n');
 
-%load('VOC2007/bicycle_final');
-%test('000084.jpg', model);
+load('VOC2007/bicycle_final');
+test('000084.jpg', model);
 
 
 function test(impath, model);
@@ -40,8 +43,8 @@ axis off;
 fprintf('Compute cascade thresholds');
 fprintf('...done\n');
 
-thresh = -1.1;
-pca = 6;
+thresh = -0.5;
+pca = 5;
 orig_model = model;
 csc_model = cascade_model(model, '2007', pca, thresh);
 orig_model.thresh = csc_model.thresh;

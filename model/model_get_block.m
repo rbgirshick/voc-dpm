@@ -26,6 +26,10 @@ switch(type)
     if obj.flip
       w = flipfeat(w);
     end
+  case block_types.PCAFilter
+    if obj.flip
+      w = reshape(m.blocks(bl).w_flipped, shape);
+    end
   case block_types.SepQuadDef
     if obj.flip
       w(2) = -w(2);

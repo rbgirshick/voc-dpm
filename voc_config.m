@@ -25,7 +25,7 @@ BASE_DIR    = '/var/tmp/rbg';
 PASCAL_YEAR = '2010';
 
 % Models are automatically stored in BASE_DIR/PROJECT/PASCAL_YEAR/
-PROJECT     = 'rel5-dev/rc2';
+PROJECT     = 'rel5-dev/rc2-extra-octave';
 
 %
 % You probably don't need to change configuration settings below this line.
@@ -165,7 +165,15 @@ conf.pascal.VOCopts.testset = conf.eval.test_set;
 conf = cv(conf, 'features.sbin', 8);
 conf = cv(conf, 'features.dim', 32);
 conf = cv(conf, 'features.truncation_dim', 32);
-conf = cv(conf, 'features.extra_octave', false);
+conf = cv(conf, 'features.extra_octave', true);
+
+
+% -------------------------------------------------------------------
+% Cascade configuration 
+% -------------------------------------------------------------------
+conf = cv(conf, 'cascade.data_dir', [conf.paths.model_dir 'cascade_data/']);
+exists_or_mkdir(conf.cascade.data_dir);
+
 
 
 % -------------------------------------------------------------------

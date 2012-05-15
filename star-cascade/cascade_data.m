@@ -21,17 +21,16 @@ cscdir = conf.cascade.data_dir;
 model.interval = conf.training.interval_fg;
 
 % get training data
-[pos, neg] = pascal_data(model.class, model.year);
+pos = pascal_data(model.class, model.year);
 
-[model, pca_model] = project_model_adapt(model, pca_dim);
-% if using PCA, project the model
-%load('pca.mat');
-%[model, pca_model] = projectmodel(model, coeff, pca_dim);
+%[model, pca_model] = project_model_adapt(model, pca_dim);
+% Loads <coeff>
+load('pca.mat');
+[model, pca_model] = project_model(model, coeff, pca_dim);
 
 numpos = length(pos);
 pixels = model.minsize * model.sbin / 2;
 minsize = prod(pixels);
-nrules = length(model.rules{model.start});
 pars = cell(1,numpos);
 
 % compute latent filter locations and record target bounding boxes
@@ -39,7 +38,7 @@ parfor i = 1:numpos
   pars{i}.scores = [];
   pars{i}.pca_scores = [];
   fprintf('%s %s: cascade data: %d/%d\n', procid(), model.class, i, numpos);
-  bbox = [pos(i).x1 pos(i).y1 pos(i).x2 pos(i).y2];
+  bbox = pos(i).boxes;
   % skip small examples
   if (bbox(3)-bbox(1)+1)*(bbox(4)-bbox(2)+1) < minsize
     continue;
@@ -47,23 +46,38 @@ parfor i = 1:numpos
   % get example
   im = imreadx(pos(i));
   [im, bbox] = croppos(im, bbox);
-  [pyra, model_dp] = gdetect_pos_prepare(im, model, bbox, 0.7);
-  [ds, bs, trees] = gdetect_pos(pyra, model_dp, 1, ...
-                                1, 0.7, [], 0.5);
+  [pyra, model_dp] = gdetect_pos_prepare(im, model, bbox, 0.5);
+  [ds, bs, trees] = gdetect_pos(pyra, model_dp, 1, 1, 0.5);
   if ~isempty(ds)
     % collect cascade score statistics
     pars{i}.scores = get_score_stats(pyra, model, trees);
-    pca_pyra = project_pyramid(pca_model, pyra);
+
+    t = tree_mat_to_struct(trees{1});
+    valid = [];
+    valid.c = t(1).rule_index;
+    valid.y = t(1).y;
+    valid.x = t(1).x;
+    valid.l = t(1).l;
+    
+    % Get detection with PCA model restricted to the root filter being placed
+    % exactly where the original model's root filter was placed
+    [pca_pyra, pca_model_dp] = gdetect_pos_prepare_c(im, pca_model, valid);
+    [ds, bs, trees] = gdetect_pos_c(pca_pyra, pca_model_dp, valid);
+
+    % sanity check
+    t = tree_mat_to_struct(trees{1});
+    assert(valid.c == t(1).rule_index);
+    assert(valid.y == t(1).y);
+    assert(valid.x == t(1).x);
+    assert(valid.l == t(1).l);
+
     pars{i}.pca_scores = get_score_stats(pca_pyra, pca_model, trees);
   end
 end
-scores = [];
-pca_scores = [];
-% FIXME: cat
-for i = 1:numpos
-  scores = [scores pars{i}.scores];
-  pca_scores = [pca_scores pars{i}.pca_scores];
-end
+% collate
+pars = cell2mat(pars);
+scores = cat(2, pars(:).scores);
+pca_scores = cat(2, pars(:).pca_scores);
 
 % FIXME save into .mat files
 

@@ -15,7 +15,7 @@ cachedir = conf.paths.model_dir;
 cls = model.class;
 ids = textread(sprintf(VOCopts.imgsetpath, testset), '%s');
 
-pca = 6;
+pca = 5;
 model = cascade_model(model, model.year, pca, model.thresh);
 
 % run detector in each image
@@ -28,7 +28,7 @@ catch
   ds_out = cell(1, num_ids);
   bs_out = cell(1, num_ids);
   % parallel implementation disabled for single-threaded tests
-  for i = 1:num_ids
+  parfor i = 1:num_ids
     if strcmp('inriaperson', cls)
       % INRIA uses a mixutre of PNGs and JPGs, so we need to use the annotation
       % to locate the image.  The annotation is not generally available for PASCAL

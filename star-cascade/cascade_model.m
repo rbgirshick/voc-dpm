@@ -11,9 +11,9 @@ function model = cascade_model(model, data_year, pca, thresh)
 conf = voc_config();
 cscdir = conf.cascade.data_dir;
 
-model = project_model_adapt(model, pca);
-%load('pca.mat');
-%model = projectmodel(model, coeff, pca);
+%model = project_model_adapt(model, pca);
+load('pca.mat');
+model = project_model(model, coeff, pca);
 
 % convert a (star structured) grammar model into a simpler representation
 model = grammar2simple(model);

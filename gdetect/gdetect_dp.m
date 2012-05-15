@@ -178,7 +178,14 @@ for level = 1:length(pyra.feat)
   end
 
   % compute filter response for all filters at this level
-  r = fconv(pyra.feat{level}, filters, 1, length(filters));
+  if size(pyra.feat{level},3) == 32
+    % Faster SSE version (fconvsse.cc) that can only handle 32-dim features
+    r = fconv(pyra.feat{level}, filters, 1, length(filters));
+  else
+    % More general convolution code to handle non-32-dim features
+    % e.g., the HOG-PCA features used by the star-cascade
+    r = fconv_var_dim(pyra.feat{level}, filters, 1, length(filters));
+  end 
   % find max response array size for this level
   s = [-inf -inf];
   for i = 1:length(r)
