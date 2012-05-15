@@ -7,7 +7,7 @@ function m = grammar2simple(gm)
 % This function works with models produced by voc-release5.
 % This structure roughly matches the model format from voc-release3.
 %
-% gm  grammar model returned by project_model_adapt.m
+% gm  grammar model returned by project_model.m
 
 %% copy scalars
 m.sbin      = gm.sbin;

@@ -1,4 +1,4 @@
-function [ap, newap] = bboxpred_rescore(name, testset, year, method)
+function [ap, newap] = bboxpred_rescore(name, testset, year, suffix, method)
 % Apply bounding box prediction to detections from a test dataset.
 %   [ap, newap] = bboxpred_rescore(name, testset, year, method)
 %
@@ -15,7 +15,7 @@ function [ap, newap] = bboxpred_rescore(name, testset, year, method)
 conf = voc_config('pascal.year', year);
 VOCopts = conf.pascal.VOCopts;
 
-if nargin < 4
+if nargin < 5
   method = 'default';
 end
 
@@ -27,7 +27,7 @@ end
 bboxpred = model.bboxpred;
 
 % Load original detections (loads vars ds, bs)
-load([conf.paths.model_dir name '_boxes_' testset '_' year]);
+load([conf.paths.model_dir name '_boxes_' testset '_' suffix]);
 
 ids = textread(sprintf(VOCopts.imgsetpath, testset), '%s');
 num_ids = length(ids);
@@ -60,17 +60,17 @@ for i = 1:num_ids
 end
 
 % load old ap
-load([conf.paths.model_dir name '_pr_' testset '_' year]);
+load([conf.paths.model_dir name '_pr_' testset '_' suffix]);
 if strcmp(method, 'default')
   method_str = '_';
 else
   method_str = ['_' method '_'];
 end
 newap = pascal_eval(name, ds_out, testset, year, ...
-                    ['bboxpred' method_str year]);
+                    ['bboxpred' method_str suffix]);
 
 % save modified boxes
 ds = ds_out;
 bs = bs_out;
-save([conf.paths.model_dir name '_boxes_' testset '_bboxpred_' year], ...
+save([conf.paths.model_dir name '_boxes_' testset '_bboxpred_' suffix], ...
      'ds', 'bs');

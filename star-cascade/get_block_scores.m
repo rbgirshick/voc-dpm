@@ -1,4 +1,4 @@
-function scores = get_scores_stats(pyra, model, trees)
+function scores = get_block_scores(pyra, model, trees)
 
 % Get block scores used for computing cascade thresholds.
 %
@@ -6,7 +6,7 @@ function scores = get_scores_stats(pyra, model, trees)
 % model    object model
 % info     detection info from gdetect.m
 
-scores = zeros(model.numblocks, length(trees));
+scores = zeros(length(trees), model.numblocks);
 loc_f = loc_feat(model, pyra.num_levels);
 
 for d = 1:length(trees)
@@ -17,7 +17,7 @@ for d = 1:length(trees)
     if model.symbols(sym).type == 'T'
       % filter score
       fi = model.symbols(sym).filter;
-      scores(:,d) = add_filter_score(model, scores(:,d),    ...
+      scores(d,:) = add_filter_score(model, scores(d,:),    ...
                                      t(j).x, t(j).y,        ...
                                      pyra.padx, pyra.pady,  ...
                                      t(j).ds, fi,           ...
@@ -33,20 +33,20 @@ for d = 1:length(trees)
         if model.rules{sym}(ruleind).def.flip
           def(2) = -def(2);
         end
-        scores(bl,d) = scores(bl,d) + model.blocks(bl).w' * def;
+        scores(d,bl) = scores(d,bl) + model.blocks(bl).w' * def;
       end
       % offset score
       bl = model.rules{sym}(ruleind).offset.blocklabel;
-      scores(bl,d) = scores(bl,d) + model.blocks(bl).w * model.features.bias;
+      scores(d,bl) = scores(d,bl) + model.blocks(bl).w * model.features.bias;
       % location/scale score
       bl = model.rules{sym}(ruleind).loc.blocklabel;
       l = t(j).l;
-      scores(bl,d) = scores(bl,d) + model.blocks(bl).w' * loc_f(:,l);
+      scores(d,bl) = scores(d,bl) + model.blocks(bl).w' * loc_f(:,l);
     end
   end
 end
-
-scores = [sum(scores); scores];
+% Prepend with total scores
+scores = [sum(scores,2) scores];
 
 
 %

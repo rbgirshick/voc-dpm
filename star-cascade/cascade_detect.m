@@ -15,7 +15,7 @@ projpyra = project_pyramid(model, pyra);
 % stage 0: convolution with PCA root filters is done densely
 % before any pruning can be applied
 
-% Precompute loc scores
+% Precompute location/scale scores
 loc_f      = loc_feat(model, pyra.num_levels);
 loc_scores = cell(model.numcomponents, 1);
 for c = 1:model.numcomponents
@@ -27,7 +27,7 @@ pyra.loc_scores = loc_scores;
 numrootlocs = 0;
 nlevels = size(pyra.feat,1);
 rootscores = cell(model.numcomponents, nlevels);
-s = 0;  % holds the amount of temp storage needed by cascade()
+s = 0;  % will hold the amount of temp storage needed by cascade()
 for i = 1:pyra.num_levels
   s = s + size(pyra.feat{i},1)*size(pyra.feat{i},2);
   if i > model.interval

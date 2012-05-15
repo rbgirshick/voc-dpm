@@ -21,8 +21,8 @@ model = grammar2simple(model);
 % the inf files contain filter and deformation score statistics from positive
 % examples
 class_year = [model.class '_' model.year];
-inffile = [cscdir class_year '_cascade_data_pca0_' data_year '.inf'];
-pcafile = [cscdir class_year '_cascade_data_pca' num2str(pca) '_' data_year '.inf'];
+inffile = [cscdir class_year '_cascade_data_no_pca_' data_year '.mat'];
+pcafile = [cscdir class_year '_cascade_data_pca_' num2str(pca) '_' data_year '.mat'];
 
 % check that files exist
 if exist(inffile) == 0
@@ -35,7 +35,9 @@ if exist(pcafile) == 0
 end
 
 % get block score statistics from info file
-[vals, blocks] = readscorestats(inffile, model);
+a = load(inffile);
+vals = a.scores(:,1);
+blocks = a.scores(:,2:end);
 
 % further restrict the data to only those positive examples with score >= thresh
 I = find(vals >= thresh);
@@ -44,7 +46,9 @@ vals = vals(I,:);
 [scores, offset_loc_scores] = parse_scores(model, vals, blocks);
 
 % get block score statistics from the PCA info file
-[pcavals, pcablocks] = readscorestats(pcafile, model);
+a = load(pcafile);
+pcavals = a.pca_scores(:,1);
+pcablocks = a.pca_scores(:,2:end);
 pcablocks = pcablocks(I,:);
 pcavals = pcavals(I,:);
 [pcascores, pca_offset_loc_scores] = parse_scores(model, pcavals, pcablocks);
