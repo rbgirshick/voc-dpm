@@ -8,7 +8,7 @@ function model = cascade_model(model, data_year, pca, thresh)
 % pca        number of PCA components to project onto (if pca > 0)
 % thresh     global detection threshold
 
-conf = voc_config();
+conf = voc_config('pascal.year', data_year);
 cscdir = conf.cascade.data_dir;
 
 %model = project_model_adapt(model, pca);

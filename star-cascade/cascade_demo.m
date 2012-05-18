@@ -1,5 +1,6 @@
 function cascade_demo()
 
+% FIXME: remove these
 global VOC_CONFIG_OVERRIDE;
 VOC_CONFIG_OVERRIDE = @voc_config_csc;
 
@@ -9,14 +10,11 @@ VOC_CONFIG_OVERRIDE = @voc_config_csc;
 % function, you will be comparing a multi-threaded version of the
 % DP algorithm to a single-threaded version of the cascade algorithm.
 
-%load('VOC2007/car_final');
-%model.features.extra_octave = true;
-%test('000034.jpg', model);
-%fprintf('\nPress any key to continue with demo'); pause; fprintf('...ok\n\n');
-%
+load('VOC2007/car_final');
+test('000034.jpg', model);
+fprintf('\nPress any key to continue with demo'); pause; fprintf('...ok\n\n');
+
 %load('INRIA/inriaperson_final');
-%load('VOC2007/person_final');
-%model.features.extra_octave = true;
 %test('000061.jpg', model);
 %fprintf('\nPress any key to continue with demo'); pause; fprintf('...ok\n\n');
 

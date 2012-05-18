@@ -47,10 +47,5 @@ ap1 = pascal_eval(cls, ds, testset, testyear, testyear);
 fprintf('AP = %.4f (without bounding box prediction)\n', ap1)
 %fprintf('AP = %.4f (with bounding box prediction)\n', ap2)
 
-% compute detections on the trainval dataset (used for context rescoring)
-if dotrainval
-  trainval(cls);
-end
-
 % Clear the override
 clearvars -global VOC_CONFIG_OVERRIDE;
