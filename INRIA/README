@@ -1,0 +1,29 @@
+This model was trained using the PASCAL VOC compatible INRIA annotations and 
+devkit. You can download them from:
+http://people.cs.uchicago.edu/~rbg/INRIA_PASCAL.tgz.
+
+This archive does not include the images -- it's just the annotations and a 
+PASCAL-compatible directory structure for holding the VOCdevkit, images, and 
+annotations. To get the images, download 
+http://pascal.inrialpes.fr/data/human/INRIAPerson.tar and then copy the 
+following files:
+
+cp INRIAPerson/Test/neg/* INRIA_PASCAL/VOCdevkit/VOC2007/Images/
+cp INRIAPerson/Test/pos/* INRIA_PASCAL/VOCdevkit/VOC2007/Images/
+cp INRIAPerson/Train/neg/* INRIA_PASCAL/VOCdevkit/VOC2007/Images/
+cp INRIAPerson/Train/pos/* INRIA_PASCAL/VOCdevkit/VOC2007/Images/
+
+To train an INRIA pedestrian model, change the pascal.dev_kit configuration 
+in voc_config.m.
+
+conf = cv(conf, 'pascal.dev_kit', [conf.paths.base_dir '/INRIA/VOCdevkit/']);
+
+(Make sure you've extracted the archive so it's in the location above.)
+
+Then train the model by running:
+
+>> global VOC_CONFIG_OVERRIDE;
+>> VOC_CONFIG_OVERRIDE = @voc_config_inriaperson;
+>> pascal('inriaperson', 1);
+
+That should reproduce the released model.
