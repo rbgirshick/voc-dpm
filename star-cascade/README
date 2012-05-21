@@ -40,59 +40,17 @@ References
 
 [1] P. Felzenszwalb, R. Girshick, D. McAllester.  
 Cascade Object Detection with Deformable Part Models.
-To appear in the Proceedings of the IEEE CVPR 2010.
+Proceedings of the IEEE CVPR 2010.
 
 [2] P. Felzenszwalb, R. Girshick, D. McAllester, D. Ramanan.  Object
 Detection with Discriminatively Trained Part Based Models.
-To appear in the IEEE Transactions on Pattern Analysis and Machine 
-Intelligence.
+IEEE Transactions on Pattern Analysis and Machine Intelligence, Vol. 32, No. 9, September 2010.
 
 
 Installation
 ============
 
-0. This package is an add-on for our object detection system, which can
-   be downloaded at http://people.cs.uchicago.edu/~pff/latent/.  You must
-   install that system first in order to use the cascade code.
-
-1. Extract the source code and compile the C++ MEX files.
-
-   After downloading the source package, extract it inside your
-   voc-release4 directory.
-
-     $ tar zxvf voc-release4-star-cascade.tgz
-
-   The code will be unpacked into its own directory named 'star-cascade'.
-   Switch to that directory, compile the code, and switch back to the
-   voc-release4 directory.
-
-     $ cd star-cascade
-     $ make
-     $ cd ..
-
-
-2. Edit globals.m.
-
-   Add the following two lines to the end of globals.m in your
-   voc-release4 installation.
-
-     % directory for cascade algorithm data
-     cscdir = [pwd() '/star-cascade/data/'];
-
-
-3. Start matlab.
-
-   Start matlab inside your voc-release4 directory.  To use the cascade
-   code you will need to add it to your path with the following matlab
-   command.
-
-     >> addpath star-cascade;
-
-   Now run to see a demonstration of cascade detection.
-
-     >> cascade_demo
-
-   Fin.
+No additional steps are required. This is now included as part of voc-release5.
 
 
 Basic Usage
@@ -126,55 +84,56 @@ An example.
 Source Code Overview
 ====================
 
+
+
 Cascade Detection
 ---
-cascade_detect.m      Matlab function for cascade detection.
-cascade.cc            C++ star-cascade implementation & MEX interface.
-model.{cc,h}          C++ representation of cascade models.
-timer.h               Simple timer for profiling.
-Makefile              Makefile for building the MEX code.
-cascade-2pass.cc      Experimental version not described in the paper
-                      that is about 1.25-1.75x faster.
+cascade_demo.m           Demo script
+cascade_detect.m         Matlab function for cascade detection
+cascade.cc               C++ star-cascade implementation & MEX interface
+model.{cc,h}             C++ representation of cascade models
+timer.h                  Simple timer for profiling
+Makefile                 Makefile for building the MEX code
 
 Threshold Training
 ---
-cascade_model.m       Trains thresholds from positive examples.
-cascade_data.m        Function for generating score statistics.
-writescores.m         Write score statistics to a file.
-readscorestats.m      Reads a score statistics file.
-data/                 Directory containing score statistic files.
+cascade_model.m          Trains thresholds from positive examples
+cascade_data.m           Function for generating score statistics
+data/                    Directory containing score statistic files
 
 Performance evaluation
 ---
-cascade_demo.m        Demo script.
-cascade_test.m        Find detections in a test set using a cascade model.
-compare_runtime.m     Compare runtime performance of DP and cascade algorithms.
-                      (See the README note in this file before using.)
-cascade_thresh.m      Find a detection threshold from a PR curve.
+cascade_test.m           Find detections in a test set using a cascade model
 
 Helper functions & data
 ---
-pca.mat               PCA coefficients from PCA of HOG features.
-pca_of_hog.m          Function used to generate pca.mat.
-project.m             Computes PCA projection of a filter or feature map.
-projectmodel.m        Computes PCA projection of a model.
-projectpyramid.m      Computes PCA projection of a feature pyramid.
-gdetectvalid.m        Modified version of gdetect.m used by cascade_data.m.
-grammar2simple.m      Converts a grammar model to a simpler star-model format.
+cascade_compile.m        Builds the cascade code
+pca.mat                  PCA coefficients from PCA of HOG features
+pca_of_hog.m             Function used to generate pca.mat
+project.m                Computes PCA projection of a filter or feature map
+project_model.m          Computes PCA projection of a model
+project_pyramid.m        Computes PCA projection of a feature pyramid
+grammar2simple.m         Converts a grammar model to a simpler star-model format
+gdetect_pos_c.m          Cascade version of gdetect_pos.m -- allows PCA 
+                         detections to be restricted to a specific root location
+gdetect_pos_prepare_c.m  Cascade version of gdetect_pos_prepare.m -- allows PCA
+                         detections to be restricted to a specific root location
+get_block_scores.m       Given a detection, computes the score of each parameter 
+                         block
+
 
 data directory
 ---
 This directory is populated with files containing score statistics.  The
 files are named with the schema:
-  <model_class>_<model_year>_cascade_data_det_<data_year>.inf
-  <model_class>_<model_year>_cascade_data_pca0_<data_year>.inf
-  <model_class>_<model_year>_cascade_data_pca5_<data_year>.inf
+  <model_class>_<model_year>_cascade_data_no_pca_<data_year>.mat
+  <model_class>_<model_year>_cascade_data_pca_5_<data_year>.mat
 
-That is, each file contains score statistics for the object category
+That is, each file contains block score statistics for the object category
 <model_class> that were trained using data from the <model_year>
 PASCAL dataset with score statistics computed using the <data_year>
 PASCAL dataset.  Files with 'pca0' use the full filters and files with
-'pca5' use PCA filters projected onto the first 5 principle components.
+'pca_5' use PCA filters projected onto the first 5 principle components.
 
-This release includes score statistics for PASCAL 2006, 2007, 2009 and
+This release includes score statistics for PASCAL 2007, 2010 and
 INRIA where model_year == data_year.

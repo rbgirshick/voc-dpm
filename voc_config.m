@@ -25,7 +25,7 @@ BASE_DIR    = '/var/tmp/rbg';
 PASCAL_YEAR = '2010';
 
 % Models are automatically stored in BASE_DIR/PROJECT/PASCAL_YEAR/
-PROJECT     = 'rel5-dev/rc2-extra-octave';
+PROJECT     = 'rel5-dev/rc2';
 
 %
 % You probably don't need to change configuration settings below this line.
@@ -103,10 +103,11 @@ conf = cv(conf, 'single_byte_size', 4);
 % Configure the PASCAL VOC dataset year
 conf = cv(conf, 'pascal.year', PASCAL_YEAR);
 
-%% Directory with PASCAL VOC development kit and dataset
+% Directory with PASCAL VOC development kit and dataset
 conf = cv(conf, 'pascal.dev_kit', [conf.paths.base_dir '/VOC' ...
                                    conf.pascal.year '/VOCdevkit/']);
-%conf = cv(conf, 'pascal.dev_kit', [conf.paths.base_dir '/INRIA/VOCdevkit/']);
+% For INRIA person                                   
+% conf = cv(conf, 'pascal.dev_kit', [conf.paths.base_dir '/INRIA/VOCdevkit/']);
 
 % VOCinit brings VOCopts into scope                  
 conf.pascal.VOCopts = get_voc_opts(conf);
@@ -171,7 +172,7 @@ conf = cv(conf, 'features.extra_octave', true);
 % -------------------------------------------------------------------
 % Cascade configuration 
 % -------------------------------------------------------------------
-conf = cv(conf, 'cascade.data_dir', [conf.paths.model_dir 'cascade_data/']);
+conf = cv(conf, 'cascade.data_dir', [pwd() '/star-cascade/data/']);
 exists_or_mkdir(conf.cascade.data_dir);
 
 
