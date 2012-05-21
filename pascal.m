@@ -59,10 +59,10 @@ model.interval = conf.eval.interval;
 suffix = testyear;
 
 % Collect detections on the test set
-bs = pascal_test(model, testset, testyear, suffix);
+ds = pascal_test(model, testset, testyear, suffix);
 
 % Evaluate the model without bounding box prediction
-ap1 = pascal_eval(cls, bs, testset, testyear, suffix);
+ap1 = pascal_eval(cls, ds, testset, testyear, suffix);
 fprintf('AP = %.4f (without bounding box prediction)\n', ap1)
 
 % Recompute AP after applying bounding box prediction
