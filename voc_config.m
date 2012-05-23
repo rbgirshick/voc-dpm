@@ -22,7 +22,7 @@ function conf = voc_config(varargin)
 BASE_DIR    = '/var/tmp/rbg';
 
 % PASCAL dataset year
-PASCAL_YEAR = '2010';
+PASCAL_YEAR = '2007';
 
 % Models are automatically stored in BASE_DIR/PROJECT/PASCAL_YEAR/
 PROJECT     = 'rel5-dev/rc2';
@@ -107,7 +107,7 @@ conf = cv(conf, 'pascal.year', PASCAL_YEAR);
 conf = cv(conf, 'pascal.dev_kit', [conf.paths.base_dir '/VOC' ...
                                    conf.pascal.year '/VOCdevkit/']);
 % For INRIA person                                   
-% conf = cv(conf, 'pascal.dev_kit', [conf.paths.base_dir '/INRIA/VOCdevkit/']);
+%conf = cv(conf, 'pascal.dev_kit', [conf.paths.base_dir '/INRIA/VOCdevkit/']);
 
 % VOCinit brings VOCopts into scope                  
 conf.pascal.VOCopts = get_voc_opts(conf);

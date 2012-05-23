@@ -1,9 +1,5 @@
 function cascade_demo()
 
-% FIXME: remove these
-global VOC_CONFIG_OVERRIDE;
-VOC_CONFIG_OVERRIDE = @voc_config_csc;
-
 % Run cascade demo.
 % 
 % Note that unless you have compiled fconv.cc as your convolution
@@ -14,9 +10,9 @@ load('VOC2007/car_final');
 test('000034.jpg', model);
 fprintf('\nPress any key to continue with demo'); pause; fprintf('...ok\n\n');
 
-%load('INRIA/inriaperson_final');
-%test('000061.jpg', model);
-%fprintf('\nPress any key to continue with demo'); pause; fprintf('...ok\n\n');
+load('INRIA/inriaperson_final');
+test('000061.jpg', model);
+fprintf('\nPress any key to continue with demo'); pause; fprintf('...ok\n\n');
 
 load('VOC2007/bicycle_final');
 test('000084.jpg', model);
@@ -46,7 +42,6 @@ pca = 5;
 orig_model = model;
 csc_model = cascade_model(model, '2007', pca, thresh);
 orig_model.thresh = csc_model.thresh;
-cat(2, csc_model.cascade.t{:})
 
 fprintf('Building the feature pyramid...');
 
@@ -79,14 +74,10 @@ subplot(1,3,2);
 showboxes(im, b);
 title('dynamic programming detections');
 
-b(1,:)
-
 b = getboxes(csc_model, im, dCSC, bCSC);
 subplot(1,3,3);
 showboxes(im, b);
 title('star-cascade detections');
-
-b(1,:)
 
 
 function b = getboxes(model, image, det, all)
