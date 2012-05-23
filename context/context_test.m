@@ -1,7 +1,7 @@
 function ap = context_test(dataset, cls)
 % Rescore detections on the test dataset using the context
 % rescoring SVMs trained by context_train.m.
-%   ap = context_test(cls, dataset)
+%   ap = context_test(dataset, cls)
 %
 % Return value
 %   ap          AP score for context rescoring
