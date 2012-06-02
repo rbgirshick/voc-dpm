@@ -26,7 +26,7 @@ static void max_filter_1d(const double *vals, double *out_vals, int32_t *I,
 }
 
 // matlab entry point
-// [M, Ix, Iy] = bounded_dt(vals, s)
+// [M, Ix, Iy] = bounded_dt(vals, ax, bx, ay, by, s)
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) { 
   if (nrhs != 6)
     mexErrMsgTxt("Wrong number of inputs"); 
@@ -41,7 +41,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   double bx = mxGetScalar(prhs[2]);
   double ay = mxGetScalar(prhs[3]);
   double by = mxGetScalar(prhs[4]);
-  double s = mxGetScalar(prhs[5]);
+  int s = (int)mxGetScalar(prhs[5]);
   
   mxArray *mxM = mxCreateNumericArray(2, dims, mxDOUBLE_CLASS, mxREAL);
   mxArray *mxIx = mxCreateNumericArray(2, dims, mxINT32_CLASS, mxREAL);

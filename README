@@ -1,33 +1,67 @@
 Information
 ===========
 
-This is voc-release5.
+Welcome to voc-release5.
+
+This is the companion code-release for my Ph.D. dissertation ("Appendix
+C").
 
 Project webpage: http://www.cs.uchicago.edu/~rbg/latent/.
 
-This is an implementation of our object detection system based on
-mixtures of deformable part models. The current implementation extends
-the system in [2] as described in [6]. The models in this implementation 
-are structured using the grammar formalism presented in [4,5,6]. The
-learning framework has been generalized to support both binary latent SVM
-the weak-label structural SVM (WL-SSVM) presented in [5]. The code also 
-supports training the person object detection grammar described in [5].
+Release highlights (see docs/changelog for more details)
+ * Weak-label structural SVM (wl-ssvm) [4]
+ * Person grammar model (NIPS 2011) [4]
+ * Optimization improvements (faster convergence)
+ * Code cleanup, reorganization, and speed improvements
+ * Training is done in memory (no more large temp files on disk!)
+ * Scale prior
+ * Star-cascade included
+ * Bug fixes
 
-The distribution contains object detection and model learning code, as
-well as models trained on the PASCAL and INRIA Person datasets. This
-release also includes code for rescoring detections based on
-contextual information and the star-cascade detection algorithm of [7].
+This is an implementation of our object detection system based on mixtures
+of deformable part models. This release extends the system in [2], and is
+described in my dissertation [5]. The models in this implementation are
+represented using the grammar formalism presented in [3,4,5]. The learning
+framework support both binary latent SVM and weak-label structural SVM
+(WL-SSVM), which is presented in [4,5]. The code also supports the person
+object detection grammar described in [4].
 
-The system is implemented in Matlab, with a few helper functions
-written in C/C++ for efficiency reasons. The software was tested on
-several versions of Linux and Mac OS X using Matlab versions R2011a. 
-There may be compatibility issues with other versions of Matlab.
+The distribution contains object detection and model learning code,
+as well as models trained on the PASCAL and INRIA Person datasets. This
+release also includes code for rescoring detections based on contextual
+information and the star-cascade detection algorithm of [6].
+
+The system is implemented in MATLAB, with various helper functions and
+written in MEX C++ for efficiency reasons.
+
+More details, especially about the learning algorithm and model strcuture,
+can be found in my dissertation [5].
 
 For questions concerning the code please contact Ross Girshick at
-<rbg AT cs DOT uchicago DOT edu>.
+<ross.girshick AT gmail DOT com>.
 
 This project has been supported by the National Science Foundation under Grant
 No. 0534820, 0746569 and 0811340.
+
+
+How to Cite
+===========
+If you use this code or the pretrained models in your research, please cite
+[2] and this specific release:
+
+  @misc{voc-release5,
+    author       = "Girshick, R. B. and Felzenszwalb, P. F. and McAllester, D.",
+    title        = "Discriminatively Trained Deformable Part Models, Release 5",
+    howpublished = "http://people.cs.uchicago.edu/~rbg/latent-release5/"
+  }
+
+You may also want to cite some of the following depending on what aspects
+of this system you are using or comparing against:
+ * [4] for the NIPS 2011 person grammar model and/or Weak-Label
+       Structural SVM
+ * [6] for the cascade detection algorithm
+ * [5] if you discuss specific parts of the system that are not published
+       elsewhere
 
 
 References
@@ -41,49 +75,40 @@ Proceedings of the IEEE CVPR 2008.
 Detection with Discriminatively Trained Part Based Models.
 IEEE Transactions on Pattern Analysis and Machine Intelligence, Vol. 32, No. 9, September 2010.
 
-[3] R. Girshick, P. Felzenszwalb, D. McAllester.
-release5-notes.pdf -- included in this code release.
-
-[4] P. Felzenszwalb, D. McAllester
+[3] P. Felzenszwalb, D. McAllester
 Object Detection Grammars.
 University of Chicago, Computer Science TR-2010-02, February 2010
 
-[5] R. Girshick, P. Felzenszwalb, D. McAllester.
+[4] R. Girshick, P. Felzenszwalb, D. McAllester.
 Object Detection with Grammar Models.
 Proceedings of Neural Information Processing Systems (NIPS) 2011.
 
-[6] R. Girshick.
+[5] R. Girshick.
 From Rigid Templates to Grammars: Object Detection with Structured Models.
 Ph.D. dissertation, The University of Chicago, April 2012.
 
-[7] Cascade Object Detection with Deformable Part Models
+[6] Cascade Object Detection with Deformable Part Models
 P. Felzenszwalb, R. Girshick, D. McAllester.
-In Proceedings of the IEEE CVPR 2010 
+In Proceedings of the IEEE CVPR 2010.
 
 
-How to Cite
-===========
-When citing our system, please cite reference [2] and the website for
-the specific release. The website bibtex reference is below.
+System Requirements
+===================
+ * Linux or OS X
+ * MATLAB >= 2010b (support for enumerations is required)
+ * GCC >= 4.2 (or an older version if it has OpenMP support)
+ * At least 4GB of memory (plus an additional 0.75GB for each
+   parallel matlab worker)
 
-If you are using the code for weak-label structural SVM (WL-SSVM)
-or the NIPS person grammar model please cite [5].
+The software was tested on several versions of Linux and Mac OS X using
+MATLAB versions R2011a.
 
-@misc{voc-release5,
-  author = "Girshick, R. B. and Felzenszwalb, P. F. and McAllester, D.",
-  title = "Discriminatively Trained Deformable Part Models, Release 5",
-  howpublished = "http://people.cs.uchicago.edu/~rbg/latent-release5/"}
+Compatibility with older MATLABs:
 
-More details, especially about the learning code and model strcuture,
-can be found in my dissertation [6].
-
-
-Requirements
-============
-
-Linux or OS X
-MATLAB (has only been tested on 2011a; should work on >= 2008a)
-GCC >= 4.2 is required for OpenMP support.
+If you need to use the software with MATLAB < 2010b, you can edit
+models/{block,model}_types.m so that they use constants instead of
+enumerations. Please note that if you make this change, you will not be
+able to load the pretrained models.
 
 
 Basic Usage
@@ -135,9 +160,9 @@ Using the learning code
 5. Use the 'pascal' script to train and evaluate a model. 
 
 example:
->> pascal('person', 3);   % train and evaluate a 6 component person model
+>> pascal('bicycle', 3);   % train and evaluate a 6 component bicycle model
 
-The learning code saves a number of intermediate files in a cache
+The learning code saves a number of intermediate models in a model cache
 directory defined in 'voc_config.m'.
 
 
@@ -173,7 +198,7 @@ Multicore Support
 =================
 
 In addition to multithreaded convolutions (see notes in compile.m),
-multicore support is also available through the Matlab Parallel 
+multicore support is also available through the Matlab Parallel
 Computing Toolbox.  Various loops (e.g., negative example data mining,
 positive latent labeling, and testing) are implemented using the 'parfor'
 parallel for-loop construct.  To take advantage of the parfor loops,
@@ -188,9 +213,10 @@ see non-sequential ordering of loop indexes in the terminal output when
 training and testing.  This is expected behavior.  The parallel computing
 toolbox has been tested on Linux using Matlab 2011a.
 
-The learning code, which uses Mark Schmidt's minConf, now computes 
-function gradients using OMP based multithreading. By default a single
-thread is used unless a matlabpool has already been opened. Note that
-when computing the function gradient with different numbers of threads,
-the resulting gradients will be very slightly different. In practice
-this leads to small variations in the resulting AP scores.
+The learning code, which uses Mark Schmidt's minConf for LBGFS with
+simple box constraints, now computes function gradients using OMP based
+multithreading. By default a single thread is used unless a matlabpool
+has already been opened. Note that when computing the function gradient
+with different numbers of threads, the resulting gradients will be very
+slightly different. In practice this leads to small variations in the
+resulting AP scores.
