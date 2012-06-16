@@ -95,20 +95,14 @@ In Proceedings of the IEEE CVPR 2010.
 System Requirements
 ===================
  * Linux or OS X
- * MATLAB >= 2010b (support for enumerations is required)
+ * MATLAB
  * GCC >= 4.2 (or an older version if it has OpenMP support)
  * At least 4GB of memory (plus an additional 0.75GB for each
    parallel matlab worker)
 
 The software was tested on several versions of Linux and Mac OS X using
-MATLAB versions R2011a.
-
-Compatibility with older MATLABs:
-
-If you need to use the software with MATLAB < 2010b, you can edit
-models/{block,model}_types.m so that they use constants instead of
-enumerations. Please note that if you make this change, you will not be
-able to load the pretrained models.
+MATLAB versions R2011a. There may be compatibility issues with older
+versions of MATLAB.
 
 
 Basic Usage
