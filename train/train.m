@@ -498,8 +498,8 @@ for i = 1:batchsize:numpos
   thisbatchsize = batchsize - max(0, (i+batchsize-1) - numpos);
   % data for batch
   clear('data');
-  data(thisbatchsize).boxdata = [];
-  data(thisbatchsize).pyra = [];
+  empties = cell(1, thisbatchsize);
+  data = struct('boxdata', empties, 'pyra', empties);
   parfor k = 1:thisbatchsize
     j = i+k-1;
     msg = sprintf('%s %s: iter %d/%d: latent positive: %d/%d', ...
@@ -514,7 +514,8 @@ for i = 1:batchsize:numpos
     % do whole image operations
     im = color(imreadx(pos(j)));
     [im, boxes] = croppos(im, pos(j).boxes);
-    [data(k).pyra, model_dp] = gdetect_pos_prepare(im, model, boxes, fg_overlap);
+    [pyra, model_dp] = gdetect_pos_prepare(im, model, boxes, fg_overlap);
+    data(k).pyra = pyra;
 
     % process each box in the image
     num_boxes = size(boxes, 1);
