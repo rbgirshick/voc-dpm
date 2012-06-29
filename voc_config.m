@@ -25,7 +25,7 @@ BASE_DIR    = '/var/tmp/rbg';
 PASCAL_YEAR = '2007';
 
 % Models are automatically stored in BASE_DIR/PROJECT/PASCAL_YEAR/
-PROJECT     = 'rel5-dev/rc3';
+PROJECT     = 'rel5-dev/rc4';
 
 %
 % You probably don't need to change configuration settings below this line.

@@ -18,5 +18,5 @@ if isempty(G_STARTUP)
   end
   conf = voc_config();
   fprintf('%s is set up\n', conf.version);
-  clear conf;
+  clear conf i incl;
 end
