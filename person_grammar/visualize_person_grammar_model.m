@@ -37,7 +37,7 @@ for c = 1:length(rhs)
     filter_symbol = model.rules{sym}(direction).rhs(1);
   end
   filter_id = model.symbols(filter_symbol).filter;
-  w = model.filters(filter_id).w;
+  w = model_get_block(model, model.filters(filter_id));
 
   if c == 1
     filters{c} = w;
@@ -51,7 +51,7 @@ if length(model.rules{model.start}(1).rhs) > 1
   O_def_symbol = model.rules{O}(direction).rhs(1);
   O_filter_symbol = model.rules{O_def_symbol}.rhs(1);
   O_filter_id = model.symbols(O_filter_symbol).filter;
-  O_w = model.filters(O_filter_id).w;
+  O_w = model_get_block(model, model.filters(O_filter_id));
 else
   O_w = zeros(0, size(X_w, 2), size(X_w, 3));
 end
@@ -84,8 +84,8 @@ for i = 2:length(model.rules{symbol}(direction).rhs)
   dsym = model.rules{symbol}(direction).rhs(i);
   fsym = model.rules{dsym}.rhs(1);
   fid = model.symbols(fsym).filter;
-  parts(end+1).w = model.filters(fid).w;
-  defs(end+1).w = model.rules{dsym}.def.w;
+  parts(end+1).w = model_get_block(model, model.filters(fid));
+  defs(end+1).w = model_get_block(model, model.rules{dsym}.def);
   anchors(end+1).w = base_anchor + model.rules{symbol}(direction).anchor{i};
 end
 
