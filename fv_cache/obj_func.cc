@@ -62,14 +62,12 @@ void obj_val(double out[OBJ_VAL_LEN], ex_cache &E, model &M) {
         max_hnrm2 = val;
     }
     
-    double pc[M.num_components];
     double Z = 0;
     for (int c = 0; c < M.num_components; c++) {
       if (M.component_sizes[c] == 0)
         continue;
 
       double a = exp(beta * (hnrms2[c] - max_hnrm2));
-      pc[c] = a;
       Z += a;
     }
 

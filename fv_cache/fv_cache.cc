@@ -439,7 +439,7 @@ static void info_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
   enum { SCORE = 0, UNIQUE, DATA_ID, X, Y, SCALE, BYTE_SIZE, 
          MARGIN, BELIEF, ZERO, MINED, NUM };
 
-  int dims[]       = { gctx.F.size(), NUM };
+  int dims[]       = { (int)gctx.F.size(), NUM };
   mxArray *mx_info = mxCreateNumericArray(2, dims, mxDOUBLE_CLASS, mxREAL);
   double *info     = mxGetPr(mx_info);
 
