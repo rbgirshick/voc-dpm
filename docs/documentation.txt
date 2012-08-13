@@ -1,3 +1,11 @@
+
+This documentation is up-to-date for voc-release4.01.
+
+It mostly applies to the model format used in voc-release5.
+
+Updated documentation is in progress.
+
+
 Weight vector documentation
 ===========================
 
