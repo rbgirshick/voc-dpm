@@ -1,6 +1,10 @@
 function demo()
 startup;
 
+fprintf('compiling the code...');
+compile;
+fprintf('done.\n\n');
+
 load('VOC2007/car_final');
 model.vis = @() visualizemodel(model, ...
                   1:2:length(model.rules{model.start}));
