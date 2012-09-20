@@ -30,11 +30,10 @@ dim = model.symbols(model.start).max_dim;
 % Max number of blocks used
 nblocks = model.symbols(model.start).max_num;
 
-% done
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
+% ------------------------------------------------------------------------
 function model = symbol_max_dim(model, s)
+% ------------------------------------------------------------------------
 [m, i] = max(cat(1, model.rules{s}(:).max_dim));
 model.symbols(s).max_dim = m;
 model.symbols(s).max_dim_blocks = model.rules{s}(i).max_dim_blocks;
@@ -44,19 +43,23 @@ model.symbols(s).max_num = m;
 model.symbols(s).max_num_blocks = model.rules{s}(i).max_num_blocks;
 
 
+% ------------------------------------------------------------------------
 function model = rule_max_dim(model, r)
+% ------------------------------------------------------------------------
 rbls = r.blocks(:);
 
-bls = unique([rbls; cat(1, model.symbols(r.rhs).max_dim_blocks)]);
+bls = [rbls; cat(1, model.symbols(r.rhs).max_dim_blocks)];
 model.rules{r.lhs}(r.i).max_dim_blocks = bls;
 model.rules{r.lhs}(r.i).max_dim = sum(cat(1, model.blocks(bls).dim));
 
-bls = unique([rbls; cat(1, model.symbols(r.rhs).max_num_blocks)]);
+bls = [rbls; cat(1, model.symbols(r.rhs).max_num_blocks)];
 model.rules{r.lhs}(r.i).max_num_blocks = bls;
 model.rules{r.lhs}(r.i).max_num = length(bls);
 
 
+% ------------------------------------------------------------------------
 function model = filter_dims(model)
+% ------------------------------------------------------------------------
 for i = 1:model.numfilters
   sym = model.filters(i).symbol;
   bl = model.filters(i).blocklabel;
