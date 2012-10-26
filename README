@@ -105,18 +105,22 @@ MATLAB versions R2011a. There may be compatibility issues with older
 versions of MATLAB.
 
 
-Basic Usage
-===========
+Getting started
+===============
 
 1. Unpack the code.
 2. Start matlab.
 3. Run the 'compile' function to compile the helper functions.
    (you may need to edit compile.m to use a different convolution 
     routine depending on your system)
-4. Load a model and an image.
-5. Use 'process' to detect objects.
+4. Run demo.m or demo_cascade.m to see the detection code in action.
 
-Example:
+Note: If you don't start matlab in the code directory, you may need
+to manually run startup.m to ensure all paths are correctly set.
+
+Example usage
+=============
+
 >> load VOC2007/car_final.mat;       % car model trained on the PASCAL 2007 dataset
 >> im = imread('000034.jpg');        % test image
 >> bbox = process(im, model, -0.5);  % detect objects

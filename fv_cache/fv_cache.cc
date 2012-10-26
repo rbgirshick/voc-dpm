@@ -1,3 +1,15 @@
+// AUTORIGHTS
+// -------------------------------------------------------
+// Copyright (C) 2012 Ross Girshick
+// 
+// This file is part of the voc-releaseX code
+// (http://people.cs.uchicago.edu/~rbg/latent/)
+// and is available under the terms of an MIT-like license
+// provided in COPYING. Please retain this notice and
+// COPYING if you use this file (or a portion of it) in
+// your project.
+// -------------------------------------------------------
+
 #include "mex.h"
 #include "model.h"
 #include "fv_cache.h"
@@ -68,7 +80,7 @@ void checker(bool e, const string file, int line, const string msg) {
     mexUnlock();
     sigaction(SIGINT, &gctx.matlab_act, &gctx.act);
     ostringstream out;
-    out << file << ":" << line << " " << msg;
+    out << file.c_str() << ":" << line << " " << msg.c_str();
     mexErrMsgTxt(out.str().c_str());
   }
 }

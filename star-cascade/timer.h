@@ -33,7 +33,7 @@ public:
 
   const char *msg() {
     ostringstream oss;
-    oss << "timer '" << name 
+    oss << "timer '" << name.c_str()
         << "' = " << total_time << " sec in " 
         << calls << " call(s)";
     return oss.str().c_str();

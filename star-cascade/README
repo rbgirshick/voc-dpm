@@ -88,7 +88,7 @@ Source Code Overview
 
 Cascade Detection
 ---
-cascade_demo.m           Demo script
+../demo_cascade.m        Demo script
 cascade_detect.m         Matlab function for cascade detection
 cascade.cc               C++ star-cascade implementation & MEX interface
 model.{cc,h}             C++ representation of cascade models

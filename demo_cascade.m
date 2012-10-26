@@ -1,10 +1,11 @@
-function cascade_demo()
-
+function demo_cascade()
 % Run cascade demo.
 % 
 % Note that unless you have compiled fconv.cc as your convolution
 % function, you will be comparing a multi-threaded version of the
 % DP algorithm to a single-threaded version of the cascade algorithm.
+
+startup;
 
 load('VOC2007/car_final');
 test('000034.jpg', model);
