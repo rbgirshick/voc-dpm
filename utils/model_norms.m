@@ -7,6 +7,16 @@ function model_norms(model)
 %   model   Object model (must be a mixture of star models with latent orientation)
 
 % AUTORIGHTS
+% -------------------------------------------------------
+% Copyright (C) 2009-2012 Ross Girshick
+% 
+% This file is part of the voc-releaseX code
+% (http://people.cs.uchicago.edu/~rbg/latent/)
+% and is available under the terms of an MIT-like license
+% provided in COPYING. Please retain this notice and
+% COPYING if you use this file (or a portion of it) in
+% your project.
+% -------------------------------------------------------
 
 assert(model.type == model_types.MixStar);
 

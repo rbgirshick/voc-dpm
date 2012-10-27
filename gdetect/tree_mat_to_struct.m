@@ -11,6 +11,16 @@ function s = tree_mat_to_struct(m)
 %       Each row corresponds to a field (N_* below)
 
 % AUTORIGHTS
+% -------------------------------------------------------
+% Copyright (C) 2011-2012 Ross Girshick
+% 
+% This file is part of the voc-releaseX code
+% (http://people.cs.uchicago.edu/~rbg/latent/)
+% and is available under the terms of an MIT-like license
+% provided in COPYING. Please retain this notice and
+% COPYING if you use this file (or a portion of it) in
+% your project.
+% -------------------------------------------------------
 
 % Indexes into tree from get_detection_trees.cc
 N_PARENT      = 1;

@@ -15,6 +15,16 @@ function [blocks, lower_bounds, reg_mult, learn_mult, comps] ...
 %   model           Input model
 
 % AUTORIGHTS
+% -------------------------------------------------------
+% Copyright (C) 2011-2012 Ross Girshick
+% 
+% This file is part of the voc-releaseX code
+% (http://people.cs.uchicago.edu/~rbg/latent/)
+% and is available under the terms of an MIT-like license
+% provided in COPYING. Please retain this notice and
+% COPYING if you use this file (or a portion of it) in
+% your project.
+% -------------------------------------------------------
 
 blocks        = get_blocks(model);
 lower_bounds  = get_lb(model);

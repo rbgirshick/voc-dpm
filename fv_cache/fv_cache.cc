@@ -1,6 +1,6 @@
 // AUTORIGHTS
 // -------------------------------------------------------
-// Copyright (C) 2012 Ross Girshick
+// Copyright (C) 2011-2012 Ross Girshick
 // 
 // This file is part of the voc-releaseX code
 // (http://people.cs.uchicago.edu/~rbg/latent/)

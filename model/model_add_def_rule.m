@@ -32,6 +32,16 @@ function [m, rule] = model_add_def_rule(m, lhs, rhs, varargin)
 %   mirror_rule                 Rule structure to horizontally mirror
 
 % AUTORIGHTS
+% -------------------------------------------------------
+% Copyright (C) 2009-2012 Ross Girshick
+% 
+% This file is part of the voc-releaseX code
+% (http://people.cs.uchicago.edu/~rbg/latent/)
+% and is available under the terms of an MIT-like license
+% provided in COPYING. Please retain this notice and
+% COPYING if you use this file (or a portion of it) in
+% your project.
+% -------------------------------------------------------
 
 valid_opts = {'flip', 'offset_w', 'offset_blocklabel', ...
               'def_w', 'def_blocklabel', ...

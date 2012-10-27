@@ -3,6 +3,16 @@ function model = person_init_grammar()
 %   model = person_init_grammar()
 
 % AUTORIGHTS
+% -------------------------------------------------------
+% Copyright (C) 2011-2012 Ross Girshick
+% 
+% This file is part of the voc-releaseX code
+% (http://people.cs.uchicago.edu/~rbg/latent/)
+% and is available under the terms of an MIT-like license
+% provided in COPYING. Please retain this notice and
+% COPYING if you use this file (or a portion of it) in
+% your project.
+% -------------------------------------------------------
 
 model = train_full_person_2x_res();
 model = make_person_grammar_occ_def(model);

@@ -2,6 +2,16 @@ function conf = voc_config_person_grammar()
 % Set up configuration variables
 
 % AUTORIGHTS
+% -------------------------------------------------------
+% Copyright (C) 2011-2012 Ross Girshick
+% 
+% This file is part of the voc-releaseX code
+% (http://people.cs.uchicago.edu/~rbg/latent/)
+% and is available under the terms of an MIT-like license
+% provided in COPYING. Please retain this notice and
+% COPYING if you use this file (or a portion of it) in
+% your project.
+% -------------------------------------------------------
 
 conf.pascal.year                   = '2010';
 conf.project                       = 'rel5-dev/rc2-person-grammar';

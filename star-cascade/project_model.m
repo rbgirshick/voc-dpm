@@ -8,6 +8,16 @@ function [model, pca_model] = project_model(model, coeff, k)
 % 'pcamodel' has its filters replaced with the PCA filters.
 
 % AUTORIGHTS
+% -------------------------------------------------------
+% Copyright (C) 2009-2012 Ross Girshick
+% 
+% This file is part of the voc-releaseX code
+% (http://people.cs.uchicago.edu/~rbg/latent/)
+% and is available under the terms of an MIT-like license
+% provided in COPYING. Please retain this notice and
+% COPYING if you use this file (or a portion of it) in
+% your project.
+% -------------------------------------------------------
 
 % take the top k eigenvectors from coeff as the projection matrix
 coeff = coeff(:, 1:k);

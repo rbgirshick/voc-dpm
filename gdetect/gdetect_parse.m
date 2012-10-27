@@ -18,6 +18,16 @@ function [ds, bs, trees] = gdetect_parse(model, pyra, thresh, max_num)
 %   max_num   Maximum number of detections to return
 
 % AUTORIGHTS
+% -------------------------------------------------------
+% Copyright (C) 2009-2012 Ross Girshick
+% 
+% This file is part of the voc-releaseX code
+% (http://people.cs.uchicago.edu/~rbg/latent/)
+% and is available under the terms of an MIT-like license
+% provided in COPYING. Please retain this notice and
+% COPYING if you use this file (or a portion of it) in
+% your project.
+% -------------------------------------------------------
 
 % Find scores above the threshold
 X = zeros(0, 'int32');

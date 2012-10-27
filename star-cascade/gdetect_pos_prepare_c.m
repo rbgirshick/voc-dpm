@@ -12,6 +12,16 @@ function [pyra, model_dp] = gdetect_pos_prepare_c(im, model, valid)
 %   model         Object model
 
 % AUTORIGHTS
+% -------------------------------------------------------
+% Copyright (C) 2009-2012 Ross Girshick
+% 
+% This file is part of the voc-releaseX code
+% (http://people.cs.uchicago.edu/~rbg/latent/)
+% and is available under the terms of an MIT-like license
+% provided in COPYING. Please retain this notice and
+% COPYING if you use this file (or a portion of it) in
+% your project.
+% -------------------------------------------------------
 
 % get feature pyramid
 pyra = featpyramid(im, model);

@@ -15,6 +15,16 @@ function model = add_slab_parts(model, Y, num_parts, hi_res_size, low_res_size, 
 %                   of newly initialized parts that are added to the model)
 
 % AUTORIGHTS
+% -------------------------------------------------------
+% Copyright (C) 2011-2012 Ross Girshick
+% 
+% This file is part of the voc-releaseX code
+% (http://people.cs.uchicago.edu/~rbg/latent/)
+% and is available under the terms of an MIT-like license
+% provided in COPYING. Please retain this notice and
+% COPYING if you use this file (or a portion of it) in
+% your project.
+% -------------------------------------------------------
 
 % We rewrite the slab rules from
 %   Y -struct-> Y_l | Y_r

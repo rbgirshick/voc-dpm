@@ -15,6 +15,16 @@ function model = add_head_parts(model, X, num_parts, hi_res_size, low_res_size, 
 %                   of newly initialized parts that are added to the model)
 
 % AUTORIGHTS
+% -------------------------------------------------------
+% Copyright (C) 2011-2012 Ross Girshick
+% 
+% This file is part of the voc-releaseX code
+% (http://people.cs.uchicago.edu/~rbg/latent/)
+% and is available under the terms of an MIT-like license
+% provided in COPYING. Please retain this notice and
+% COPYING if you use this file (or a portion of it) in
+% your project.
+% -------------------------------------------------------
 
 % Terminal symbols for the two head filter subtypes
 X_lf  = model.rules{X}(1).rhs(1);
