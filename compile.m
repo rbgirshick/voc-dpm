@@ -14,6 +14,8 @@ if ispc
   error('This code is not supported on Windows.');
 end
 
+startup;
+
 if nargin < 1
   opt = true;
 end
