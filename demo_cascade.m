@@ -19,6 +19,18 @@ function demo_cascade()
 
 startup;
 
+fprintf('compiling the code...');
+compile;
+fprintf('done.\n\n');
+
+fprintf(['\n\n' ...
+         '              ~~~~~~~~~~~ README ~~~~~~~~~~~\n' ...
+         'This is comparing a MULTITHREADED, SSE-accelerated version\n' ...
+         'of the baseline DP algorithm to a SINGLE-THREADED, non-SSE\n' ...
+         'version of the cascade. Speedups will be less than expected\n' ...
+         'if you are running this on a multicore system.\n\n']);
+input('Noted? Press return to continue.');
+
 load('VOC2007/car_final');
 test('000034.jpg', model);
 fprintf('\nPress any key to continue with demo'); pause; fprintf('...ok\n\n');
