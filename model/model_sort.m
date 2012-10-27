@@ -12,6 +12,8 @@ function [L, V] = model_sort(m, i, L, V)
 %   L   (internal use) Symbols visited thus far in post order
 %   V   (internal use) Symbol visitation status thus far
 
+% AUTORIGHTS
+
 % initialize depth-first search at start symbol
 if nargin < 2
   i = m.start;

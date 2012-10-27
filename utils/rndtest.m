@@ -1,6 +1,8 @@
 function [p, ptt] = rndtest(X, Y, B)
 % Randomized (permutation) paired sample test
 
+% AUTORIGHTS
+
 if nargin < 3
   B = 100000;
 end

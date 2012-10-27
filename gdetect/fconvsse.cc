@@ -1,8 +1,4 @@
-/**
- * WARNING: This is an experimental implementation of filter convolutions
- * using SSE instructions.  It produces responses that are slightly different
- * from what is computed by learn.cc and has not been thoroughly tested.
- */
+// AUTORIGHTS
 
 #include "mex.h"
 #include <pthread.h>

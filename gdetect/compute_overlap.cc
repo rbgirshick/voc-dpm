@@ -1,3 +1,5 @@
+// AUTORIGHTS
+
 #include "mex.h"
 #include <algorithm>
 using namespace std;

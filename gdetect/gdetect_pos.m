@@ -39,6 +39,8 @@ function [ds, bs, trees] = gdetect_pos(pyra, model, count, ...
 %   max_bg_overlap  Maximum allowed amount of overlap with bg bounding boxes
 %                   Implements S(x) in WL-SSVM
 
+% AUTORIGHTS
+
 % Get the non-loss adjusted detection (termed the "belief")
 modelp = apply_L_output(model, pyra, fg_box, fg_overlap);
 [ds, bs, trees] = gdetect_parse(modelp, pyra, -100, 1);

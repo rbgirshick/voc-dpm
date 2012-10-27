@@ -12,6 +12,8 @@ function [ap, newap] = bboxpred_rescore(name, testset, year, suffix, method)
 %   year      Test dataset year (e.g., '2007', '2011')
 %   method    Regression method
 
+% AUTORIGHTS
+
 conf = voc_config('pascal.year', year);
 VOCopts = conf.pascal.VOCopts;
 

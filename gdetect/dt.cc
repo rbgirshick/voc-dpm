@@ -1,3 +1,5 @@
+// AUTORIGHTS
+
 #include <math.h>
 #include <sys/types.h>
 #include "mex.h"

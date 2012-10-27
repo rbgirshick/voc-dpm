@@ -9,6 +9,8 @@ function m = model_create(cls, note)
 %   cls     Object class (e.g., 'bicycle')
 %   note    A descriptive note (e.g., 'testing new features X, Y, and Z')
 
+% AUTORIGHTS
+
 conf = voc_config();
 
 if nargin < 2

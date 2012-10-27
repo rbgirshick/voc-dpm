@@ -12,6 +12,8 @@ function [ap1, ap2] = trainval(cls)
 %   cls   Class to evaluate 
 %         (if no class is specified all classes are evaluated)
 
+% AUTORIGHTS
+
 if nargin < 1
   % pass no arguments in order to run on all classes
   conf = voc_config();

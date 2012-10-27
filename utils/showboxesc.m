@@ -1,7 +1,8 @@
 function showboxesc(im, boxes, c)
-
 % showboxes(im, boxes)
 % Draw boxes on top of image.
+
+% AUTORIGHTS
 
 %clf;
 image(im); 

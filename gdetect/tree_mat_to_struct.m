@@ -10,6 +10,8 @@ function s = tree_mat_to_struct(m)
 %       Each column comes from a symbol in a derivation tree
 %       Each row corresponds to a field (N_* below)
 
+% AUTORIGHTS
+
 % Indexes into tree from get_detection_trees.cc
 N_PARENT      = 1;
 N_IS_LEAF     = 2;

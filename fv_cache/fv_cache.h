@@ -1,3 +1,5 @@
+// AUTORIGHTS
+
 #ifndef FV_CACHE_H
 #define FV_CACHE_H
 

@@ -14,6 +14,8 @@ function [ds, bs] = process(im, model, thresh)
 %   model     Object model
 %   thresh    Detection threshold
 
+% AUTORIGHTS
+
 if nargin < 3
   thresh = model.thresh
 end

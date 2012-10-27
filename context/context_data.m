@@ -24,6 +24,8 @@ function [ds_all, bs_all, X] = context_data(dataset, year)
 %   detections for a class in the image, that class is assigned the max score
 %   -1.1.
 
+% AUTORIGHTS
+
 conf = voc_config('pascal.year', year);
 cachedir = conf.paths.model_dir;
 VOCopts  = conf.pascal.VOCopts;

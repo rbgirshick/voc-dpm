@@ -12,6 +12,8 @@ function labels = context_labels(cls, ds, train_set, train_year)
 %   train_set   Training dataset
 %   train_year  Training dataset year
 
+% AUTORIGHTS
+
 conf = voc_config('pascal.year', train_year);
 cachedir = conf.paths.model_dir;
 VOCopts  = conf.pascal.VOCopts;

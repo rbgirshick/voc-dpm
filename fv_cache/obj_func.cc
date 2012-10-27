@@ -1,3 +1,5 @@
+// AUTORIGHTS
+
 #include "obj_func.h"
 #include <cmath>
 #include <fstream>

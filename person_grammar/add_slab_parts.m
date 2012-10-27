@@ -14,6 +14,8 @@ function model = add_slab_parts(model, Y, num_parts, hi_res_size, low_res_size, 
 %   a               Subpart filter weight scale (used to reduce the influence
 %                   of newly initialized parts that are added to the model)
 
+% AUTORIGHTS
+
 % We rewrite the slab rules from
 %   Y -struct-> Y_l | Y_r
 %   Y_l -def-> F_l 

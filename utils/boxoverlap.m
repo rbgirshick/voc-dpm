@@ -5,6 +5,8 @@ function o = boxoverlap(a, b)
 % a  a matrix where each row specifies a bounding box
 % b  a single bounding box
 
+% AUTORIGHTS
+
 x1 = max(a(:,1), b(1));
 y1 = max(a(:,2), b(2));
 x2 = min(a(:,3), b(3));

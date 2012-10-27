@@ -9,6 +9,8 @@ function model = lr_root_model(model)
 % Argument
 %   model   Object model from root_model.m
 
+% AUTORIGHTS
+
 % Symbol for the root filter
 rootsym = model.rules{model.start}.rhs(1);
 

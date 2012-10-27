@@ -10,6 +10,8 @@ function compile(opt, verb, mex_file)
 %   opt   Compile with optimizations (default: on)
 %   verb  Verbose output (default: off)
 
+% AUTORIGHTS
+
 if ispc
   error('This code is not supported on Windows.');
 end

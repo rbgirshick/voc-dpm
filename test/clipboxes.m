@@ -17,6 +17,8 @@ function [ds, bs, I] = clipboxes(im, ds, bs)
 %   ds      Detection bounding boxes (see pascal_test.m)
 %   bs      Filter bounding boxes (see pascal_test.m)
 
+% AUTORIGHTS
+
 if nargin < 3
   bs = [];
 end

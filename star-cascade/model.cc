@@ -1,3 +1,5 @@
+// AUTORIGHTS
+
 #include "mex.h"
 #include "model.h"
 

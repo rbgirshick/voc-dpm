@@ -14,6 +14,8 @@ function [blocks, lower_bounds, reg_mult, learn_mult, comps] ...
 % Argument
 %   model           Input model
 
+% AUTORIGHTS
+
 blocks        = get_blocks(model);
 lower_bounds  = get_lb(model);
 reg_mult      = get_rm(model);

@@ -8,6 +8,8 @@ function im = imreadx(ex)
 % Argument
 %   ex    An example returned by pascal_data.m
 
+% AUTORIGHTS
+
 im = color(imread(ex.im));
 if ex.flip
   im = im(:,end:-1:1,:);

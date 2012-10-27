@@ -6,6 +6,8 @@ function model_norms(model)
 % Argument
 %   model   Object model (must be a mixture of star models with latent orientation)
 
+% AUTORIGHTS
+
 assert(model.type == model_types.MixStar);
 
 n = length(model.rules{model.start});

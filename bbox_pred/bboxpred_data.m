@@ -13,6 +13,8 @@ function [ds_all, bs_all, targets] = bboxpred_data(name)
 % Argument
 %   name      Object class
 
+% AUTORIGHTS
+
 conf = voc_config();
 
 try

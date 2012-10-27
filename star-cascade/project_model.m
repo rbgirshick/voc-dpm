@@ -1,5 +1,4 @@
 function [model, pca_model] = project_model(model, coeff, k)
-
 % [model, pcamodel] = project_model(model, coeff, k)
 %
 % Project a model's filters onto the top k PCA eigenvectors
@@ -7,6 +6,8 @@ function [model, pca_model] = project_model(model, coeff, k)
 % variable 'model' holds the original model augmented to
 % hold the PCA filters as extra data.  The output variable
 % 'pcamodel' has its filters replaced with the PCA filters.
+
+% AUTORIGHTS
 
 % take the top k eigenvectors from coeff as the projection matrix
 coeff = coeff(:, 1:k);

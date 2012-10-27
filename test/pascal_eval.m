@@ -15,6 +15,8 @@ function [ap, prec, recall] = pascal_eval(cls, ds, testset, year, suffix)
 %   suffix    Results are saved to a file named:
 %             [cls '_pr_' testset '_' suffix]
 
+% AUTORIGHTS
+
 conf = voc_config('pascal.year', year, ...
                   'eval.test_set', testset);
 cachedir = conf.paths.model_dir;                  

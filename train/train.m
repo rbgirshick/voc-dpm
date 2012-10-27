@@ -23,6 +23,8 @@ function model = train(model, pos, neg, warp, randneg, iter, ...
 %   cont      True => restart training from a previous run
 %   C         Regularization/surrogate loss tradeoff parameter
 
+% AUTORIGHTS
+
 conf = voc_config();
 
 if nargin < 8

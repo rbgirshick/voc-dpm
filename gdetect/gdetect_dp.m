@@ -15,6 +15,8 @@ function model = gdetect_dp(pyra, model)
 %   pyra    Feature pyramid returned by featpyramid.m
 %   model   Object model
 
+% AUTORIGHTS
+
 % cache filter response
 model = filter_responses(model, pyra);
 

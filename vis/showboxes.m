@@ -4,6 +4,8 @@ function showboxes(im, boxes, out)
 %
 %   If out is given, a pdf of the image is generated (requires export_fig).
 
+% AUTORIGHTS
+
 if nargin > 2
   % different settings for producing pdfs
   print = true;

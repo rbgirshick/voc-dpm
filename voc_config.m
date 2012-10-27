@@ -14,6 +14,8 @@ function conf = voc_config(varargin)
 %      overrides set. This method is persistent until VOC_CONFIG_OVERRIDE
 %      is cleared. See sample_voc_config_override.m for an example.
 
+% AUTORIGHTS
+
 %
 % ~~~~~~~~~~~~~~~~~~~~~~ BASIC SETUP ~~~~~~~~~~~~~~~~~~~~~~
 % Please read the next few lines

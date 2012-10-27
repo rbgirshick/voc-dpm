@@ -9,6 +9,8 @@ function model = bboxpred_train(name, method)
 %   name    Object class
 %   method  Regression method (default is least squares regression)
 
+% AUTORIGHTS
+
 conf = voc_config();
 
 if nargin < 3

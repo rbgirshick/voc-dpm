@@ -1,5 +1,7 @@
 function visualize_simple_grammar_model_def(model, comps, direction)
 
+% AUTORIGHTS
+
 clf;
 
 if nargin < 3

@@ -9,6 +9,8 @@ function write_zero_fv(from_pos, key)
 %               vector for a background example
 %   key         Feature vector cache key (see fv_cache.h and gdetect_write.m)
 
+% AUTORIGHTS
+
 if from_pos
   % The zero vector is being used as the feature vector associated with the
   % background output for a foreground example

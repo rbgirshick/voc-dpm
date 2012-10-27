@@ -1,5 +1,7 @@
 function vis_grammar(model)
 
+% AUTORIGHTS
+
 % visualize random derivations...forever
 while true
   f = vis_grammar_rand(model);

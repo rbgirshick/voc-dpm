@@ -14,6 +14,8 @@ function pascal(cls, n, note, dotrainval, testyear)
 %                 This is used to collect training data for context rescoring
 %   testyear      Test set year (e.g., '2007', '2011')
 
+% AUTORIGHTS
+
 startup;
 
 conf = voc_config();

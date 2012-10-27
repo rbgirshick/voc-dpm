@@ -1,3 +1,5 @@
+// AUTORIGHTS
+
 #include "mex.h"
 #include <pthread.h>
 #include <math.h>

@@ -1,8 +1,9 @@
 function p = project(f, coeff)
-
 % p = project(f, coeff)
 %
 % project filter f onto PCA eigenvectors (columns of) coeff
+
+% AUTORIGHTS
 
 sz = size(f);
 p = reshape(f, [sz(1)*sz(2) sz(3)]);

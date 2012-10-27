@@ -7,6 +7,8 @@ function context_train(train_set, train_year, cls)
 %   train_year    Training dataset year
 %   cls           Object class to train (trains all if not specified)
 
+% AUTORIGHTS
+
 conf = voc_config('pascal.year', train_year);
 cachedir = conf.paths.model_dir;
 VOCopts  = conf.pascal.VOCopts;

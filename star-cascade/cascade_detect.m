@@ -1,5 +1,7 @@
 function [dets, boxes, t] = cascade_detect(pyra, model, thresh)
 
+% AUTORIGHTS
+
 th = tic();
 
 % gather PCA root filters for convolution

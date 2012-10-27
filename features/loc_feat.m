@@ -17,6 +17,8 @@ function f = loc_feat(model, num_levels)
 %   model       Model used for detection
 %   num_levels  Number of levels in the feature pyramid
 
+% AUTORIGHTS
+
 f = zeros(3, num_levels);
 
 b = 1;

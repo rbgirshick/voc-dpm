@@ -3,6 +3,8 @@ function auc_ap_2007(path, suffix)
 % AP scores using the >= 2010 area under curve method. Useful for
 % getting less noisy results on the 2007 test set.
 
+% AUTORIGHTS
+
 conf = voc_config();
 VOCopts = conf.pascal.VOCopts;
 

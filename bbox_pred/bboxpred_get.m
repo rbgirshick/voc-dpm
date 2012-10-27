@@ -11,6 +11,8 @@ function [ds_pred, bs_pred] = bboxpred_get(bboxpred, ds, bs)
 %   ds        Source detection windows
 %   bs        Source filter bounding boxes
 
+% AUTORIGHTS
+
 ds_pred = [];
 bs_pred = [];
 % number of components

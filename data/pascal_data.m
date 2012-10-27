@@ -11,6 +11,8 @@ function [pos, neg, impos] = pascal_data(cls, year)
 %   cls     Object class to get examples for
 %   year    PASCAL dataset year
 
+% AUTORIGHTS
+
 conf       = voc_config('pascal.year', year);
 dataset_fg = conf.training.train_set_fg;
 dataset_bg = conf.training.train_set_bg;

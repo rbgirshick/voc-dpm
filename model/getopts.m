@@ -9,6 +9,8 @@ function map = getopts(in, valid_keys)
 %   in          Cell array of alternating (key, value) pairs
 %   valid_keys  Valid keys that can be extracted from in
 
+% AUTORIGHTS
+
 map = containers.Map();
 
 %for i = 1:2:length(defaults)

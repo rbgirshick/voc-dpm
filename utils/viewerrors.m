@@ -1,6 +1,8 @@
 function ap = viewerrors(model, boxes, testset, year, saveim)
 % For visualizing mistakes on a validation set
 
+% AUTORIGHTS
+
 warning on verbose;
 warning off MATLAB:HandleGraphics:noJVM;
 

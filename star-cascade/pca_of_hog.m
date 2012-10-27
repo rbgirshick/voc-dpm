@@ -1,7 +1,10 @@
 function [coeff,latent] = pca_of_hog(sbin, n)
 
-globals;
-pascal_init;
+conf = voc_config();
+VOCopts = conf.pascal.VOCopts;
+cachedir = conf.paths.model_dir;
+
+% AUTORIGHTS
 
 try
   load([cachedir 'pca']);

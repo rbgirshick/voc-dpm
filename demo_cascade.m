@@ -5,6 +5,8 @@ function demo_cascade()
 % function, you will be comparing a multi-threaded version of the
 % DP algorithm to a single-threaded version of the cascade algorithm.
 
+% AUTORIGHTS
+
 startup;
 
 load('VOC2007/car_final');

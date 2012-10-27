@@ -18,6 +18,8 @@ function pyra = featpyramid(im, model, padx, pady)
 %                   Feature map computed at exactly half the 
 %                   resolution of pyra.feat{i}
 
+% AUTORIGHTS
+
 if nargin < 3
   [padx, pady] = getpadding(model);
 end

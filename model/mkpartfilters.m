@@ -11,6 +11,8 @@ function pfilters = mkpartfilters(filter, psize, num, scale)
 %   num         Number of parts to make
 %   scale       Number of octave shifts (>= 0)
 
+% AUTORIGHTS
+
 if nargin < 4
   scale = 1;
 end

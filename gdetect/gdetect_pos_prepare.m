@@ -14,6 +14,7 @@ function [pyra, model_dp] = gdetect_pos_prepare(im, model, boxes, fg_overlap)
 %   fg_overlap    Amount of overlap required between a belief 
 %                 and a foreground example
 
+% AUTORIGHTS
 
 % get feature pyramid
 pyra = featpyramid(im, model);

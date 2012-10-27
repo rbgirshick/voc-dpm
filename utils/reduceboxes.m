@@ -15,6 +15,8 @@ function b = reduceboxes(model, bs)
 %   model   Object model
 %   bs      Filter bounding boxes
 
+% AUTORIGHTS
+
 % Only reduce boxes for mixtures of star models
 if model.type ~= model_types.MixStar
   b = bs;

@@ -4,6 +4,8 @@ function f = foldHOG(w)
 % 
 %   Used for displaying features and filters
 
+% AUTORIGHTS
+
 % Return the contrast insensitive orientations
 f = w(:,:,19:27);
 

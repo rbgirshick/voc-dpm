@@ -1,6 +1,8 @@
 function report_cmp(dir1, suffix1, dir2, suffix2)
 % Compare two different result sets.
 
+% AUTORIGHTS
+
 conf = voc_config();
 
 count1 = 0;

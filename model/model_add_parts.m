@@ -26,6 +26,8 @@ function model = model_add_parts(model, lhs, ruleind, partner, ...
 %               (only scale = 0,1 have been tested)
 %   coef_scale  Part filter coeficients are scaled by this value
 
+% AUTORIGHTS
+
 % if the filter is mirrored, find its partner so mirrored
 % parts can be added to it as well
 if ~isempty(partner)

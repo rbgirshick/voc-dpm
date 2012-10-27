@@ -10,6 +10,8 @@ function ap = context_test(dataset, cls)
 %   dataset     Dataset to context rescore
 %   cls         Object class to rescore (if not given, all are rescored)
 
+% AUTORIGHTS
+
 conf = voc_config();
 cachedir = conf.paths.model_dir;
 VOCopts  = conf.pascal.VOCopts;

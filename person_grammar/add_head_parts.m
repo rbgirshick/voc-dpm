@@ -14,6 +14,8 @@ function model = add_head_parts(model, X, num_parts, hi_res_size, low_res_size, 
 %   a               Subpart filter weight scale (used to reduce the influence
 %                   of newly initialized parts that are added to the model)
 
+% AUTORIGHTS
+
 % Terminal symbols for the two head filter subtypes
 X_lf  = model.rules{X}(1).rhs(1);
 X_rf  = model.rules{X}(2).rhs(1);

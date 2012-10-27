@@ -1,5 +1,4 @@
 function ds = cascade_test(model, testset, year, suffix)
-
 % boxes1 = cascade_test(cls, model, testset, year, suffix)
 % Compute bounding boxes in a test set.
 % boxes1 are detection windows and scores.
@@ -7,6 +6,8 @@ function ds = cascade_test(model, testset, year, suffix)
 % Now we also save the locations of each filter for rescoring
 % parts1 gives the locations for the detections in boxes1
 % (these are saved in the cache file, but not returned by the function)
+
+% AUTORIGHTS
 
 conf = voc_config('pascal.year', year, ...
                   'eval.test_set', testset);

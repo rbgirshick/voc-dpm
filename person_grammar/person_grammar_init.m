@@ -2,6 +2,8 @@ function model = person_init_grammar()
 % Initialize the structure and filters of the person grammar model.
 %   model = person_init_grammar()
 
+% AUTORIGHTS
+
 model = train_full_person_2x_res();
 model = make_person_grammar_occ_def(model);
 

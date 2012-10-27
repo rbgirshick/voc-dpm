@@ -25,6 +25,8 @@ function [A, x1, y1, x2, y2, w, h] = bboxpred_input(ds, bs)
 %   ds     Detection window coordinates
 %   bs     Coordinates for each filter placed in the detection
 
+% AUTORIGHTS
+
 % detection windows' coordinates
 x1 = ds(:,1);
 x2 = ds(:,3);

@@ -25,6 +25,8 @@ function model = loss_pyramid(h_loss_func, pyra, model, fg_box, ...
 %   min_fg_overlap  Minimum required amount of overlap with fg box
 %   max_bg_overlap  Maximum allowed amount of overlap with bg bounding boxes
 
+% AUTORIGHTS
+
 num_bg_boxes = length(bg_boxes);
 
 % For each model component

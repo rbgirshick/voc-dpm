@@ -1,5 +1,7 @@
 function test_stats(cls, testset, year, B)
 
+% AUTORIGHTS
+
 conf = voc_config('project', 'fv_cache', ...
                   'pascal.year', year, ...
                   'eval.test_set', testset);

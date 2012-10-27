@@ -9,6 +9,8 @@ function w = model_get_block(m, obj)
 %   m       Object model
 %   obj     A struct with a blocklabel field
 
+% AUTORIGHTS
+
 % Backwards compatibility
 %if ~isfield(m, 'blocks')
 %  w = obj.w;

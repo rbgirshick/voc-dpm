@@ -17,6 +17,8 @@ function [m, bl] = model_add_block(m, varargin);
 %   w               Block parameter values
 %   type            Block type from the block_type enumeration
 
+% AUTORIGHTS
+
 valid_opts = {'reg_mult', 'learn', 'lower_bounds', 'shape', 'w', 'type'};
 opts = getopts(varargin, valid_opts);
 

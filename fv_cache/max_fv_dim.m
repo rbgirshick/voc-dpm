@@ -12,6 +12,8 @@ function [dim, nblocks] = max_fv_dim(model)
 % Argument
 %   model     Object model
 
+% AUTORIGHTS
+
 model = filter_dims(model);
 
 L = model_sort(model);

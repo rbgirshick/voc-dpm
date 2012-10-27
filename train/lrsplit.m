@@ -15,6 +15,8 @@ function [A, B] = lrsplit(model, pos)
 %         (Assumes: even index i and odd index i-1 are flipped 
 %          copies of each other)
 
+% AUTORIGHTS
+
 conf = voc_config();
 
 % Get warpped positives

@@ -17,6 +17,8 @@ function ds = pascal_test(model, testset, year, suffix)
 %   We also save the bounding boxes of each filter (include root filters)
 %   and the unclipped detection window in ds
 
+% AUTORIGHTS
+
 conf = voc_config('pascal.year', year, ...
                   'eval.test_set', testset);
 VOCopts  = conf.pascal.VOCopts;

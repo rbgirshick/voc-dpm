@@ -8,6 +8,8 @@ function model = model_merge(models)
 % Argument
 %   models    Cell array of models
 
+% AUTORIGHTS
+
 model = models{1};
 
 for i = 2:length(models)

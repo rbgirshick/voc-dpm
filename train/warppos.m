@@ -11,6 +11,8 @@ function warped = warppos(model, pos)
 %   model   Root filter only model
 %   pos     Positive examples from pascal_data.m
 
+% AUTORIGHTS
+
 fi = model.symbols(model.rules{model.start}.rhs).filter;
 fsize = model.filters(fi).size;
 pixels = fsize * model.sbin;

@@ -1,5 +1,7 @@
 function model = model_attach_weights(model)
 
+% AUTORIGHTS
+
 for i = 1:model.numfilters
   w = model_get_block(model, model.filters(i));
   model.filters(i).w = w;

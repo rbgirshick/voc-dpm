@@ -23,6 +23,8 @@ function overlaps = compute_overlaps(pyra, model, boxes)
 %   is the intersection over union overlap between the detection
 %   window for component c and the bounding box boxes(b,:).
 
+% AUTORIGHTS
+
 num_comps = length(model.rules{model.start});
 num_boxes = size(boxes, 1);
 overlaps = [];

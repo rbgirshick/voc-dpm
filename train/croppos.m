@@ -10,6 +10,8 @@ function [im, boxes] = croppos(im, boxes)
 %   im      Input image
 %   boxes   Set of bounding boxes in the image
 
+% AUTORIGHTS
+
 % Bounding box of all of the bounding boxes
 box = [min(boxes(:,1)) min(boxes(:,2)) ...
        max(boxes(:,3)) max(boxes(:,4))];

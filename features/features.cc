@@ -1,3 +1,5 @@
+// AUTORIGHTS
+
 #include <math.h>
 #include "mex.h"
 
@@ -233,6 +235,3 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     mexErrMsgTxt("Wrong number of outputs");
   plhs[0] = process(prhs[0], prhs[1]);
 }
-
-
-

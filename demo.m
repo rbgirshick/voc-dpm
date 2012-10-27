@@ -1,4 +1,7 @@
 function demo()
+
+% AUTORIGHTS
+
 startup;
 
 fprintf('compiling the code...');

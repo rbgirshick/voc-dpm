@@ -13,6 +13,8 @@ function do_levels = validate_levels(model, pyra, boxes, overlap)
 %   boxes       Ground truth bounding boxes
 %   overlap     Overlap threshold
 
+% AUTORIGHTS
+
 num_boxes = size(boxes,1);
 do_levels = false(pyra.num_levels, 1);
 % for each pyramid level

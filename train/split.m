@@ -11,6 +11,8 @@ function spos = split(pos, n)
 %   pos     Positive examples from pascal_data.m
 %   n       Number of aspect ratio clusters
 
+% AUTORIGHTS
+
 h = [pos(:).y2]' - [pos(:).y1]' + 1;
 w = [pos(:).x2]' - [pos(:).x1]' + 1;
 aspects = h ./ w;

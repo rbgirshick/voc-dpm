@@ -11,6 +11,7 @@ function [pyra, model_dp] = gdetect_pos_prepare_c(im, model, valid)
 %   im            Foreground image with one or more foreground examples
 %   model         Object model
 
+% AUTORIGHTS
 
 % get feature pyramid
 pyra = featpyramid(im, model);

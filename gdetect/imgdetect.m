@@ -9,6 +9,8 @@ function [ds, bs, trees] = imgdetect(im, model, thresh)
 %   model     Model to use for detection
 %   thresh    Detection threshold (scores must be > thresh)
 
+% AUTORIGHTS
+
 im = color(im);
 pyra = featpyramid(im, model);
 [ds, bs, trees] = gdetect(pyra, model, thresh);

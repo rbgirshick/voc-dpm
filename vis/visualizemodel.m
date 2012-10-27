@@ -6,6 +6,8 @@ function visualizemodel(model, components, layers)
 %   model       Model to visualize
 %   components  Which components to draw
 
+% AUTORIGHTS
+
 clf;
 if nargin < 2
   components = 1:length(model.rules{model.start});

@@ -14,6 +14,8 @@ function B = subarray(A, i1, i2, j1, j2, pad)
 %   pad   true => pad with boundary values 
 %         false => pad with zeros
 
+% AUTORIGHTS
+
 dim = size(A);
 
 i1c = max(i1, 1);

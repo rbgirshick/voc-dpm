@@ -9,6 +9,8 @@ function ap = context_rescore(train_set, train_year)
 %   train_set     Training dataset
 %   train_year    Training dataset year
 
+% AUTORIGHTS
+
 if nargin < 2
   conf = voc_config();
   train_year = conf.pascal.year;

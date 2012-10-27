@@ -10,6 +10,8 @@ function fv_compile(opt, verb)
 %   opt   Compile with optimizations (default: on)
 %   verb  Verbose output (default: off)
 
+% AUTORIGHTS
+
 if ispc
   error('This code is not supported on Windows.');
 end

@@ -1,5 +1,7 @@
 function f = vis_derived_filter(model, tree)
 
+% AUTORIGHTS
+
 conf = voc_config();
 
 % indexes into info from get_detection_trees.cc

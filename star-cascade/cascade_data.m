@@ -15,6 +15,8 @@ function cascade_data(model, data_year, pca_dim)
 % data_year  Dataset year as a string (e.g., '2007')
 % pca_dim    Number of PCA components to use
 
+% AUTORIGHTS
+
 conf = voc_config();
 cscdir = conf.cascade.data_dir;
 

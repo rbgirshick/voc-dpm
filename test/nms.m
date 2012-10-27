@@ -16,6 +16,8 @@ function pick = nms(boxes, overlap)
 %             is |Bi \cap Bj| / |Bj|, not the PASCAL intersection over 
 %             union measure.
 
+% AUTORIGHTS
+
 if isempty(boxes)
   pick = [];
 else

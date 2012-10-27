@@ -1,5 +1,7 @@
 function showposlat(model, start, pos, fp_count, overlap)
 
+% AUTORIGHTS
+
 conf = voc_config();
 
 % get training data

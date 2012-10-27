@@ -5,6 +5,8 @@ function conf = sample_voc_config_override()
 %  >> global VOC_CONFIG_OVERRIDE;
 %  >> VOC_CONFIG_OVERRIDE = @sample_voc_config_override;
 
+% AUTORIGHTS
+
 conf.custom_key = 'custom value';
 conf.project    = 'sample project';
 conf.training.C = 99;

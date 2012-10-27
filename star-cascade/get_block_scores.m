@@ -1,10 +1,11 @@
 function scores = get_block_scores(pyra, model, trees)
-
 % Get block scores used for computing cascade thresholds.
 %
 % pyra     feature pyramid
 % model    object model
 % info     detection info from gdetect.m
+
+% AUTORIGHTS
 
 scores = zeros(length(trees), model.numblocks);
 loc_f = loc_feat(model, pyra.num_levels);

@@ -1,5 +1,7 @@
 function model = car_grammar_init()
 
+% AUTORIGHTS
+
 [front, angled, side] = train_car_views();
 %model = make_car_grammar(front, side);
 model = make_car_grammar_subtypes(front, angled, side);

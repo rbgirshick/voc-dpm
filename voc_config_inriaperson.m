@@ -7,4 +7,6 @@ function conf = voc_config_inriaperson()
 
 % SEE: INRIA/README for more details
 
+% AUTORIGHTS
+
 conf.training.C = 0.006;

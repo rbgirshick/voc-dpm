@@ -1,6 +1,8 @@
 function conf = voc_config_car_grammar()
 % Set up configuration variables
 
+% AUTORIGHTS
+
 conf.project = 'rel5-dev/car-grammar-3';
  
 conf.training.C                    = 0.006;

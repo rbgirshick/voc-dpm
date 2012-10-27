@@ -10,6 +10,8 @@ function losses = loss_func(o)
 % Argument
 %   o         Vector of overlap values
 
+% AUTORIGHTS
+
 % The PASCAL VOC detection task loss
 % Loss is 0 for IoU >= 0.5
 % Loss is 1 for IoU < 0.5

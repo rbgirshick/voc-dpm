@@ -1,6 +1,8 @@
 function report(dir1, suffix1, showcls, do_auc_ap)
 % Print scores for all classes.
 
+% AUTORIGHTS
+
 conf = voc_config();
 
 if nargin < 3

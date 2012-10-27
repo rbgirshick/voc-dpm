@@ -17,6 +17,8 @@ function [m, symbol, filterind] = model_add_terminal(m, varargin)
 %   blocklabel                  model.blocks index
 %   mirror_terminal             Terminal symbol to horizontally mirror
 
+% AUTORIGHTS
+
 valid_opts = {'w', 'blocklabel', 'flip', 'mirror_terminal'};
 opts = getopts(varargin, valid_opts);
 

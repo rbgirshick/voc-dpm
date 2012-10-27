@@ -32,6 +32,8 @@ function [ds, bs, trees] = gdetect_pos_c(pyra, model, valid)
 %                   (augmented with overlaps from gdetect_pos_prepare.m)
 %   valid
 
+% AUTORIGHTS
+
 % Get the non-loss adjusted detection (termed the "belief")
 modelp = apply_L_output(model, pyra, valid);
 [ds, bs, trees] = gdetect_parse(modelp, pyra, -100, 1);

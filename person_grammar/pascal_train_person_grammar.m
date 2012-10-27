@@ -1,9 +1,10 @@
 function model = pascal_train_person_grammar(note)
-
 % model = pascal_train(cls, n, note)
 % Train a model with 2*n components using the PASCAL dataset.
 % note allows you to save a note with the trained model
 % example: note = 'testing FRHOG (FRobnicated HOG)
+
+% AUTORIGHTS
 
 % At every "checkpoint" in the training process we reset the 
 % RNG's seed to a fixed value so that experimental results are 

@@ -9,4 +9,6 @@ function [m, N] = model_add_nonterminal(m)
 % Argument
 %   m   Object model
 
+% AUTORIGHTS
+
 [m, N] = model_add_symbol(m, 'N');

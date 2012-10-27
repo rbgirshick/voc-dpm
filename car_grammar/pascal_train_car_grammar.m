@@ -1,5 +1,7 @@
 function model = pascal_train_car_grammar(note)
 
+% AUTORIGHTS
+
 % At every "checkpoint" in the training process we reset the 
 % RNG's seed to a fixed value so that experimental results are 
 % reproducible.

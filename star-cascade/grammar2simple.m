@@ -1,5 +1,4 @@
 function m = grammar2simple(gm)
-
 % m = grammar2simple(gm)
 %
 % Convert a simple grammar model (with some strong assumptions on
@@ -8,6 +7,8 @@ function m = grammar2simple(gm)
 % This structure roughly matches the model format from voc-release3.
 %
 % gm  grammar model returned by project_model.m
+
+% AUTORIGHTS
 
 %% copy scalars
 m.sbin      = gm.sbin;

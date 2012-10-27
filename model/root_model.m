@@ -18,6 +18,8 @@ function model = root_model(cls, pos, note, sbin, sz)
 %   sbin    Pixel size of the HOG feature cells (e.g., 8)
 %   sz      Size of the root filter
 
+% AUTORIGHTS
+
 conf = voc_config();
 
 if nargin < 3

@@ -1,5 +1,7 @@
 function pascal_car_grammar(dotrainval, testyear)
 
+% AUTORIGHTS
+
 % Set configuration override
 global VOC_CONFIG_OVERRIDE;
 if isempty(VOC_CONFIG_OVERRIDE)

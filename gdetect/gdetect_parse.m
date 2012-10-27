@@ -17,6 +17,8 @@ function [ds, bs, trees] = gdetect_parse(model, pyra, thresh, max_num)
 %   thresh    Detection threshold (scores must be > thresh)
 %   max_num   Maximum number of detections to return
 
+% AUTORIGHTS
+
 % Find scores above the threshold
 X = zeros(0, 'int32');
 Y = zeros(0, 'int32');

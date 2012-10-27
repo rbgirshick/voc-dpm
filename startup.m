@@ -1,3 +1,5 @@
+% AUTORIGHTS
+
 % Prepares your matlab workspace for using voc-release5.
 global G_STARTUP;
 

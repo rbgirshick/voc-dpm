@@ -10,6 +10,8 @@ function f = flipfeat(f)
 % Arguments
 %   f   Input features
 
+% AUTORIGHTS
+
 % flip permutation
 p = [10  9  8  7  6  5  4  3  2 ... % 1st set of contrast sensitive features
       1 18 17 16 15 14 13 12 11 ... % 2nd set of contrast sensitive features

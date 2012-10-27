@@ -1,6 +1,8 @@
 function conf = voc_config_person_grammar()
 % Set up configuration variables
 
+% AUTORIGHTS
+
 conf.pascal.year                   = '2010';
 conf.project                       = 'rel5-dev/rc2-person-grammar';
  

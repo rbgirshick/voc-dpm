@@ -2,6 +2,8 @@ function im = color(input)
 % Convert input image to color.
 %   im = color(input)
 
+% AUTORIGHTS
+
 if size(input, 3) == 1
   im(:,:,1) = input;
   im(:,:,2) = input;

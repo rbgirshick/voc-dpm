@@ -1,5 +1,7 @@
 function t = model_cmp(m1, m2)
 
+% AUTORIGHTS
+
 [v1, b1, map1] = model2blocks(m1);
 [v2, b2, map2] = model2blocks(m2);
 

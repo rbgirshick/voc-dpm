@@ -1,5 +1,4 @@
 function model = cascade_model(model, data_year, pca, thresh)
-
 % model = cascade_model(model, data_year, pca, p)
 % Compute thresholds on partial scores for cascade detection.
 %
@@ -7,6 +6,8 @@ function model = cascade_model(model, data_year, pca, thresh)
 % data_year  dataset year as a string (e.g., '2007')
 % pca        number of PCA components to project onto (if pca > 0)
 % thresh     global detection threshold
+
+% AUTORIGHTS
 
 conf = voc_config('pascal.year', data_year);
 cscdir = conf.cascade.data_dir;

@@ -10,4 +10,6 @@ function [v, g] = fv_obj_func(w, num_threads)
 %   w             Gradient and function evaluation point
 %   num_threads   Number of worker threads to use for computing the gradient
 
+% AUTORIGHTS
+
 [v, g] = fv_cache('gradient', w, num_threads);

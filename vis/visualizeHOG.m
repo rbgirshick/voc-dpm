@@ -2,6 +2,8 @@ function visualizeHOG(w)
 % Visualize HOG features/weights.
 %   visualizeHOG(w)
 
+% AUTORIGHTS
+
 % Make pictures of positive and negative weights
 bs = 20;
 w = w(:,:,1:9);

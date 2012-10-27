@@ -1,3 +1,5 @@
+% AUTORIGHTS
+
 % Symbols for the various types of parameter blocks in a model
 classdef (Sealed) block_types
   properties  (Constant)

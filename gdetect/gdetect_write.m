@@ -19,6 +19,8 @@ function [bs, count] = gdetect_write(pyra, model, bs, trees, from_pos, ...
 %   maxsize     Max cache size in bytes
 %   maxnum      Max number of feature vectors to write
 
+% AUTORIGHTS
+
 if nargin < 7
   maxsize = inf;
 end

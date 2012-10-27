@@ -11,6 +11,8 @@ function model = pascal_train(cls, n, note)
 %                 (The final model has 2*n components)
 %   note          Save a note in the model.note field that describes this model
 
+% AUTORIGHTS
+
 % At every "checkpoint" in the training process we reset the 
 % RNG's seed to a fixed value so that experimental results are 
 % reproducible.
