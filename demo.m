@@ -22,24 +22,24 @@ fprintf('done.\n\n');
 load('VOC2007/car_final');
 model.vis = @() visualizemodel(model, ...
                   1:2:length(model.rules{model.start}));
-test('000034.jpg', model, -0.3);
+test('000034.jpg', model, 1);
 
 load('INRIA/inriaperson_final');
 model.vis = @() visualizemodel(model, ...
                   1:2:length(model.rules{model.start}));
-test('000061.jpg', model, -0.3);
+test('000061.jpg', model, 2);
 
 load('VOC2007/person_grammar_final');
 model.class = 'person grammar';
 model.vis = @() visualize_person_grammar_model(model, 6);
-test('000061.jpg', model, -0.6);
+test('000061.jpg', model, 2);
 
 load('VOC2007/bicycle_final');
 model.vis = @() visualizemodel(model, ...
                   1:2:length(model.rules{model.start}));
-test('000084.jpg', model, -0.3);
+test('000084.jpg', model, 1);
 
-function test(imname, model, thresh)
+function test(imname, model, num_dets)
 cls = model.class;
 fprintf('///// Running demo for %s /////\n\n', cls);
 
@@ -49,6 +49,7 @@ clf;
 image(im);
 axis equal; 
 axis on;
+title('input image');
 disp('input image');
 disp('press any key to continue'); pause;
 disp('continuing...');
@@ -60,13 +61,17 @@ disp('press any key to continue'); pause;
 disp('continuing...');
 
 % detect objects
-[ds, bs] = imgdetect(im, model, thresh);
+[ds, bs] = imgdetect(im, model, -1);
 top = nms(ds, 0.5);
+top = top(1:min(length(top), num_dets));
+ds = ds(top, :);
+bs = bs(top, :);
 clf;
 if model.type == model_types.Grammar
   bs = [ds(:,1:4) bs];
 end
-showboxes(im, reduceboxes(model, bs(top,:)));
+showboxes(im, reduceboxes(model, bs));
+title('detections');
 disp('detections');
 disp('press any key to continue'); pause;
 disp('continuing...');
@@ -78,6 +83,7 @@ if model.type == model_types.MixStar
   top = nms(bbox, 0.5);
   clf;
   showboxes(im, bbox(top,:));
+  title('predicted bounding boxes');
   disp('bounding boxes');
   disp('press any key to continue'); pause;
 end

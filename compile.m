@@ -89,3 +89,5 @@ if nargin < 3
 else
   eval([mexcmd ' ' mex_file]);
 end
+
+rehash path;
