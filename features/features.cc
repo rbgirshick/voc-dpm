@@ -58,23 +58,23 @@ mxArray *process(const mxArray *mximage, const mxArray *mxsbin) {
   int sbin = (int)mxGetScalar(mxsbin);
 
   // memory for caching orientation histograms & their norms
-  int blocks[2];
-  blocks[0] = (int)round((double)dims[0]/(double)sbin);
-  blocks[1] = (int)round((double)dims[1]/(double)sbin);
-  float *hist = (float *)mxCalloc(blocks[0]*blocks[1]*18, sizeof(float));
-  float *norm = (float *)mxCalloc(blocks[0]*blocks[1], sizeof(float));
+  int cells[2];
+  cells[0] = (int)round((double)dims[0]/(double)sbin);
+  cells[1] = (int)round((double)dims[1]/(double)sbin);
+  float *hist = (float *)mxCalloc(cells[0]*cells[1]*18, sizeof(float));
+  float *norm = (float *)mxCalloc(cells[0]*cells[1], sizeof(float));
 
   // memory for HOG features
   int out[3];
-  out[0] = max(blocks[0]-2, 0);
-  out[1] = max(blocks[1]-2, 0);
+  out[0] = max(cells[0]-2, 0);
+  out[1] = max(cells[1]-2, 0);
   out[2] = 27+4+1;
   mxArray *mxfeat = mxCreateNumericArray(3, out, mxSINGLE_CLASS, mxREAL);
   float *feat = (float *)mxGetPr(mxfeat);
   
   int visible[2];
-  visible[0] = blocks[0]*sbin;
-  visible[1] = blocks[1]*sbin;
+  visible[0] = cells[0]*sbin;
+  visible[1] = cells[1]*sbin;
   
   for (int x = 1; x < visible[1]-1; x++) {
     for (int y = 1; y < visible[0]-1; y++) {
@@ -122,7 +122,7 @@ mxArray *process(const mxArray *mximage, const mxArray *mxsbin) {
         }
       }
       
-      // add to 4 histograms around pixel using linear interpolation
+      // add to 4 histograms around pixel using bilinear interpolation
       double xp = ((double)x+0.5)/(double)sbin - 0.5;
       double yp = ((double)y+0.5)/(double)sbin - 0.5;
       int ixp = (int)floor(xp);
@@ -134,22 +134,22 @@ mxArray *process(const mxArray *mximage, const mxArray *mxsbin) {
       v = sqrt(v);
 
       if (ixp >= 0 && iyp >= 0) {
-        *(hist + ixp*blocks[0] + iyp + best_o*blocks[0]*blocks[1]) += 
+        *(hist + ixp*cells[0] + iyp + best_o*cells[0]*cells[1]) += 
           vx1*vy1*v;
       }
 
-      if (ixp+1 < blocks[1] && iyp >= 0) {
-        *(hist + (ixp+1)*blocks[0] + iyp + best_o*blocks[0]*blocks[1]) += 
+      if (ixp+1 < cells[1] && iyp >= 0) {
+        *(hist + (ixp+1)*cells[0] + iyp + best_o*cells[0]*cells[1]) += 
           vx0*vy1*v;
       }
 
-      if (ixp >= 0 && iyp+1 < blocks[0]) {
-        *(hist + ixp*blocks[0] + (iyp+1) + best_o*blocks[0]*blocks[1]) += 
+      if (ixp >= 0 && iyp+1 < cells[0]) {
+        *(hist + ixp*cells[0] + (iyp+1) + best_o*cells[0]*cells[1]) += 
           vx1*vy0*v;
       }
 
-      if (ixp+1 < blocks[1] && iyp+1 < blocks[0]) {
-        *(hist + (ixp+1)*blocks[0] + (iyp+1) + best_o*blocks[0]*blocks[1]) += 
+      if (ixp+1 < cells[1] && iyp+1 < cells[0]) {
+        *(hist + (ixp+1)*cells[0] + (iyp+1) + best_o*cells[0]*cells[1]) += 
           vx0*vy0*v;
       }
     }
@@ -157,10 +157,10 @@ mxArray *process(const mxArray *mximage, const mxArray *mxsbin) {
 
   // compute energy in each block by summing over orientations
   for (int o = 0; o < 9; o++) {
-    float *src1 = hist + o*blocks[0]*blocks[1];
-    float *src2 = hist + (o+9)*blocks[0]*blocks[1];
+    float *src1 = hist + o*cells[0]*cells[1];
+    float *src2 = hist + (o+9)*cells[0]*cells[1];
     float *dst = norm;
-    float *end = norm + blocks[1]*blocks[0];
+    float *end = norm + cells[1]*cells[0];
     while (dst < end) {
       *(dst++) += (*src1 + *src2) * (*src1 + *src2);
       src1++;
@@ -174,14 +174,14 @@ mxArray *process(const mxArray *mximage, const mxArray *mxsbin) {
       float *dst = feat + x*out[0] + y;      
       float *src, *p, n1, n2, n3, n4;
 
-      p = norm + (x+1)*blocks[0] + y+1;
-      n1 = 1.0 / sqrt(*p + *(p+1) + *(p+blocks[0]) + *(p+blocks[0]+1) + eps);
-      p = norm + (x+1)*blocks[0] + y;
-      n2 = 1.0 / sqrt(*p + *(p+1) + *(p+blocks[0]) + *(p+blocks[0]+1) + eps);
-      p = norm + x*blocks[0] + y+1;
-      n3 = 1.0 / sqrt(*p + *(p+1) + *(p+blocks[0]) + *(p+blocks[0]+1) + eps);
-      p = norm + x*blocks[0] + y;      
-      n4 = 1.0 / sqrt(*p + *(p+1) + *(p+blocks[0]) + *(p+blocks[0]+1) + eps);
+      p = norm + (x+1)*cells[0] + y+1;
+      n1 = 1.0 / sqrt(*p + *(p+1) + *(p+cells[0]) + *(p+cells[0]+1) + eps);
+      p = norm + (x+1)*cells[0] + y;
+      n2 = 1.0 / sqrt(*p + *(p+1) + *(p+cells[0]) + *(p+cells[0]+1) + eps);
+      p = norm + x*cells[0] + y+1;
+      n3 = 1.0 / sqrt(*p + *(p+1) + *(p+cells[0]) + *(p+cells[0]+1) + eps);
+      p = norm + x*cells[0] + y;      
+      n4 = 1.0 / sqrt(*p + *(p+1) + *(p+cells[0]) + *(p+cells[0]+1) + eps);
 
       float t1 = 0;
       float t2 = 0;
@@ -189,7 +189,7 @@ mxArray *process(const mxArray *mximage, const mxArray *mxsbin) {
       float t4 = 0;
 
       // contrast-sensitive features
-      src = hist + (x+1)*blocks[0] + (y+1);
+      src = hist + (x+1)*cells[0] + (y+1);
       for (int o = 0; o < 18; o++) {
         float h1 = min(*src * n1, 0.2);
         float h2 = min(*src * n2, 0.2);
@@ -201,20 +201,20 @@ mxArray *process(const mxArray *mximage, const mxArray *mxsbin) {
         t3 += h3;
         t4 += h4;
         dst += out[0]*out[1];
-        src += blocks[0]*blocks[1];
+        src += cells[0]*cells[1];
       }
 
       // contrast-insensitive features
-      src = hist + (x+1)*blocks[0] + (y+1);
+      src = hist + (x+1)*cells[0] + (y+1);
       for (int o = 0; o < 9; o++) {
-        float sum = *src + *(src + 9*blocks[0]*blocks[1]);
+        float sum = *src + *(src + 9*cells[0]*cells[1]);
         float h1 = min(sum * n1, 0.2);
         float h2 = min(sum * n2, 0.2);
         float h3 = min(sum * n3, 0.2);
         float h4 = min(sum * n4, 0.2);
         *dst = 0.5 * (h1 + h2 + h3 + h4);
         dst += out[0]*out[1];
-        src += blocks[0]*blocks[1];
+        src += cells[0]*cells[1];
       }
 
       // texture features
