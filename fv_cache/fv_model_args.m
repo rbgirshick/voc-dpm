@@ -30,38 +30,53 @@ blocks        = get_blocks(model);
 lower_bounds  = get_lb(model);
 reg_mult      = get_rm(model);
 learn_mult    = get_lm(model);
+comps         = {};
+% For mixture of star models, we need to get the blocks used
+% by each component for max-component regularization
 if model.type == model_types.MixStar
   comps = get_comps(model);
-else
-  comps = {};
 end
 
 
+% ------------------------------------------------------------------------
 function lb = get_lb(model)
+% ------------------------------------------------------------------------
+% Lower-bound constraints for each dimension of each block
 lb = {model.blocks(:).lb}';
 
 
+% ------------------------------------------------------------------------
 function rm = get_rm(model)
+% ------------------------------------------------------------------------
+% Regularization cost for each dimension of each block
 rm = single([model.blocks(:).reg_mult]');
 
 
+% ------------------------------------------------------------------------
 function lm = get_lm(model)
+% ------------------------------------------------------------------------
+% Learning flag for each block 
+% (treated as binary; 0 => don't learn, 1 => learn)
 lm = single([model.blocks(:).learn]');
 
 
+% ------------------------------------------------------------------------
 function blocks = get_blocks(model)
+% ------------------------------------------------------------------------
+% All parameter blocks
 blocks = {model.blocks(:).w}';
 
 
+% ------------------------------------------------------------------------
 function comp = get_comps(model)
+% ------------------------------------------------------------------------
+% Get a list of which blocks are used by each component
+% Used for computing max-component regularization
 assert(model.type == model_types.MixStar);
 
 n = length(model.rules{model.start});
 comp = cell(n, 1);
-% We assume that rule i (i is odd) and i+1 are symmetric
-% mirrors of each other, so
-% skip every other component rule
-for i = 1:2:n
+for i = 1:n
   comp{i} = [comp{i} model.rules{model.start}(i).blocks-1];
   % collect part blocks
   for j = model.rules{model.start}(i).rhs
@@ -79,6 +94,15 @@ for i = 1:2:n
   end
 end
 
-for i = 1:2:n
-  comp{i} = int32(comp{i}(:));
+ht = containers.Map;
+for i = 1:n
+  bls = sort(comp{i});
+  key = num2str(bls);
+  % Don't add components that use exactly the same blocks twice
+  if ~ht.isKey(key)
+    ht(key) = true;
+    comp{i} = int32(bls');
+  else
+    comp{i} = [];
+  end
 end
