@@ -55,7 +55,6 @@ void resize1dtran(double *src, int sheight, double *dst, int dheight,
 
     if (sy1 - fsy1 > 1e-3) {
       assert(k < len);
-      assert(sy-1 >= 0);
       ofs[k].di = dy*width;
       ofs[k].si = sy1-1;
       ofs[k++].alpha = (sy1 - fsy1) * scale;

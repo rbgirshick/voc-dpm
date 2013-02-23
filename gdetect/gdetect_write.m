@@ -1,8 +1,8 @@
 function [bs, count] = gdetect_write(pyra, model, bs, trees, from_pos, ...
-                                     dataid, maxsize, maxnum)
+                                     dataid, max_size, max_num)
 % Write detections from gdetect.m to the feature vector cache.
 %   [bs, count] = gdetect_write(pyra, model, bs, trees, from_pos, ...
-%                               dataid, maxsize, maxnum)
+%                               dataid, max_size, max_num)
 %
 % Return values
 %   bs
@@ -16,8 +16,8 @@ function [bs, count] = gdetect_write(pyra, model, bs, trees, from_pos, ...
 %   from_pos    True if the boxes come from a foreground example
 %               False if the boxes come from a background example
 %   dataid      Id for use in cache key (from pascal_data.m; see fv_cache.h)
-%   maxsize     Max cache size in bytes
-%   maxnum      Max number of feature vectors to write
+%   max_size    Max cache size in bytes
+%   max_num     Max number of feature vectors to write
 
 % AUTORIGHTS
 % -------------------------------------------------------
@@ -31,26 +31,28 @@ function [bs, count] = gdetect_write(pyra, model, bs, trees, from_pos, ...
 % your project.
 % -------------------------------------------------------
 
-if nargin < 7
-  maxsize = inf;
+if ~exist('max_size', 'var') || isempty(max_size)
+  max_size = inf;
 end
 
-if nargin < 8
-  maxnum = inf;
+if ~exist('max_num', 'var') || isempty(max_num)
+  max_num = inf;
 end
 
 count = 0;
 if ~isempty(bs)
-  count = writefeatures(pyra, model, trees, from_pos, dataid, maxsize, maxnum);
+  count = write_features(pyra, model, trees, from_pos, ...
+                         dataid, max_size, max_num);
   % truncate boxes
   bs(count+1:end,:) = [];
 end
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ------------------------------------------------------------------------
+function count = write_features(pyra, model, trees, from_pos, ...
+                                dataid, max_size, max_num)
+% ------------------------------------------------------------------------
 % writes feature vectors for the detections in trees
-function count = writefeatures(pyra, model, trees, from_pos, ...
-                               dataid, maxsize, maxnum)
 if from_pos
   is_belief = 1;
 else
@@ -71,11 +73,13 @@ end
 
 count = 0;
 for d = 1:min(maxnum, length(trees))
-  t = tree_mat_to_struct(trees{d});
+  t  = tree_mat_to_struct(trees{d});
   ex = [];
-  ex.key = [dataid; t(1).l; t(1).x; t(1).y];
-  ex.blocks(model.numblocks).f = [];
-  ex.loss = t(1).loss;
+  ex.key   = [dataid; t(1).l; t(1).x; t(1).y];
+  ex.loss  = t(1).loss;
+  ex.score = t(1).score;
+  ex.blocks(model.numblocks).f  = [];
+  ex.blocks(model.numblocks).bl = [];
 
   for j = 1:length(t)
     sym = t(j).symbol;
@@ -83,11 +87,11 @@ for d = 1:min(maxnum, length(trees))
       fi = model.symbols(sym).filter;
       bl = model.filters(fi).blocklabel;
       if write_block(bl)
-        ex = addfilterfeat(model, ex,             ...
-                           t(j).x, t(j).y,        ...
-                           pyra.padx, pyra.pady,  ...
-                           t(j).ds, fi,           ...
-                           pyra.feat{t(j).l});
+        ex = add_filter_feat(model, ex,             ...
+                             t(j).x, t(j).y,        ...
+                             pyra.padx, pyra.pady,  ...
+                             t(j).ds, fi,           ...
+                             pyra.feat{t(j).l});
       end
     else
       ruleind = t(j).rule_index;
@@ -101,7 +105,8 @@ for d = 1:min(maxnum, length(trees))
             def(2) = -def(2);
           end
           if isempty(ex.blocks(bl).f)
-            ex.blocks(bl).f = def;
+            ex.blocks(bl).bl = bl;
+            ex.blocks(bl).f  = def;
           else
             ex.blocks(bl).f = ex.blocks(bl).f + def;
           end
@@ -111,7 +116,8 @@ for d = 1:min(maxnum, length(trees))
       bl = model.rules{sym}(ruleind).offset.blocklabel;
       if write_block(bl)
         if isempty(ex.blocks(bl).f)
-          ex.blocks(bl).f = model.features.bias;
+          ex.blocks(bl).bl = bl;
+          ex.blocks(bl).f  = model.features.bias;
         else
           ex.blocks(bl).f = ex.blocks(bl).f + model.features.bias;
         end
@@ -121,14 +127,15 @@ for d = 1:min(maxnum, length(trees))
       if write_block(bl)
         l = t(j).l;
         if isempty(ex.blocks(bl).f)
-          ex.blocks(bl).f = loc_f(:,l);
+          ex.blocks(bl).bl = bl;
+          ex.blocks(bl).f  = loc_f(:,l);
         else
           ex.blocks(bl).f = ex.blocks(bl).f + loc_f(:,l);
         end
       end
     end
   end
-  status = exwrite(ex, from_pos, is_belief, maxsize);
+  status = ex_write(ex, from_pos, is_belief, max_size);
   count = count + 1;
   if from_pos
     % by convention, only the first feature vector is the belief
@@ -140,9 +147,10 @@ for d = 1:min(maxnum, length(trees))
 end
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ------------------------------------------------------------------------
+function ex = add_filter_feat(model, ex, x, y, padx, pady, ds, fi, feat)
+% ------------------------------------------------------------------------
 % stores the filter feature vector in the example ex
-function ex = addfilterfeat(model, ex, x, y, padx, pady, ds, fi, feat)
 % model object model
 % ex    example that is being extracted from the feature pyramid
 % x, y  location of filter in feat (with virtual padding)
@@ -166,37 +174,32 @@ end
 % accumulate features
 bl = model.filters(fi).blocklabel;
 if isempty(ex.blocks(bl).f)
-  ex.blocks(bl).f = f(:);
+  ex.blocks(bl).bl = bl;
+  ex.blocks(bl).f  = f(:);
 else
   ex.blocks(bl).f = ex.blocks(bl).f + f(:);
 end
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ------------------------------------------------------------------------
+function status = ex_write(ex, from_pos, is_belief, max_size)
+% ------------------------------------------------------------------------
 % write ex to fv cache
-function status = exwrite(ex, from_pos, is_belief, maxsize)
 % ex  example to write
 
 if from_pos
-  loss = ex.loss;
-  is_mined = 0;
+  loss      = ex.loss;
+  is_mined  = 0;
   ex.key(2) = 0; % remove scale
   ex.key(3) = 0; % remove x position
   ex.key(4) = 0; % remove y position
 else
-  loss = 1;
-  is_mined = 1;
+  loss      = 1;
+  is_mined  = 1;
 end
 
-feat = [];
-bls = [];
-for i = 1:length(ex.blocks)
-  % skip if empty or the features are all zero
-  if ~isempty(ex.blocks(i).f) && ~all(ex.blocks(i).f == 0)
-    feat = [feat; ex.blocks(i).f];
-    bls = [bls; i-1;];
-  end
-end
+feat = cat(1, ex.blocks(:).f);
+bls  = cat(1, ex.blocks(:).bl)-1;
 
 if ~from_pos || is_belief
   % write zero belief vector if this came from neg[]
@@ -208,4 +211,21 @@ byte_size = fv_cache('add', int32(ex.key), int32(bls), single(feat), ...
                             int32(is_belief), int32(is_mined), loss); 
 
 % still under the limit?
-status = (byte_size ~= -1) & (byte_size < maxsize);
+status = (byte_size ~= -1) & (byte_size < max_size);
+
+% Critical debugging assertion: the score computed during inference
+% MUST match the score of the computed features. If they don't match
+% then there is a serious bug!
+debug = false;
+if debug
+  w     = cat(1, model.blocks(bls+1).w);
+  if any(size(w) ~= size(feat))
+    disp('!!! dimensions do not match !!!');
+    keyboard;
+  end
+  score = w'*feat;
+  if abs(ex.score - score) > 1e-5
+    disp('!!! scores do not match !!!');
+    keyboard;
+  end
+end

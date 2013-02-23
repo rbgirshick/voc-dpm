@@ -31,7 +31,7 @@ pixels = fsize * model.sbin;
 heights = [pos(:).y2]' - [pos(:).y1]' + 1;
 widths = [pos(:).x2]' - [pos(:).x1]' + 1;
 numpos = length(pos);
-warped = cell(numpos);
+warped = cell(numpos, 1);
 cropsize = (fsize+2) * model.sbin;
 parfor i = 1:numpos
   fprintf('%s %s: warp: %d/%d\n', ...
