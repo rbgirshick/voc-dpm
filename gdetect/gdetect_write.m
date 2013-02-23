@@ -72,7 +72,7 @@ for i = 1:model.numblocks
 end
 
 count = 0;
-for d = 1:min(maxnum, length(trees))
+for d = 1:min(max_num, length(trees))
   t  = tree_mat_to_struct(trees{d});
   ex = [];
   ex.key   = [dataid; t(1).l; t(1).x; t(1).y];
