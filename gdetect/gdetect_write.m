@@ -135,7 +135,7 @@ for d = 1:min(max_num, length(trees))
       end
     end
   end
-  status = ex_write(ex, from_pos, is_belief, max_size);
+  status = ex_write(model, ex, from_pos, is_belief, max_size);
   count = count + 1;
   if from_pos
     % by convention, only the first feature vector is the belief
@@ -182,7 +182,7 @@ end
 
 
 % ------------------------------------------------------------------------
-function status = ex_write(ex, from_pos, is_belief, max_size)
+function status = ex_write(model, ex, from_pos, is_belief, max_size)
 % ------------------------------------------------------------------------
 % write ex to fv cache
 % ex  example to write
