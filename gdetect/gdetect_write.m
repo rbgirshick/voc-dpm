@@ -68,7 +68,7 @@ loc_f = loc_feat(model, pyra.num_levels);
 write_block = false(model.numblocks, 1);
 for i = 1:model.numblocks
   all_zero = all(model.blocks(i).w == 0);
-  write_block(i) = ~(model.blocks(i).learn == 0 && all_zero == 0);
+  write_block(i) = ~(model.blocks(i).learn == 0 && all_zero == 1);
 end
 
 count = 0;
