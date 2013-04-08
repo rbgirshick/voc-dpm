@@ -17,7 +17,7 @@ function seed_rand()
 
 % Try to make different versions of matlab happy
 try
-  RandStream.setDefaultStream(RandStream('mt19937ar','seed',3));
+  rng(3, 'twister')
 catch
   rand('twister',3);
 end
