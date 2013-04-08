@@ -261,11 +261,12 @@ void gradient(double *obj_val_out, double *grad, const int dim,
     obj_val = 0;
     double **w = M.w;
     for (int b = 0; b < M.num_blocks; b++) {
-      const double *wb = w[b];
-      double reg_mult  = M.reg_mult[b];
-      double *ptr_grad = grad_blocks[0][b];
+      const double *wb  = w[b];
+      double reg_mult   = M.reg_mult[b];
+      double *ptr_grad  = grad_blocks[0][b];
+      double learn_mult = (M.learn_mult[b] == 0) ? 0 : 1;
       for (int k = 0; k < M.block_sizes[b]; k++) {
-        *(ptr_grad++) += wb[k] * reg_mult;
+        *(ptr_grad++) += wb[k] * reg_mult * learn_mult;
         obj_val += wb[k] * wb[k] * reg_mult;
       }
     }
@@ -321,8 +322,9 @@ void gradient(double *obj_val_out, double *grad, const int dim,
         double reg_mult = M.reg_mult[b];
         double *wb = w[b];
         double *ptr_grad = grad_blocks[0][b];
-        for (int k = 0; k < M.block_sizes[b]; k++)
-          *(ptr_grad++) += wb[k] * reg_mult * cmult;
+        if (M.learn_mult[b] != 0)
+          for (int k = 0; k < M.block_sizes[b]; k++)
+            *(ptr_grad++) += wb[k] * reg_mult * cmult;
       }
     }
   }

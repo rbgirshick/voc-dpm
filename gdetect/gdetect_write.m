@@ -62,13 +62,15 @@ end
 % location/scale features
 loc_f = loc_feat(model, pyra.num_levels);
 
-% Precompute which blocks we need to write features for
-% We can skip writing features for a block if
-% the block is not learned AND the weights are all zero
+% Precompute which blocks we need to write features for.
+% We must write a block if it's learned (because its
+% parameters will change during optimization) OR if
+% it has some nonzero entries (because it will have
+% a nonzero contibution to the score).
 write_block = false(model.numblocks, 1);
 for i = 1:model.numblocks
   all_zero = all(model.blocks(i).w == 0);
-  write_block(i) = ~(model.blocks(i).learn == 0 && all_zero == 0);
+  write_block(i) = model.blocks(i).learn ~= 0 || ~all_zero;
 end
 
 count = 0;
@@ -218,7 +220,7 @@ status = (byte_size ~= -1) & (byte_size < max_size);
 % then there is a serious bug!
 debug = false;
 if debug
-  w     = cat(1, model.blocks(bls+1).w);
+  w = cat(1, model.blocks(bls+1).w);
   if any(size(w) ~= size(feat))
     disp('!!! dimensions do not match !!!');
     keyboard;
