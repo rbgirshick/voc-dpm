@@ -109,8 +109,9 @@ end
 pfilters = best;
 
 
+% ------------------------------------------------------------------------
 function [x y] = placepart(energy, template)
-
+% ------------------------------------------------------------------------
 score = conv2(energy, template, 'valid');
 score = padarray(score, [1 1], -inf, 'post');
 [v, Y] = max(score);
@@ -118,21 +119,27 @@ score = padarray(score, [1 1], -inf, 'post');
 y = Y(x);
 
 
+% ------------------------------------------------------------------------
 function f = mkfilter(w, template, x, y, alpha)
+% ------------------------------------------------------------------------
+conf = voc_config();
+td = conf.features.truncation_dim;
 
 f = w(y:y+size(template,1)-1, x:x+size(template,2)-1, :);
 f = max(f, 0);
 % remove image boundary truncation weights
-f(:,:,end-1) = 0;
-f = alpha*f/norm(f(:));
+f(:,:,td) = 0;
+f = alpha*f/(norm(f(:)) + eps);
 
 
+% ------------------------------------------------------------------------
 function energy = zeroenergy(energy, x, y, template)
-
+% ------------------------------------------------------------------------
 energy(y:y+size(template,1)-1, x:x+size(template,2)-1) = 0;
 
 
+% ------------------------------------------------------------------------
 function covered = coveredenergy(energy, x, y, template)
-
+% ------------------------------------------------------------------------
 e = energy(y:y+size(template,1)-1, x:x+size(template,2)-1);
 covered = sum(e(:).^2);
