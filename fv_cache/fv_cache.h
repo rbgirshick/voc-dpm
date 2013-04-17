@@ -194,11 +194,11 @@ struct fv {
     in.read((char *)&score,      sizeof(double));
 
     if (num_blocks > 0) {
-      block_labels = new (nothrow) int[num_blocks];
+      block_labels = block_label_pool.get();
       check(block_labels != NULL);
       in.read((char *)block_labels, sizeof(int)*num_blocks);
 
-      feat = new (nothrow) float[feat_dim];
+      feat = feat_pool.get();
       check(feat != NULL);
       in.read((char *)feat, sizeof(float)*feat_dim);
     }

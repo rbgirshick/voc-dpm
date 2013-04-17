@@ -56,6 +56,7 @@ struct context {
   bool model_is_set;
   bool cache_is_built;
   bool cleanup_reg;
+  bool is_initialized;
   struct sigaction act, matlab_act;
 
   context() {
@@ -63,6 +64,7 @@ struct context {
     model_is_set    = false;
     cleanup_reg     = false;
     cache_is_built  = false;
+    is_initialized  = false;
   }
 };
 static context gctx;
@@ -84,6 +86,9 @@ void checker(bool e, const string file, int line, const string msg) {
     mexErrMsgTxt(out.str().c_str());
   }
 }
+static const string ERR_STR_INIT  = "fv_cache not initialized; call fv_cache('init',...)";
+static const string ERR_STR_MODEL = "model not set; call fv_cache('set_model', ...)";
+static const string ERR_STR_CACHE = "cache not prepared; call fv_cache('ex_prepare', ...)";
 
 
 /** -----------------------------------------------------------------
@@ -233,6 +238,8 @@ static void init_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
   mexPrintf("Created a feature vector cache to hold <= %d elements "
             "in <= %.1fMB\n", max_num_fv, 
             (max_num_fv*sizeof(float)*max_fv_dim)/(1024.0*1024.0));
+
+  gctx.is_initialized = true;
 }
 
 
@@ -252,6 +259,9 @@ static void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs
   // matlab outputs
   //  plhs[0]   current fv cache size in bytes or -1 if no memory left
   
+  // Check preconditions
+  checkM(gctx.is_initialized, ERR_STR_INIT);
+
   checkM(nrhs == 7, "Expected 6 inputs");
   checkM(nlhs >= 0, "Expected >= 0 outputs");
 
@@ -301,6 +311,7 @@ static void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *p
 
   checkM(nrhs == 2, "Expected 1 inputs");
   checkM(nlhs == 0, "Expected 0 outputs");
+  checkM(mxGetClassID(prhs[1]) == mxINT32_CLASS, "Argument 1 must be int32");
 
   fv_cache &F = gctx.F;
 
@@ -346,8 +357,9 @@ static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray 
   checkM(nlhs == 2, "Expected 2 outputs");
 
   // Check preconditions
-  check(gctx.cache_is_built);
-  check(gctx.model_is_set);
+  checkM(gctx.is_initialized, ERR_STR_INIT);
+  checkM(gctx.cache_is_built, ERR_STR_CACHE);
+  checkM(gctx.model_is_set, ERR_STR_MODEL);
 
   model &M          = gctx.M;
   double **w        = M.w;
@@ -444,8 +456,9 @@ static void info_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
   checkM(nrhs == 1, "Expected 0 inputs");
   checkM(nlhs == 1, "Expected 1 outputs");
 
-  check(gctx.model_is_set);
-  check(gctx.cache_is_built);
+  checkM(gctx.is_initialized, ERR_STR_INIT);
+  checkM(gctx.model_is_set, ERR_STR_MODEL);
+  checkM(gctx.cache_is_built, ERR_STR_CACHE);
 
   // Info fields
   enum { SCORE = 0, UNIQUE, DATA_ID, X, Y, SCALE, BYTE_SIZE, 
@@ -485,7 +498,7 @@ static void get_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
   checkM(nrhs == 1, "Expected 0 inputs");
   checkM(nlhs == 1, "Expected 1 outputs");
 
-  check(gctx.model_is_set);
+  checkM(gctx.model_is_set, ERR_STR_MODEL);
 
   const model &M = gctx.M;
 
@@ -631,7 +644,7 @@ static void byte_size_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
 static void obj_val_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   checkM(nrhs == 1, "Expected 0 inputs");
 
-  check(gctx.model_is_set);
+  checkM(gctx.model_is_set, ERR_STR_MODEL);
 
   double terms[3];
   obj_val(terms, gctx.E, gctx.M);
@@ -705,6 +718,8 @@ static void save_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
 static void load_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   checkM(nrhs == 2, "Expected 1 inputs");
   checkM(nlhs == 0, "Expected 0 outputs");
+
+  checkM(gctx.is_initialized, ERR_STR_INIT);
 
   char *filename = mxArrayToString(prhs[1]);
   ifstream in(filename, ios::binary);
