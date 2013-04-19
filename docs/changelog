@@ -41,6 +41,40 @@ The main highlights in this release:
 	Such configuration overriding makes it easy to test different config
 	options on different machines from the same code directory.
 
+* Point updates to voc-release5:
+
+voc-release5.02
+---
+Contains the following commits:
+1e6d34f remove unmotivated max(f,0) and zeroing of trunc weights
+91880c4 bug fix in fv read/write; slighty better error checking
+c1b94b1 compat fix
+46bde8c zeroing wrong dimension
+8321dbb fix bugs concerning treatment of unlearned parameter blocks
+2ecbb1c pass model to ex_write for debugging
+96cfd32 fixed typo
+b9dc39a make gdetect_write faster; minor bug fixes
+03c0f30 function to train a model without parts
+f05617c make it easy to train models where components do not share mirrored parameters
+316afca add cachedir; s/blocks/cells/g in features.cc
+* Summary: minor bug fixes and speed improvements
+
+voc-release5.01
+---
+Contains the following commits:
+96c3394 readme edits; only display hello-i'm-not-configured message once
+13d3eda notice about the comparison vis-a-vis sse and multithreadedness
+b3512c2 rehash after compile; tidy demo
+62bdfcb place cascade config before bailout message
+79c31b6 adding autorights notices
+664d6d4 adding AUTORIGHTS placeholder
+66bdb17 add startup to compile.m
+901bf3f c_str bug fixes reported by Sergey Karayev; improvements to usability vis-a-vis startup.m
+aae6d05 fix bug where max fv dim can be wrong
+* Summary: added copyright notices (source code is showing up in other 
+projects without credit)
+
+
 
 voc-release4.01 (11/23/11)
 ---
