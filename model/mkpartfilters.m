@@ -122,13 +122,7 @@ y = Y(x);
 % ------------------------------------------------------------------------
 function f = mkfilter(w, template, x, y, alpha)
 % ------------------------------------------------------------------------
-conf = voc_config();
-td = conf.features.truncation_dim;
-
 f = w(y:y+size(template,1)-1, x:x+size(template,2)-1, :);
-f = max(f, 0);
-% remove image boundary truncation weights
-f(:,:,td) = 0;
 f = alpha*f/(norm(f(:)) + eps);
 
 
