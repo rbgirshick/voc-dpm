@@ -52,12 +52,16 @@ struct mempool {
    ** Allocates _num_chunks*_chunk_size*sizeof(T) bytes of memory
    ** and initializes the free-block list
    */
-  void init(int _num_chunks, int _chunk_size) {
+  bool init(int _num_chunks, int _chunk_size) {
     num_chunks = _num_chunks;
     chunk_size = _chunk_size;
 
     // Allocate memory block
-    data = new (nothrow) T[num_chunks*chunk_size];
+    data = (T *)mxCalloc(num_chunks, chunk_size*sizeof(T));
+    if (data == NULL)
+      return false;
+    mexMakeMemoryPersistent(data);
+
     // Build free-block list stored as pointers embedded in the 
     // free blocks
     for (int i = 0; i < num_chunks-1; i++) {
@@ -68,6 +72,8 @@ struct mempool {
     *((T **)(data + (num_chunks-1)*chunk_size)) = NULL;
 
     free_head = data;
+
+    return true;
   }
 
 
@@ -98,7 +104,7 @@ struct mempool {
    ** Free all memory allocated by the pool
    */
   void free() {
-    delete [] data;
+    mxFree(data);
     data       = NULL;
     free_head  = NULL;
     num_chunks = 0;
