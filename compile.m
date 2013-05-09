@@ -66,16 +66,24 @@ if nargin < 3
   eval([mexcmd ' features/resize.cc']);
   eval([mexcmd ' features/features.cc']);
   eval([mexcmd ' gdetect/dt.cc']);
-  eval([mexcmd ' gdetect/bounded_dt.cc']);
+  eval([mexcmd ' CXXFLAGS="\$CXXFLAGS -DNUM_THREADS=0" gdetect/bounded_dt.cc']);
   eval([mexcmd ' gdetect/get_detection_trees.cc']);
   eval([mexcmd ' gdetect/compute_overlap.cc']);
+  eval([mexcmd ' gdetect/post_pad.cc']);
 
   % Convolution routine
   %   Use one of the following depending on your setup
   %   (0) is fastest, (2) is slowest 
 
   % 0) multithreaded convolution using SSE (pthreads)
-  eval([mexcmd ' gdetect/fconv_sse.cc -o fconv']);
+  % Build a special loop-unrolled version for each feature dimension
+  % from 4 to 100
+  for i = 4:4:100
+    fprintf('Building convolution routine for %d features\n', i);
+    mexcmd_meta = [mexcmd ' CXXFLAGS="\$CXXFLAGS -Iexternal/boost' ...
+                          ' -DMETA_NUM_FEATURES=' num2str(i/4) '"'];
+    eval([mexcmd_meta ' gdetect/fconv_sse_meta.cc -o fconv_' num2str(i)]);
+  end
   % 1) multithreaded convolution using SSE (OpenMP)
   %eval([mexcmd ' gdetect/fconv_sse_omp.cc -o fconv']);
   % 2) multithreaded convolution

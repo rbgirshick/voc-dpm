@@ -19,10 +19,11 @@
 #include "mex.h"
 #include <pthread.h>
 #include <xmmintrin.h>
+#include <boost/preprocessor/repeat.hpp>
 
 // N.B. If you change the number of features you will need to unroll
 // the unrolled loop in process() more.
-const static int NUM_FEATURES = 32;
+const static int NUM_FEATURES = 4*META_NUM_FEATURES;
 
 struct thread_data {
   float  *A;
@@ -58,21 +59,14 @@ void *process(void *thread_arg) {
         const float *B_off = B_src;
         for (int yp = 0; yp < B_dims[0]; yp++) {
           // Loop body: dot product of two 4-vectors of floats
-          #define dot4(A, B, step)          \
-            a     = _mm_load_ps(A + step);  \
-            b     = _mm_load_ps(B + step);  \
-            c     = _mm_mul_ps(a, b);       \
-            accum = _mm_add_ps(accum, c);   \
+          #define DOT4(z, step, ignore)           \
+            a     = _mm_load_ps(A_off + 4*step);  \
+            b     = _mm_load_ps(B_off + 4*step);  \
+            c     = _mm_mul_ps(a, b);             \
+            accum = _mm_add_ps(accum, c);         \
 
           // Unrolled loop over feature vector dimensions
-          dot4(A_off, B_off, 0);
-          dot4(A_off, B_off, 4);
-          dot4(A_off, B_off, 8);
-          dot4(A_off, B_off, 12);
-          dot4(A_off, B_off, 16);
-          dot4(A_off, B_off, 20);
-          dot4(A_off, B_off, 24);
-          dot4(A_off, B_off, 28);
+          BOOST_PP_REPEAT(META_NUM_FEATURES, DOT4, ignore)
 
           // N.B. Unroll me more/less if you change NUM_FEATURES
           A_off += NUM_FEATURES;

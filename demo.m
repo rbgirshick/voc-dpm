@@ -1,4 +1,4 @@
-function demo()
+function demo(no_compile)
 
 % AUTORIGHTS
 % -------------------------------------------------------
@@ -15,9 +15,11 @@ function demo()
 
 startup;
 
-fprintf('compiling the code...');
-compile;
-fprintf('done.\n\n');
+if ~exist('no_compile', 'var')
+  fprintf('compiling the code...');
+  compile;
+  fprintf('done.\n\n');
+end
 
 load('VOC2007/car_final');
 model.vis = @() visualizemodel(model, ...
@@ -61,7 +63,9 @@ disp('press any key to continue'); pause;
 disp('continuing...');
 
 % detect objects
+tic;
 [ds, bs] = imgdetect(im, model, -1);
+toc;
 top = nms(ds, 0.5);
 top = top(1:min(length(top), num_dets));
 ds = ds(top, :);

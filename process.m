@@ -31,7 +31,9 @@ if nargin < 3
   thresh = model.thresh
 end
 
+tic;
 [ds, bs] = imgdetect(im, model, thresh);
+toc;
 
 if ~isempty(ds)
   if model.type == model_types.MixStar
