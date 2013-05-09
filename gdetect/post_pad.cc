@@ -34,7 +34,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     copy(A_col, A_col+A_dims[0], B_col);
 
     if (pady > 0)
-      fill(B_col+A_dims[0]+1, B_col+B_dims[0], val);
+      fill(B_col+A_dims[0], B_col+B_dims[0], val);
   }
 
   fill(B + A_dims[1]*B_dims[0], B+B_dims[0]*B_dims[1], val);

@@ -78,7 +78,9 @@ if nargin < 3
   % 0) multithreaded convolution using SSE (pthreads)
   % Build a special loop-unrolled version for each feature dimension
   % from 4 to 100
-  for i = 4:4:100
+  % for i = 4:4:100
+  %for i = [8 32]
+  for i = [32]
     fprintf('Building convolution routine for %d features\n', i);
     mexcmd_meta = [mexcmd ' CXXFLAGS="\$CXXFLAGS -Iexternal/boost' ...
                           ' -DMETA_NUM_FEATURES=' num2str(i/4) '"'];
