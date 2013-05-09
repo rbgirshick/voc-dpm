@@ -216,6 +216,7 @@ for level = 1:length(pyra.feat)
     spadx = s(2) - size(r{i},2);
     if spady > 0 || spadx > 0
       r{i} = post_pad(r{i}, spady, spadx, -inf);
+      %r{i} = padarray(r{i}, [spady spady], -inf, 'both');
     end
     fsym = model.filters(i).symbol;
     model.symbols(fsym).score{level} = r{i};
