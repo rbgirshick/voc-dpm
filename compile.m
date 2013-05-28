@@ -98,6 +98,8 @@ if nargin < 3
   eval([mexcmd ' gdetect/fconv_var_dim_MT.cc -o fconv_var_dim']);
   % 1) single-threaded convolution
   % eval([mexcmd ' gdetect/fconv_var_dim.cc -o fconv_var_dim']);
+
+  eval([mexcmd ' external/minConf/minFunc/lbfgsC.c']);
 else
   eval([mexcmd ' ' mex_file]);
 end
