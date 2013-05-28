@@ -82,7 +82,7 @@ if nargin < 3
   %for i = [8 32]
   for i = [32]
     fprintf('Building convolution routine for %d features\n', i);
-    mexcmd_meta = [mexcmd ' CXXFLAGS="\$CXXFLAGS -Iexternal/boost' ...
+    mexcmd_meta = [mexcmd ' CXXFLAGS="\$CXXFLAGS -Iexternal' ...
                           ' -DMETA_NUM_FEATURES=' num2str(i/4) '"'];
     eval([mexcmd_meta ' gdetect/fconv_sse_meta.cc -o fconv_' num2str(i)]);
   end
