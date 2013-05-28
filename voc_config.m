@@ -36,11 +36,11 @@ function conf = voc_config(varargin)
 BASE_DIR    = 'cachedir';
 
 % PASCAL dataset year to use
-PASCAL_YEAR = '2011';
+PASCAL_YEAR = '2007';
 
 % Models are stored in BASE_DIR/PROJECT/PASCAL_YEAR/
 % e.g., /var/tmp/rbg/voc-release5/2007/
-PROJECT     = 'voc-dpm-bugfixes6';
+PROJECT     = 'voc-dpm-bugfixes7';
 
 % The code will look for your PASCAL VOC devkit in 
 % BASE_DIR/VOC<PASCAL_YEAR>/VOCdevkit
@@ -174,13 +174,13 @@ exists_or_mkdir(conf.paths.model_dir);
 % -------------------------------------------------------------------
 % Training configuration 
 % -------------------------------------------------------------------
-%conf = cv(conf, 'training.train_set_fg', 'trainval');
-conf = cv(conf, 'training.train_set_fg', 'train');
+conf = cv(conf, 'training.train_set_fg', 'trainval');
+%conf = cv(conf, 'training.train_set_fg', 'train');
 conf = cv(conf, 'training.train_set_bg', 'train');
 conf = cv(conf, 'training.C', 0.001);
 conf = cv(conf, 'training.bias_feature', 10);
 % File size limit for the feature vector cache (2^30 bytes = 1GB)
-conf = cv(conf, 'training.cache_byte_limit', 8*2^30);
+conf = cv(conf, 'training.cache_byte_limit', 3*2^30);
 % Location of training log (matlab diary)
 conf.training.log = @(x) sprintf([conf.paths.model_dir '%s.log'], x);
 
@@ -202,8 +202,8 @@ conf = cv(conf, 'training.interval_bg', 4);
 % Evaluation configuration 
 % -------------------------------------------------------------------
 conf = cv(conf, 'eval.interval', 10);
-%conf = cv(conf, 'eval.test_set', 'test');
-conf = cv(conf, 'eval.test_set', 'val');
+conf = cv(conf, 'eval.test_set', 'test');
+%conf = cv(conf, 'eval.test_set', 'val');
 conf = cv(conf, 'eval.max_thresh', -1.1);
 conf.pascal.VOCopts.testset = conf.eval.test_set;
 
