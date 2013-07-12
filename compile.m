@@ -66,10 +66,13 @@ if nargin < 3
   eval([mexcmd ' features/resize.cc']);
   eval([mexcmd ' features/features.cc']);
   eval([mexcmd ' gdetect/dt.cc']);
-  eval([mexcmd ' CXXFLAGS="\$CXXFLAGS -DNUM_THREADS=0" gdetect/bounded_dt.cc']);
+  eval([mexcmd ' gdetect/fast_bounded_dt.cc']);
   eval([mexcmd ' gdetect/get_detection_trees.cc']);
   eval([mexcmd ' gdetect/compute_overlap.cc']);
   eval([mexcmd ' gdetect/post_pad.cc']);
+
+  % obsolete bounded dt algorithm & implementation
+  %eval([mexcmd ' CXXFLAGS="\$CXXFLAGS -DNUM_THREADS=0" gdetect/bounded_dt.cc']);
 
   % Convolution routine
   %   Use one of the following depending on your setup
