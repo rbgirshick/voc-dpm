@@ -16,6 +16,23 @@
 #include <vector>
 #include <cmath>
 
+#ifdef USE_TBB
+  #include <tbb/tbb.h>
+  #include <tbb/task_scheduler_init.h>
+
+  #define TBB_OVER_COMPONENTS 1
+  #define TBB_OVER_SCALES 2
+
+  #ifndef PARALLELIZE_METHOD
+    #define PARALLELIZE_METHOD TBB_OVER_SCALES
+  #endif
+#else
+  #define PARALLELIZE_METHOD 0
+#endif // USE_TBB
+  
+
+
+
 using namespace std;
 
 // timers
@@ -46,6 +63,7 @@ static Model *MODEL;
 
 // square an int
 static inline int square(int x) { return x*x; }
+
 
 // compute convolution value of filter B on data A at a single 
 // location (x, y)
@@ -214,6 +232,11 @@ static inline double partscore(int L, int defindex, int pfind,
 static void init(const mxArray *prhs[]) {
   inittimer->tic();
   
+  //init parallelization
+  #ifdef USE_TBB
+    tbb::task_scheduler_init tbb_init;
+  #endif
+
   // init model and feature pyramid
   MODEL = new Model(prhs[0]);
   MODEL->initpyramid(prhs[1], prhs[2]);
@@ -289,16 +312,172 @@ static void cleanup() {
   delete [] DT[1];
 }
 
+inline void cascade_inner_one_level(int comp, const mxArray *rootscores, const double * scales,
+                                    double **pcascore, vector<double>& coords, int plevel)
+{
+    // root filter pyramid level
+    int rlevel = plevel+MODEL->interval;
+    double bias = MODEL->offsets[comp] + MODEL->loc_scores[comp][rlevel];
+    // get pointer to the scores of the first PCA filter (including component offest)
+    const mxArray *mxA = mxGetCell(rootscores, rlevel*MODEL->numcomponents + comp);
+    const mwSize *dim = mxGetDimensions(mxA);
+    const double *rtscore = mxGetPr(mxA);
+    // process each location in the current pyramid level
+    for (int rx = ceil(padx/2.0); rx < dim[1] - ceil(padx/2.0); rx++) {
+      for (int ry = ceil(pady/2.0); ry < dim[0] - ceil(pady/2.0); ry++) {
+        // get stage 0 score (PCA root + component offset)
+        double score = *(rtscore + rx*dim[0] + ry);
+
+        // record score of PCA filter ('score' has the component offset and
+        // location/scale scores added to it, so we subtract it here to get 
+        // just the PCA filter score)
+        pcascore[comp][0] = score - bias;
+
+        // cascade stages 1 through 2*numparts+2
+        int stage = 1;
+        int numstages = 2*MODEL->numparts[comp]+2; 
+        for (; stage < numstages; stage++) {
+          // check for hypothesis pruning
+          if (score < MODEL->t[comp][2*stage-1])
+            break;
+
+          // pca == 1 if we're placing pca filters
+          // pca == 0 if we're placing "full"/non-pca filters
+          int pca = (stage < MODEL->numparts[comp]+1 ? 1 : 0);
+          // get the part# used in this stage
+          // root parts have index -1, non-root parts are indexed 0:numparts
+          int part = MODEL->partorder[comp][stage];
+          
+          if (part == -1) {
+            // we just finished placing all PCA filters, now replace the PCA root
+            // filter with the non-PCA root filter
+            double rscore = rconv(rlevel, comp, rx, ry, pca);
+            score += rscore - pcascore[comp][0];
+          } else {
+            // place a non-root filter (either PCA or non-PCA)
+            int px = 2*rx + (int)MODEL->anchors[comp][part][0];
+            int py = 2*ry + (int)MODEL->anchors[comp][part][1];
+            // lookup the filter and deformation model used by this part
+            int filterind = MODEL->pfind[comp][part];
+            int defind = MODEL->defind[comp][part];
+            double defthresh = MODEL->t[comp][2*stage] - score;
+            double ps = partscore(plevel, defind, filterind, 
+                                  px, py, pca, defthresh);
+            if (pca == 1) {
+              // record PCA filter score and update hypothesis score with ps
+              pcascore[comp][part+1] = ps;
+              score += ps;
+            } else {
+              // update hypothesis score by replacing the PCA filter score with ps
+              score += ps - pcascore[comp][part+1];
+            }
+          }
+        }
+        // check if the hypothesis passed all stages with a final score over 
+        // the global threshold
+        if (stage == numstages && score >= MODEL->thresh) {
+          // compute and record image coordinates of the detection window
+          double scale = MODEL->sbin/scales[rlevel];
+          double x1 = (rx-padx)*scale;
+          double y1 = (ry-pady)*scale;
+          double x2 = x1 + MODEL->rootfilterdims[comp][1]*scale - 1;
+          double y2 = y1 + MODEL->rootfilterdims[comp][0]*scale - 1;
+          // add 1 for matlab 1-based indexes
+          coords.push_back(x1+1);
+          coords.push_back(y1+1);
+          coords.push_back(x2+1);
+          coords.push_back(y2+1);
+          // compute and record image coordinates of the part filters
+          scale = MODEL->sbin/scales[plevel];
+          for (int P = 0; P < MODEL->numparts[comp]; P++) {
+            int probex = 2*rx + (int)MODEL->anchors[comp][P][0];
+            int probey = 2*ry + (int)MODEL->anchors[comp][P][1];
+            int dind = MODEL->defind[comp][P];
+            int offset = LOFFDT[plevel] + dind*MODEL->featdimsprod[plevel] 
+                         + (probex-padx)*MODEL->featdims[plevel][0] + (probey-pady);
+            int px = *(DXAM[0] + offset) + padx;
+            int py = *(DYAM[0] + offset) + pady;
+            double x1 = (px-2*padx)*scale;
+            double y1 = (py-2*pady)*scale;
+            double x2 = x1 + MODEL->partfilterdims[P][1]*scale - 1;
+            double y2 = y1 + MODEL->partfilterdims[P][0]*scale - 1;
+            coords.push_back(x1+1);
+            coords.push_back(y1+1);
+            coords.push_back(x2+1);
+            coords.push_back(y2+1);
+          }
+          // record component number and score
+          coords.push_back(comp+1);
+          coords.push_back(score);
+        }
+      } // end loop over root y
+    }   // end loop over root x
+}
+
+inline void cascade_inner(int nlevels, int comp, const mxArray *rootscores, const double * scales,
+                          double **pcascore, vector<double>& coords)
+{
+  for (int plevel = 0; plevel < nlevels; plevel++) {
+        cascade_inner_one_level(comp, rootscores, scales, pcascore, coords, plevel);
+    }     // end loop over pyramid levels
+}
+
+#ifdef USE_TBB
+// TBB functors
+class ParaOnComponents
+{
+    int nlevels;
+    const mxArray *rootscores;
+    const double * scales;
+    double **pcascore;
+    vector<double>& coords;
+public:
+    ParaOnComponents(int nlevels_, const mxArray *rootscores_, const double * scales_,
+                          double **pcascore_, vector<double>& coords_) : 
+                          nlevels(nlevels_), rootscores(rootscores_), scales(scales_),
+                          pcascore(pcascore_), coords(coords_)
+    {};
+    void operator() (const tbb::blocked_range<int>& r) const
+    {
+        for(int comp = r.begin();comp!=r.end();comp++)
+        {
+            
+          cascade_inner(nlevels, comp, rootscores, scales, pcascore, coords);   
+        }
+    }
+};
+class ParaOnScales
+{
+    int comp;
+    const mxArray *rootscores;
+    const double * scales;
+    double **pcascore;
+    vector<double>& coords;
+public:
+    ParaOnScales(int comp_, const mxArray *rootscores_, const double * scales_,
+                 double **pcascore_, vector<double>& coords_) : 
+                 comp(comp_), rootscores(rootscores_), scales(scales_),
+                 pcascore(pcascore_), coords(coords_)
+    {};
+    void operator() (const tbb::blocked_range<int>& r) const
+    {
+        for(int plevel = r.begin();plevel!=r.end();plevel++)
+        {
+            
+          cascade_inner_one_level(comp, rootscores, scales, pcascore, coords, plevel);   
+        }
+    }
+};
+#endif
 // matlab entry point
 //                 0      1     2         3           4            5
 //coords = cascade(model, pyra, projpyra, rootscores, numrootlocs, s);
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) { 
   searchtimer = new timer("search");
   inittimer = new timer("init");
-
   // initialize data
   init(prhs);
-
+  
   const mxArray *pyramid    = prhs[1];
   const mxArray *rootscores = prhs[3];
   const double *scales      = mxGetPr(mxGetField(pyramid, 0, "scales"));
@@ -318,107 +497,21 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   int nlevels = MODEL->numlevels-MODEL->interval;
 
   // process each model component and pyramid level (note: parallelize here)
-  for (int comp = 0; comp < MODEL->numcomponents; comp++) {
-    for (int plevel = 0; plevel < nlevels; plevel++) {
-      // root filter pyramid level
-      int rlevel = plevel+MODEL->interval;
-      double bias = MODEL->offsets[comp] + MODEL->loc_scores[comp][rlevel];
-      // get pointer to the scores of the first PCA filter (including component offest)
-      const mxArray *mxA = mxGetCell(rootscores, rlevel*MODEL->numcomponents + comp);
-      const mwSize *dim = mxGetDimensions(mxA);
-      const double *rtscore = mxGetPr(mxA);
-      // process each location in the current pyramid level
-      for (int rx = ceil(padx/2.0); rx < dim[1] - ceil(padx/2.0); rx++) {
-        for (int ry = ceil(pady/2.0); ry < dim[0] - ceil(pady/2.0); ry++) {
-          // get stage 0 score (PCA root + component offset)
-          double score = *(rtscore + rx*dim[0] + ry);
-
-          // record score of PCA filter ('score' has the component offset and
-          // location/scale scores added to it, so we subtract it here to get 
-          // just the PCA filter score)
-          pcascore[comp][0] = score - bias;
-
-          // cascade stages 1 through 2*numparts+2
-          int stage = 1;
-          int numstages = 2*MODEL->numparts[comp]+2; 
-          for (; stage < numstages; stage++) {
-            // check for hypothesis pruning
-            if (score < MODEL->t[comp][2*stage-1])
-              break;
-
-            // pca == 1 if we're placing pca filters
-            // pca == 0 if we're placing "full"/non-pca filters
-            int pca = (stage < MODEL->numparts[comp]+1 ? 1 : 0);
-            // get the part# used in this stage
-            // root parts have index -1, non-root parts are indexed 0:numparts
-            int part = MODEL->partorder[comp][stage];
-            
-            if (part == -1) {
-              // we just finished placing all PCA filters, now replace the PCA root
-              // filter with the non-PCA root filter
-              double rscore = rconv(rlevel, comp, rx, ry, pca);
-              score += rscore - pcascore[comp][0];
-            } else {
-              // place a non-root filter (either PCA or non-PCA)
-              int px = 2*rx + (int)MODEL->anchors[comp][part][0];
-              int py = 2*ry + (int)MODEL->anchors[comp][part][1];
-              // lookup the filter and deformation model used by this part
-              int filterind = MODEL->pfind[comp][part];
-              int defind = MODEL->defind[comp][part];
-              double defthresh = MODEL->t[comp][2*stage] - score;
-              double ps = partscore(plevel, defind, filterind, 
-                                    px, py, pca, defthresh);
-              if (pca == 1) {
-                // record PCA filter score and update hypothesis score with ps
-                pcascore[comp][part+1] = ps;
-                score += ps;
-              } else {
-                // update hypothesis score by replacing the PCA filter score with ps
-                score += ps - pcascore[comp][part+1];
-              }
-            }
-          }
-          // check if the hypothesis passed all stages with a final score over 
-          // the global threshold
-          if (stage == numstages && score >= MODEL->thresh) {
-            // compute and record image coordinates of the detection window
-            double scale = MODEL->sbin/scales[rlevel];
-            double x1 = (rx-padx)*scale;
-            double y1 = (ry-pady)*scale;
-            double x2 = x1 + MODEL->rootfilterdims[comp][1]*scale - 1;
-            double y2 = y1 + MODEL->rootfilterdims[comp][0]*scale - 1;
-            // add 1 for matlab 1-based indexes
-            coords.push_back(x1+1);
-            coords.push_back(y1+1);
-            coords.push_back(x2+1);
-            coords.push_back(y2+1);
-            // compute and record image coordinates of the part filters
-            scale = MODEL->sbin/scales[plevel];
-            for (int P = 0; P < MODEL->numparts[comp]; P++) {
-              int probex = 2*rx + (int)MODEL->anchors[comp][P][0];
-              int probey = 2*ry + (int)MODEL->anchors[comp][P][1];
-              int dind = MODEL->defind[comp][P];
-              int offset = LOFFDT[plevel] + dind*MODEL->featdimsprod[plevel] 
-                           + (probex-padx)*MODEL->featdims[plevel][0] + (probey-pady);
-              int px = *(DXAM[0] + offset) + padx;
-              int py = *(DYAM[0] + offset) + pady;
-              double x1 = (px-2*padx)*scale;
-              double y1 = (py-2*pady)*scale;
-              double x2 = x1 + MODEL->partfilterdims[P][1]*scale - 1;
-              double y2 = y1 + MODEL->partfilterdims[P][0]*scale - 1;
-              coords.push_back(x1+1);
-              coords.push_back(y1+1);
-              coords.push_back(x2+1);
-              coords.push_back(y2+1);
-            }
-            // record component number and score
-            coords.push_back(comp+1);
-            coords.push_back(score);
-          }
-        } // end loop over root y
-      }   // end loop over root x
-    }     // end loop over pyramid levels
-  }         // end loop over components
+  #ifdef USE_TBB
+    #if PARALLELIZE_METHOD == TBB_OVER_COMPONENTS
+      tbb::parallel_for(tbb::blocked_range<int>(0,MODEL->numcomponents),ParaOnComponents(nlevels, rootscores, scales, pcascore, coords));
+    #elif PARALLELIZE_METHOD == TBB_OVER_SCALES
+      for (int comp = 0; comp < MODEL->numcomponents; comp++) {
+        tbb::parallel_for(tbb::blocked_range<int>(0,nlevels),ParaOnScales(comp, rootscores, scales, pcascore, coords));
+      } 
+    #else
+      #error unknown PARALLELIZE_METHOD
+    #endif //PARALLELIZE_METHOd 
+  #else
+      for (int comp = 0; comp < MODEL->numcomponents; comp++) {
+          cascade_inner(nlevels, comp, rootscores, scales, pcascore, coords);
+      }         // end loop over components
+  #endif
   searchtimer->toc();
   //searchtimer->mexPrintTimer();
 

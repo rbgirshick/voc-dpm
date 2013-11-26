@@ -1,4 +1,4 @@
-function cascade_compile(opt, verb)
+function cascade_compile(opt, verb, use_tbb)
 % Build the star-cascade code
 %   All compiled binaries are placed in the bin/ directory.
 %
@@ -33,6 +33,9 @@ end
 if nargin < 2
   verb = false;
 end
+if nargin < 3
+  use_tbb = false;
+end
 
 mexcmd = 'mex -outdir bin';
 
@@ -48,8 +51,25 @@ else
   mexcmd = [mexcmd ' -g'];
 end
 
-mexcmd = [mexcmd ' CXXFLAGS="\$CXXFLAGS -Wall"'];
-mexcmd = [mexcmd ' LDFLAGS="\$LDFLAGS -Wall"'];
+if use_tbb
+    if ismac
+    	%Assuming TBB was installed using mac ports
+        TBB_ROOT = '/opt/local/';
+    else
+    	%Assuming TBB was installed using the system package manager
+        TBB_ROOT = '/usr/';
+    end
+    
+    EXTRA_CXX_FLAGS = sprintf('-I%sinclude -DUSE_TBB',TBB_ROOT);
+    EXTRA_LDD_FLAGS = sprintf('-L%slib -ltbb',TBB_ROOT);
+    fprintf('Compiling with TBB. Make sure that tbb is installed in the %s directory\n',TBB_ROOT);
+else
+    EXTRA_CXX_FLAGS = '';
+    EXTRA_LDD_FLAGS = '';
+end
+
+mexcmd = [mexcmd sprintf(' CXXFLAGS="\\$CXXFLAGS -Wall %s"',EXTRA_CXX_FLAGS)];
+mexcmd = [mexcmd sprintf(' LDFLAGS="\\$LDFLAGS -Wall %s"',EXTRA_LDD_FLAGS)];
 mexcmd = [mexcmd ' star-cascade/cascade.cc star-cascade/model.cc'];
 
 eval(mexcmd);

@@ -1,4 +1,4 @@
-function compile(opt, verb, mex_file)
+function compile(opt, verb, use_tbb_for_cascades, mex_file)
 % Build MEX source code.
 %   All compiled binaries are placed in the bin/ directory.
 %
@@ -9,6 +9,7 @@ function compile(opt, verb, mex_file)
 % Arguments
 %   opt   Compile with optimizations (default: on)
 %   verb  Verbose output (default: off)
+%   use_tbb_for_cascades Parallelize cascades using TBB (default: off)
 
 % AUTORIGHTS
 % -------------------------------------------------------
@@ -36,6 +37,10 @@ if nargin < 2
   verb = false;
 end
 
+if nargin < 3
+  use_tbb_for_cascades = false;
+end
+
 % Start building the mex command
 mexcmd = 'mex -outdir bin';
 
@@ -57,11 +62,11 @@ end
 mexcmd = [mexcmd ' CXXFLAGS="\$CXXFLAGS -Wall"'];
 mexcmd = [mexcmd ' LDFLAGS="\$LDFLAGS -Wall"'];
 
-if nargin < 3
+if nargin < 4
   % Build feature vector cache code
   fv_compile(opt, verb);
   % Build the star-cascade code
-  cascade_compile(opt, verb);
+  cascade_compile(opt, verb, use_tbb_for_cascades);
 
   eval([mexcmd ' features/resize.cc']);
   eval([mexcmd ' features/features.cc']);

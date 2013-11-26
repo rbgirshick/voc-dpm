@@ -20,7 +20,7 @@ function demo_cascade()
 startup;
 
 fprintf('compiling the code...');
-compile;
+compile(true,false,false); %TBB disabled by default
 fprintf('done.\n\n');
 
 fprintf(['\n\n' ...
