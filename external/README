@@ -13,6 +13,7 @@ on Jan 23, 2012.
 
 Modifications: no changes to source; removed some unneeded files.
 
+
 2) LIBSVM by Chih-Chung Chang and Chih-Jen Lin
 
 Download: http://www.csie.ntu.edu.tw/~cjlin/libsvm/
@@ -23,3 +24,10 @@ Modifications:
   - matlab/svmpredict.c: remove mexPrintf of accuracy
   - matlab/svmtrain.c: print_string_matlab now executes a drawNow to 
     flush the print buffer
+
+
+3) Boost Preprocessor Library
+
+Used for metaprogramming. One convolution routine binary is generated 
+for each feature dimension with the inner most loop unrolled the
+appropriate number of times.

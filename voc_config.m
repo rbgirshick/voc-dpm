@@ -40,7 +40,7 @@ PASCAL_YEAR = '2007';
 
 % Models are stored in BASE_DIR/PROJECT/PASCAL_YEAR/
 % e.g., /var/tmp/rbg/voc-release5/2007/
-PROJECT     = 'voc-release5';
+PROJECT     = 'voc-dpm-bugfixes7';
 
 % The code will look for your PASCAL VOC devkit in 
 % BASE_DIR/VOC<PASCAL_YEAR>/VOCdevkit
@@ -98,6 +98,8 @@ conf = [];
 %
 %
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+conf = cv(conf, 'num_threads', feature('NumCores'));
 
 % System version
 conf = cv(conf, 'version', 'voc-release5');
@@ -173,6 +175,7 @@ exists_or_mkdir(conf.paths.model_dir);
 % Training configuration 
 % -------------------------------------------------------------------
 conf = cv(conf, 'training.train_set_fg', 'trainval');
+%conf = cv(conf, 'training.train_set_fg', 'train');
 conf = cv(conf, 'training.train_set_bg', 'train');
 conf = cv(conf, 'training.C', 0.001);
 conf = cv(conf, 'training.bias_feature', 10);
@@ -200,6 +203,7 @@ conf = cv(conf, 'training.interval_bg', 4);
 % -------------------------------------------------------------------
 conf = cv(conf, 'eval.interval', 10);
 conf = cv(conf, 'eval.test_set', 'test');
+%conf = cv(conf, 'eval.test_set', 'val');
 conf = cv(conf, 'eval.max_thresh', -1.1);
 conf.pascal.VOCopts.testset = conf.eval.test_set;
 

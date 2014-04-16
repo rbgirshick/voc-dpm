@@ -222,7 +222,11 @@ for t = 1:iter
 
       if ~datamine
         fprintf('Data mining convergence condition met.\n');
-        break;
+        % if this is the last positive latent labeling then go ahead 
+        % and optimize one last time
+        if t < iter
+          break;
+        end
       end
     else
       fprintf('Skipping data mining iteration.\n');
@@ -234,7 +238,7 @@ for t = 1:iter
     % a large amount of memory due to fragementation.
     pool_size = close_parallel_pool();
     
-    %{{{ Optimize the convex slave problem
+    %[[[ Optimize the convex slave problem
       % Set the current model in the fv_cache
       [blocks, lb, rm, lm, cmps] = fv_model_args(model);
       fv_cache('set_model', blocks, lb, rm, lm, cmps, C);
@@ -285,9 +289,9 @@ for t = 1:iter
                 cache(tt,1), cache(tt,2), cache(tt,3), cache(tt,4));
       end
       fprintf('Finished training %s (C = %.4f)\n', model_name, C);
-    %}}}
+    %[[[
 
-    %{{{ Maintain the feature vector cache
+    %[[[ Maintain the feature vector cache
       % -------------------------------------------------------------
       % Cache policy
       %
@@ -441,11 +445,15 @@ for t = 1:iter
                (info.is_unique == 1)&(info.margins < 0.000001));
       num_sv = size(unique([info.dataid(I) info.scale(I) info.x(I) info.y(I)], 'rows'), 1);
       fprintf('%d background support vectors\n', num_sv);
-    %}}}
+    %]]]
 
     % Reopen parallel pool (if applicable)
     % See comment above the call to close_parallel_pool()
     reopen_parallel_pool(pool_size);
+
+    if ~datamine
+      break;
+    end
   end
 end
 

@@ -156,8 +156,8 @@ loc_scores = loc_w * loc_f;
 for i = 1:length(score)
   score{i} = score{i} + bias + loc_scores(i);
   % Bounded distance transform with +/- 4 HOG cells (9x9 window)
-  [score{i}, Ix{i}, Iy{i}] = bounded_dt(score{i}, def_w(1), def_w(2), ...
-                                        def_w(3), def_w(4), 4);
+  [score{i}, Ix{i}, Iy{i}] = fast_bounded_dt(score{i}, def_w(1), def_w(2), ...
+                                             def_w(3), def_w(4), 4);
   % Unbounded distance transform
   %[score{i}, Ix{i}, Iy{i}] = dt(score{i}, def_w(1), def_w(2), ...
   %                              def_w(3), def_w(4));
@@ -189,27 +189,35 @@ for level = 1:length(pyra.feat)
     continue;
   end
 
-  % compute filter response for all filters at this level
-  if size(pyra.feat{level},3) == 32
-    % Faster SSE version (fconvsse.cc) that can only handle 32-dim features
-    r = fconv(pyra.feat{level}, filters, 1, length(filters));
+  % Determine the convolution routine to use
+  % Try to use an unrolled SSE routine if available
+  % 4 floats are processed at a time, so round the feature dim
+  % up to the next largest multiple of 4
+  fconv_num = 4*ceil(size(pyra.feat{level},3)/4);
+  fconv_name = ['fconv_' num2str(fconv_num)];
+  if exist(fconv_name) == 3  % 3 ==> MEX function
+    fconv_fun = str2func(fconv_name);
   else
-    % More general convolution code to handle non-32-dim features
-    % e.g., the HOG-PCA features used by the star-cascade
-    r = fconv_var_dim(pyra.feat{level}, filters, 1, length(filters));
-  end 
-  % find max response array size for this level
-  s = [-inf -inf];
-  for i = 1:length(r)
-    s = max([s; size(r{i})]);
+    % Fall back to the slower version that works with any dimension
+    fconv_fun = @fconv_var_dim;
   end
+  % compute filter response for all filters at this level
+  r = fconv_fun(pyra.feat{level}, filters, 1, length(filters));
+
+  % find max response array size for this level
+  s = cellfun(@size, r, 'UniformOutput', false);
+  s = max(cat(1, s{:}));
+
   % set filter response as the score for each filter terminal
   for i = 1:length(r)
     % normalize response array size so all responses at this 
     % level have the same dimension
     spady = s(1) - size(r{i},1);
     spadx = s(2) - size(r{i},2);
-    r{i} = padarray(r{i}, [spady spadx], -inf, 'post');
+    if spady > 0 || spadx > 0
+      r{i} = post_pad(r{i}, spady, spadx, -inf);
+      %r{i} = padarray(r{i}, [spady spady], -inf, 'both');
+    end
     fsym = model.filters(i).symbol;
     model.symbols(fsym).score{level} = r{i};
   end

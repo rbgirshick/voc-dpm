@@ -110,9 +110,9 @@ struct fv {
     num_blocks    = _num_blocks;
     feat_dim      = _feat_dim;
     if (num_blocks > 0 && feat_dim > 0) {
-      checkM(feat_dim <= feat_pool.chunk_size,
+      checkM((uint64_t)feat_dim <= feat_pool.chunk_size,
              "Feature vector is larger than feat_pool.chunk_size.");
-      checkM(num_blocks <= block_label_pool.chunk_size,
+      checkM((uint64_t)num_blocks <= block_label_pool.chunk_size,
              "Number of blocks is larger than block_label_pool.chunk_size");
       feat = feat_pool.get();
       if (feat == NULL)

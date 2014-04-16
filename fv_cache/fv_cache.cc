@@ -228,8 +228,12 @@ static void init_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
   const int max_num_fv = (int)mxGetScalar(prhs[1]);
   const int max_fv_dim = (int)mxGetScalar(prhs[2]);
   const int max_num_bl = (int)mxGetScalar(prhs[3]);
-  fv::feat_pool.init(max_num_fv, max_fv_dim);
-  fv::block_label_pool.init(max_num_fv, max_num_bl);
+  
+  bool status;
+  status = fv::feat_pool.init(max_num_fv, max_fv_dim);
+  checkM(status, "Failed to allocate feature vector memory pool");
+  status = fv::block_label_pool.init(max_num_fv, max_num_bl);
+  checkM(status, "Failed to allocate block label memory pool");
 
   // vector resizing operations
   gctx.F.reserve(max_num_fv);
@@ -267,10 +271,10 @@ static void add_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs
 
   const int *key          = (int *)mxGetPr(prhs[1]);
   const mxArray *mx_bls   = prhs[2];
-  const int num_blocks    = mxGetDimensions(mx_bls)[0];
+  const mwSize num_blocks = mxGetDimensions(mx_bls)[0];
   const int *bls          = (const int *)mxGetPr(mx_bls);
   const mxArray *mx_feat  = prhs[3];
-  const int feat_dim      = mxGetDimensions(mx_feat)[0];
+  const mwSize feat_dim   = mxGetDimensions(mx_feat)[0];
   const float *feat       = (const float *)mxGetPr(mx_feat);
   const bool is_belief    = (bool)mxGetScalar(prhs[4]);
   const bool is_mined     = (bool)mxGetScalar(prhs[5]);
@@ -320,7 +324,7 @@ static void shrink_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *p
             F.size(), gctx.byte_size/(1024.0*1024.0));
 
   const mxArray *mx_inds = prhs[1];
-  const int *inds_dims = mxGetDimensions(prhs[1]);
+  const mwSize *inds_dims = mxGetDimensions(prhs[1]);
   const int ind_len = max(inds_dims[0], inds_dims[1]);
   const int *inds = (const int *)mxGetPr(mx_inds);
   const int *inds_end = inds + ind_len;
@@ -410,7 +414,8 @@ static void gradient_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray 
     }
   }
 
-  mx_grad = mxCreateNumericArray(1, &dim, mxDOUBLE_CLASS, mxREAL);
+  mwSize dims[] = { dim };
+  mx_grad = mxCreateNumericArray(1, dims, mxDOUBLE_CLASS, mxREAL);
   grad = mxGetPr(mx_grad);
 
   gradient(&obj_val, grad, dim, gctx.E, M, num_threads);
@@ -464,7 +469,7 @@ static void info_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
   enum { SCORE = 0, UNIQUE, DATA_ID, X, Y, SCALE, BYTE_SIZE, 
          MARGIN, BELIEF, ZERO, MINED, NUM };
 
-  int dims[]       = { (int)gctx.F.size(), NUM };
+  mwSize dims[]    = { gctx.F.size(), NUM };
   mxArray *mx_info = mxCreateNumericArray(2, dims, mxDOUBLE_CLASS, mxREAL);
   double *info     = mxGetPr(mx_info);
 
@@ -502,11 +507,13 @@ static void get_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
 
   const model &M = gctx.M;
 
-  mxArray *mx_model = mxCreateCellArray(1, &(M.num_blocks));
+  mwSize dims[] = { M.num_blocks };
+  mxArray *mx_model = mxCreateCellArray(1, dims);
   plhs[0] = mx_model;
 
   for (int i = 0; i < M.num_blocks; i++) {
-    mxArray *mx_block = mxCreateNumericArray(1, &(M.block_sizes[i]), mxDOUBLE_CLASS, mxREAL);
+    mwSize dims[] = { M.block_sizes[i] };
+    mxArray *mx_block = mxCreateNumericArray(1, dims, mxDOUBLE_CLASS, mxREAL);
     mxSetCell(mx_model, i, mx_block);
     double *block = mxGetPr(mx_block);
     copy(M.w[i], M.w[i]+M.block_sizes[i], block);
@@ -534,7 +541,7 @@ static void set_model_handler(int nlhs, mxArray *plhs[], int nrhs, const mxArray
 
   model &M = gctx.M;
   
-  // Free memory is a model already exists
+  // Free memory if a model already exists
   M.free();
 
   bool quiet = (nrhs >= 8);

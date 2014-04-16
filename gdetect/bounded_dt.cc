@@ -10,9 +10,10 @@
 // your project.
 // -------------------------------------------------------
 
+#include "mex.h"
 #include <math.h>
 #include <sys/types.h>
-#include "mex.h"
+#include <omp.h>
 
 static inline int min(int a, int b) { return a <= b ? a : b; }
 static inline int max(int a, int b) { return a >= b ? a : b; }
@@ -66,9 +67,23 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   int32_t *tmpIx = (int32_t *)mxCalloc(dims[0]*dims[1], sizeof(int32_t));
   int32_t *tmpIy = (int32_t *)mxCalloc(dims[0]*dims[1], sizeof(int32_t));
 
+  #ifdef NUM_THREADS
+  #if NUM_THREADS > 0
+  #define USE_OMP
+  int nthreads = NUM_THREADS;
+  omp_set_num_threads(nthreads);
+  #endif
+  #endif
+
+  #ifdef USE_OMP
+  #pragma omp parallel for
+  #endif
   for (int x = 0; x < dims[1]; x++)
     max_filter_1d(vals+x*dims[0], tmpM+x*dims[0], tmpIy+x*dims[0], s, 1, dims[0], ay, by);
 
+  #ifdef USE_OMP
+  #pragma omp parallel for
+  #endif
   for (int y = 0; y < dims[0]; y++)
     max_filter_1d(tmpM+y, M+y, tmpIx+y, s, dims[0], dims[1], ax, bx);
 

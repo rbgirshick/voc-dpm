@@ -112,7 +112,7 @@ while funEvals <= maxIter
                     [old_dirs,old_stps,Hdiag] = lbfgsUpdate(g-g_old,x-x_old,corrections,verbose==3,old_dirs,old_stps,Hdiag);
                 end
                     curvSat = sum(old_dirs(working,:).*old_stps(working,:)) > 1e-10;
-               d(working) = lbfgs(-g(working),old_dirs(working,curvSat),old_stps(working,curvSat),Hdiag);
+               d(working) = lbfgsC(-g(working),old_dirs(working,curvSat),old_stps(working,curvSat),Hdiag);
             end
             g_old = g;
             x_old = x;
