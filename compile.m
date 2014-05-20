@@ -36,43 +36,22 @@ if nargin < 2
   verb = false;
 end
 
-% Start building the mex command
-mexcmd = 'mex -outdir bin';
-
-% Add verbosity if requested
-if verb
-  mexcmd = [mexcmd ' -v'];
-end
-
-% Add optimizations if requested
-if opt
-  mexcmd = [mexcmd ' -O'];
-  mexcmd = [mexcmd ' CXXOPTIMFLAGS="-O3 -DNDEBUG"'];
-  mexcmd = [mexcmd ' LDOPTIMFLAGS="-O3"'];
-else
-  mexcmd = [mexcmd ' -g'];
-end
-
-% Turn all warnings on
-mexcmd = [mexcmd ' CXXFLAGS="\$CXXFLAGS -Wall -fopenmp"'];
-mexcmd = [mexcmd ' LDFLAGS="\$LDFLAGS -Wall -fopenmp"'];
-
 if nargin < 3
   % Build feature vector cache code
   fv_compile(opt, verb);
   % Build the star-cascade code
   cascade_compile(opt, verb);
 
-  eval([mexcmd ' features/resize.cc']);
-  eval([mexcmd ' features/features.cc']);
-  eval([mexcmd ' gdetect/dt.cc']);
-  eval([mexcmd ' gdetect/fast_bounded_dt.cc']);
-  eval([mexcmd ' gdetect/get_detection_trees.cc']);
-  eval([mexcmd ' gdetect/compute_overlap.cc']);
-  eval([mexcmd ' gdetect/post_pad.cc']);
+  eval([mexcmd(opt, verb) ' features/resize.cc']);
+  eval([mexcmd(opt, verb) ' features/features.cc']);
+  eval([mexcmd(opt, verb) ' gdetect/dt.cc']);
+  eval([mexcmd(opt, verb) ' gdetect/fast_bounded_dt.cc']);
+  eval([mexcmd(opt, verb) ' gdetect/get_detection_trees.cc']);
+  eval([mexcmd(opt, verb) ' gdetect/compute_overlap.cc']);
+  eval([mexcmd(opt, verb) ' gdetect/post_pad.cc']);
 
   % obsolete bounded dt algorithm & implementation
-  %eval([mexcmd ' CXXFLAGS="\$CXXFLAGS -DNUM_THREADS=0" gdetect/bounded_dt.cc']);
+  %eval([mexcmd(opt, verb) ' CXXFLAGS="\$CXXFLAGS -DNUM_THREADS=0" gdetect/bounded_dt.cc']);
 
   % Convolution routine
   %   Use one of the following depending on your setup
@@ -85,26 +64,57 @@ if nargin < 3
   %for i = [8 32]
   for i = [32]
     fprintf('Building convolution routine for %d features\n', i);
-    mexcmd_meta = [mexcmd ' CXXFLAGS="\$CXXFLAGS -Iexternal' ...
-                          ' -DMETA_NUM_FEATURES=' num2str(i/4) '"'];
-    eval([mexcmd_meta ' gdetect/fconv_sse_meta.cc -o fconv_' num2str(i)]);
+    extra_cxx_flags = sprintf('-Iexternal -DMETA_NUM_FEATURES=%d', i/4);
+    eval([mexcmd(opt, verb, extra_cxx_flags) ...
+        ' gdetect/fconv_sse_meta.cc -output fconv_' num2str(i)]);
   end
   % 1) multithreaded convolution using SSE (OpenMP)
-  %eval([mexcmd ' gdetect/fconv_sse_omp.cc -o fconv']);
+  %eval([mexcmd(opt, verb) ' gdetect/fconv_sse_omp.cc -output fconv']);
   % 2) multithreaded convolution
-  %eval([mexcmd ' gdetect/fconv_var_dim_MT.cc -o fconv']);
+  %eval([mexcmd(opt, verb) ' gdetect/fconv_var_dim_MT.cc -output fconv']);
   % 3) basic convolution, very compatible
-  %eval([mexcmd ' gdetect/fconv_var_dim.cc -o fconv']);
+  %eval([mexcmd(opt, verb) ' gdetect/fconv_var_dim.cc -output fconv']);
 
   % Convolution routine that can handle feature dimenions other than 32
   % 0) multithreaded convolution
-  eval([mexcmd ' gdetect/fconv_var_dim_MT.cc -o fconv_var_dim']);
+  eval([mexcmd(opt, verb) ' gdetect/fconv_var_dim_MT.cc -output fconv_var_dim']);
   % 1) single-threaded convolution
-  % eval([mexcmd ' gdetect/fconv_var_dim.cc -o fconv_var_dim']);
+  % eval([mexcmd(opt, verb) ' gdetect/fconv_var_dim.cc -output fconv_var_dim']);
 
-  eval([mexcmd ' external/minConf/minFunc/lbfgsC.c']);
+  eval([mexcmd(opt, verb) ' external/minConf/minFunc/lbfgsC.c']);
 else
-  eval([mexcmd ' ' mex_file]);
+  eval([mexcmd(opt, verb) ' ' mex_file]);
 end
 
 rehash path;
+
+% ------------------------------------------------------------------------
+function cmd = mexcmd(opt, verb, extra_cxx_flags, extra_ld_flags)
+% ------------------------------------------------------------------------
+if ~exist('extra_cxx_flags', 'var') || isempty(extra_cxx_flags)
+  extra_cxx_flags = '';
+end
+
+if ~exist('extra_ld_flags', 'var') || isempty(extra_ld_flags)
+  extra_ld_flags = '';
+end
+
+% Start building the mex command
+cmd = 'mex -outdir bin';
+
+% Add verbosity if requested
+if verb
+  cmd = [cmd ' -v'];
+end
+
+% Add optimizations if requested
+if opt
+  cmd = [cmd ' -O'];
+  cmd = [cmd ' CXXOPTIMFLAGS="-O3 -DNDEBUG"'];
+  cmd = [cmd ' LDOPTIMFLAGS="-O3"'];
+else
+  cmd = [cmd ' -g'];
+end
+% Turn all warnings on
+cmd = [cmd ' CXXFLAGS="\$CXXFLAGS -Wall -fopenmp ' extra_cxx_flags '"'];
+cmd = [cmd ' LDFLAGS="\$LDFLAGS -Wall -fopenmp ' extra_ld_flags '"'];
