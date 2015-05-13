@@ -206,7 +206,7 @@ for level = 1:length(pyra.feat)
 
   % find max response array size for this level
   s = cellfun(@size, r, 'UniformOutput', false);
-  s = max(cat(1, s{:}));
+  s = max(cat(1, s{:}), [], 1);
 
   % set filter response as the score for each filter terminal
   for i = 1:length(r)
